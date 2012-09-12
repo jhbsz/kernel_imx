@@ -368,6 +368,18 @@ static struct imx_ssi_platform_data mx6_sabresd_ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
+static struct platform_device mx6_sabresd_audio_rt5633_device = {
+	.name = "imx-rt5633",
+};
+
+static struct mxc_audio_platform_data rt5633_data = {
+	.ssi_num = 1,
+	.src_port = 2,
+	.ext_port = 3,
+//	.hp_gpio = SABRESD_HEADPHONE_DET,
+//	.hp_active_low = 1,
+};
+
 static struct platform_device mx6_sabresd_audio_wm8958_device = {
 	.name = "imx-wm8958",
 };
@@ -1527,7 +1539,10 @@ static int __init imx6q_init_audio(void)
 		imx6q_add_imx_ssi(1, &mx6_sabresd_ssi_pdata);
 
 		mxc_wm8958_init();
-	} else {
+	}else {
+		//register multi sound soc
+		mxc_register_device(&mx6_sabresd_audio_rt5633_device,
+				&rt5633_data);
 		platform_device_register(&sabresd_vwm8962_reg_devices);
 		mxc_register_device(&mx6_sabresd_audio_wm8962_device,
 				    &wm8962_data);
