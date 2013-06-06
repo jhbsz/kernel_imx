@@ -586,6 +586,9 @@ ahb_podf2:
 
 	.macro	dl_ddr_io_set_lpm
 
+	ldr r4, [r1, #0x774] /* CTL_GRP_DDR_TYPE */
+	and	r4, r4, #0xC0000
+
 	mov	r0, #0
 	str	r0, [r1, #0x470] /* DRAM_DQM0 */
 	str	r0, [r1, #0x474] /* DRAM_DQM1 */
@@ -605,6 +608,9 @@ ahb_podf2:
 	str	r0, [r1, #0x750] /* DDRMODE_CTL */
 	str	r0, [r1, #0x760] /* DDRMODE */
 
+	cmp	r4, #0xC0000
+	bne	skip_sdq_lpm
+
 	str	r0, [r1, #0x4bc] /* DRAM_SDQS0 */
 	str	r0, [r1, #0x4c0] /* DRAM_SDQS1 */
 	str	r0, [r1, #0x4c4] /* DRAM_SDQS2 */
@@ -615,6 +621,7 @@ ahb_podf2:
 	str	r0, [r1, #0x4d4] /* DRAM_SDQS6 */
 	str	r0, [r1, #0x4d8] /* DRAM_SDQS7 */
 
+skip_sdq_lpm:
 	str	r0, [r1, #0x764] /* GPR_B0DS */
 	str	r0, [r1, #0x770] /* GPR_B1DS */
 	str	r0, [r1, #0x778] /* GPR_B2DS */
@@ -743,6 +750,9 @@ ahb_podf2:
 
 	.macro	dq_ddr_io_set_lpm
 
+	ldr r4, [r1, #0x774] /* CTL_GRP_DDR_TYPE */
+	and	r4, r4, #0xC0000
+
 	mov	r0, #0
 	str	r0, [r1, #0x5ac] /* DRAM_DQM0 */
 	str	r0, [r1, #0x5b4] /* DRAM_DQM1 */
@@ -762,6 +772,9 @@ ahb_podf2:
 	str	r0, [r1, #0x750] /* DDRMODE_CTL */
 	str	r0, [r1, #0x774] /* DDRMODE */
 
+	cmp	r4, #0xC0000
+	bne	skip_sdq_lpm_2
+
 	str	r0, [r1, #0x5a8] /* DRAM_SDQS0 */
 	str	r0, [r1, #0x5b0] /* DRAM_SDQS1 */
 	str	r0, [r1, #0x524] /* DRAM_SDQS2 */
@@ -772,6 +785,7 @@ ahb_podf2:
 	str	r0, [r1, #0x5b8] /* DRAM_SDQS6 */
 	str	r0, [r1, #0x5c0] /* DRAM_SDQS7 */
 
+skip_sdq_lpm_2:
 	str	r0, [r1, #0x784] /* GPR_B0DS */
 	str	r0, [r1, #0x788] /* GPR_B1DS */
 	str	r0, [r1, #0x794] /* GPR_B2DS */
@@ -973,10 +987,6 @@ suspend mode entry
 never run to here
 ************************************************************/
 	b 	out	/* exit standby */
-	/* Place the literal pool here so that
-	  * literals are within 4KB range
-	  */
-	.ltorg
 /************************************************************
 dormant entry, data save in stack, save sp in the src_gpr2
 ************************************************************/
@@ -1030,6 +1040,10 @@ dl_io_save:
 	bne sl_io_save
 	dl_ddr_io_save
 	b ddr_io_save_done
+	/* Place the literal pool after unconditional branch
+	 * so that literals are within 4KB range
+	 */
+	.ltorg
 sl_io_save:
 	sl_ddr_io_save
 
@@ -1131,6 +1145,26 @@ set ddr iomux to low power mode
 	 and     r0, r0, #0x2000000
 	 cmp    r0, #0x2000000
 	 bne     poll_dvfs_set_1
+
+	ldr	r1, =MMDC_P1_BASE_ADDR
+	add	r1, r1, #PERIPBASE_VIRT
+
+	/* Put DDR explicitly into self-refresh. */
+	 /* Disable Automatic power savings. */
+	 ldr    r0, [r1, #0x404]
+	 orr    r0, r0, #0x01
+	 str    r0, [r1, #0x404]
+
+	 /* Make the DDR explicitly enter self-refresh. */
+	 ldr     r0, [r1, #0x404]
+	 orr    r0, r0, #0x200000
+	 str     r0, [r1, #0x404]
+
+	poll_dvfs_set_1a:
+	 ldr     r0, [r1, #0x404]
+	 and     r0, r0, #0x2000000
+	 cmp    r0, #0x2000000
+	 bne     poll_dvfs_set_1a
 
 	/* set mmdc iomux to low power mode */
 	ldr	r1, =MX6Q_IOMUXC_BASE_ADDR
@@ -1356,6 +1390,25 @@ poll_dvfs_clear_1:
 	bic	r6, r6, #0x01
 	str	r6, [r1, #0x404]
 
+	ldr	r1, =MMDC_P1_BASE_ADDR
+	add	r1, r1, #PERIPBASE_VIRT
+
+	/* Ensure DDR exits self-refresh. */
+	ldr	r6, [r1, #0x404]
+	bic	r6, r6, #0x200000
+	str	r6, [r1, #0x404]
+
+poll_dvfs_clear_1a:
+	ldr	r6, [r1, #0x404]
+	and	r6, r6, #0x2000000
+	cmp	r6, #0x2000000
+	beq	poll_dvfs_clear_1a
+
+	/* Enable Automatic power savings. */
+	ldr	r6, [r1, #0x404]
+	bic	r6, r6, #0x01
+	str	r6, [r1, #0x404]
+
 	/* Add enough nops so that the
 	  * prefetcher will not get instructions
 	  * from DDR before its IO pads
@@ -1496,6 +1549,24 @@ poll_dvfs_clear_2:
 	and	r6, r6, #0x2000000
 	cmp	r6, #0x2000000
 	beq	poll_dvfs_clear_2
+
+	/* Enable Automatic power savings. */
+	ldr	r6, [r1, #0x404]
+	bic	r6, r6, #0x01
+	str	r6, [r1, #0x404]
+
+	ldr	r1, =MMDC_P1_BASE_ADDR
+
+	/* Ensure DDR exits self-refresh. */
+	ldr	r6, [r1, #0x404]
+	bic	r6, r6, #0x200000
+	str	r6, [r1, #0x404]
+
+poll_dvfs_clear_2a:
+	ldr	r6, [r1, #0x404]
+	and	r6, r6, #0x2000000
+	cmp	r6, #0x2000000
+	beq	poll_dvfs_clear_2a
 
 	/* Enable Automatic power savings. */
 	ldr	r6, [r1, #0x404]
