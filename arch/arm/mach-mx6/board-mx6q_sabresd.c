@@ -1543,6 +1543,15 @@ static struct platform_device mxc_bt_rfkill = {
 static struct imx_bt_rfkill_platform_data mxc_bt_rfkill_data = {
 	.power_change = mx6q_sd_bt_power_change,
 };
+struct imx_vout_mem {
+	resource_size_t res_mbase;
+	resource_size_t res_msize;
+};
+
+static struct imx_vout_mem vout_mem __initdata = {
+	.res_msize = SZ_128M,
+};
+
 static void sabresd_suspend_enter(void)
 {
 	/* suspend preparation */
@@ -1932,6 +1941,7 @@ static void __init mx6_sabresd_board_init(void)
 	struct clk *clko, *clko2;
 	struct clk *new_parent;
 	int rate;
+	struct platform_device *voutdev;
 
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_sabresd_pads,
@@ -1991,7 +2001,16 @@ static void __init mx6_sabresd_board_init(void)
 	imx6q_add_mipi_dsi(&mipi_dsi_pdata);
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
-	imx6q_add_v4l2_output(0);
+	voutdev = imx6q_add_v4l2_output(0);
+	if (vout_mem.res_msize && voutdev) {
+		dma_declare_coherent_memory(&voutdev->dev,
+					    vout_mem.res_mbase,
+					    vout_mem.res_mbase,
+					    vout_mem.res_msize,
+					    (DMA_MEMORY_MAP |
+					     DMA_MEMORY_EXCLUSIVE));
+	}
+
 	imx6q_add_v4l2_capture(0, &capture_data[0]);
 	imx6q_add_v4l2_capture(1, &capture_data[1]);
 	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
@@ -2261,6 +2280,13 @@ static void __init mx6q_sabresd_reserve(void)
 		imx_ion_data.heaps[0].base = phys;
 	}
 #endif
+
+	if (vout_mem.res_msize) {
+		phys = memblock_alloc_base(vout_mem.res_msize,
+					   SZ_4K, SZ_1G);
+		memblock_remove(phys, vout_mem.res_msize);
+		vout_mem.res_mbase = phys;
+	}
 }
 
 /*
