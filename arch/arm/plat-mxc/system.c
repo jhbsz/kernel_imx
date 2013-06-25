@@ -44,8 +44,11 @@ static void arch_reset_special_mode(char mode, const char *cmd)
 		do_switch_mfgmode();
 	else if (strcmp(cmd, "recovery") == 0)
 		do_switch_recovery();
-	else if (strcmp(cmd, "fastboot") == 0)
+	else if ((strcmp(cmd, "fastboot") == 0)||(strcmp(cmd, "bootloader") == 0))
 		do_switch_fastboot();
+	else if(strcmp(cmd, "autoupdate") == 0){
+		do_switch_autoupdate();
+	}
 }
 
 /*
