@@ -1211,7 +1211,7 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.reset		= mx6_reset_mipi_dsi,
 };
 
-static struct ipuv3_fb_platform_data sabresd_fb_data[] = {
+static struct ipuv3_fb_platform_data sparkauto_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "ldb",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
@@ -1631,7 +1631,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 	char *str;
 	struct tag *t;
 	int i = 0;
-	struct ipuv3_fb_platform_data *pdata_fb = sabresd_fb_data;
+	struct ipuv3_fb_platform_data *pdata_fb = sparkauto_fb_data;
 
 	for_each_tag(t, tags) {
 		if (t->hdr.tag == ATAG_CMDLINE) {
@@ -1641,7 +1641,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				str += 6;
 				pdata_fb[i++].res_size[0] = memparse(str, &str);
 				while (*str == ',' &&
-					i < ARRAY_SIZE(sabresd_fb_data)) {
+					i < ARRAY_SIZE(sparkauto_fb_data)) {
 					str++;
 					pdata_fb[i++].res_size[0] = memparse(str, &str);
 				}
@@ -1824,11 +1824,11 @@ static void __init mx6_sparkauto_board_init(void)
 	imx6q_add_ipuv3(0, &ipu_data[0]);
 	if (cpu_is_mx6q()) {
 		imx6q_add_ipuv3(1, &ipu_data[1]);
-		for (i = 0; i < 4 && i < ARRAY_SIZE(sabresd_fb_data); i++)
-			imx6q_add_ipuv3fb(i, &sabresd_fb_data[i]);
+		for (i = 0; i < 4 && i < ARRAY_SIZE(sparkauto_fb_data); i++)
+			imx6q_add_ipuv3fb(i, &sparkauto_fb_data[i]);
 	} else
-		for (i = 0; i < 2 && i < ARRAY_SIZE(sabresd_fb_data); i++)
-			imx6q_add_ipuv3fb(i, &sabresd_fb_data[i]);
+		for (i = 0; i < 2 && i < ARRAY_SIZE(sparkauto_fb_data); i++)
+			imx6q_add_ipuv3fb(i, &sparkauto_fb_data[i]);
 
 	imx6q_add_vdoa();
 	imx6q_add_mipi_dsi(&mipi_dsi_pdata);
@@ -2054,24 +2054,24 @@ static void __init mx6q_sparkauto_reserve(void)
 	 * Reserve primary framebuffer memory if its base address
 	 * is set by kernel command line.
 	 */
-	fb_array_size = ARRAY_SIZE(sabresd_fb_data);
-	if (fb_array_size > 0 && sabresd_fb_data[0].res_base[0] &&
-	    sabresd_fb_data[0].res_size[0]) {
-		memblock_reserve(sabresd_fb_data[0].res_base[0],
-				 sabresd_fb_data[0].res_size[0]);
-		memblock_remove(sabresd_fb_data[0].res_base[0],
-				sabresd_fb_data[0].res_size[0]);
-		sabresd_fb_data[0].late_init = true;
+	fb_array_size = ARRAY_SIZE(sparkauto_fb_data);
+	if (fb_array_size > 0 && sparkauto_fb_data[0].res_base[0] &&
+	    sparkauto_fb_data[0].res_size[0]) {
+		memblock_reserve(sparkauto_fb_data[0].res_base[0],
+				 sparkauto_fb_data[0].res_size[0]);
+		memblock_remove(sparkauto_fb_data[0].res_base[0],
+				sparkauto_fb_data[0].res_size[0]);
+		sparkauto_fb_data[0].late_init = true;
 		ipu_data[ldb_data.ipu_id].bypass_reset = true;
 		fb0_reserved = 1;
 	}
 	for (i = fb0_reserved; i < fb_array_size; i++)
-		if (sabresd_fb_data[i].res_size[0]) {
+		if (sparkauto_fb_data[i].res_size[0]) {
 			/* Reserve for other background buffer. */
-			phys = memblock_alloc(sabresd_fb_data[i].res_size[0],
+			phys = memblock_alloc(sparkauto_fb_data[i].res_size[0],
 						SZ_4K);
-			memblock_remove(phys, sabresd_fb_data[i].res_size[0]);
-			sabresd_fb_data[i].res_base[0] = phys;
+			memblock_remove(phys, sparkauto_fb_data[i].res_size[0]);
+			sparkauto_fb_data[i].res_base[0] = phys;
 		}
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
