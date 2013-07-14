@@ -97,6 +97,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_WM9705 if SND_SOC_AC97_BUS
 	select SND_SOC_WM9712 if SND_SOC_AC97_BUS
 	select SND_SOC_WM9713 if SND_SOC_AC97_BUS
+	select SND_SOC_RT5625 if I2C
 	select SND_SOC_RT5633 if I2C
         help
           Normally ASoC codec drivers are only built if a machine driver which
@@ -385,6 +386,9 @@ config SND_SOC_WM9712
 
 config SND_SOC_WM9713
 	tristate
+
+config SND_SOC_RT5625
+        tristate
 
 config SND_SOC_RT5633
 	tristate

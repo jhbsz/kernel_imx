@@ -85,6 +85,8 @@ snd-soc-wm9712-objs := wm9712.o
 snd-soc-wm9713-objs := wm9713.o
 snd-soc-wm-hubs-objs := wm_hubs.o
 snd-soc-jz4740-codec-objs := jz4740.o
+snd-soc-rt5625-objs := rt5625.o
+snd-soc-rt5633-objs := rt5633.o
 
 # Amp
 snd-soc-lm4857-objs := lm4857.o
@@ -180,6 +182,8 @@ obj-$(CONFIG_SND_SOC_WM9705)	+= snd-soc-wm9705.o
 obj-$(CONFIG_SND_SOC_WM9712)	+= snd-soc-wm9712.o
 obj-$(CONFIG_SND_SOC_WM9713)	+= snd-soc-wm9713.o
 obj-$(CONFIG_SND_SOC_WM_HUBS)	+= snd-soc-wm-hubs.o
+obj-$(CONFIG_SND_SOC_RT5625)    += snd-soc-rt5625.o
+obj-$(CONFIG_SND_SOC_RT5633)    += snd-soc-rt5633.o
 
 # Amp
 obj-$(CONFIG_SND_SOC_LM4857)	+= snd-soc-lm4857.o
