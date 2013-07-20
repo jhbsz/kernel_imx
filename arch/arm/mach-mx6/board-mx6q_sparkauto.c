@@ -1700,13 +1700,6 @@ static void mx6_snvs_poweroff(void)
 	writel(value | 0x60, mx6_snvs_base + SNVS_LPCR);
 }
 
-static const struct imx_pcie_platform_data mx6_sabresd_pcie_data __initconst = {
-	.pcie_pwr_en	= SABRESD_PCIE_PWR_EN,
-	.pcie_rst	= SABRESD_PCIE_RST_B_REVB,
-	.pcie_wake_up	= SABRESD_PCIE_WAKE_B,
-	.pcie_dis	= SABRESD_PCIE_DIS_B,
-	.pcie_power_always_on = 1,
-};
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 static struct resource ram_console_resource = {
@@ -1979,11 +1972,6 @@ static void __init mx6_sparkauto_board_init(void)
 	pm_power_off = mx6_snvs_poweroff;
 	imx6q_add_busfreq();
 
-	/* Add PCIe RC interface support
-	 * uart5 has pin mux with pcie. or you will use uart5 or use pcie
-	 */
-	if (!uart5_enabled)
-		imx6q_add_pcie(&mx6_sabresd_pcie_data);
 	if (cpu_is_mx6dl()) {
 		mxc_iomux_v3_setup_multiple_pads(mx6dl_arm2_elan_pads,
 						ARRAY_SIZE(mx6dl_arm2_elan_pads));
