@@ -1193,6 +1193,7 @@ static void __init mx6_sparkauto_board_init(void)
 {
 	int i;
 	int ret;
+	struct clk *clko2;
 	int rate;
 	struct clk *parent;
 
