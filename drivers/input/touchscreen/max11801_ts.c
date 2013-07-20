@@ -149,9 +149,9 @@ static u32 max11801_dcm_sample_aux(struct i2c_client *client)
 
 u32 max11801_read_adc(void)
 {
-	u32 adc_data;
-	adc_data = max11801_dcm_sample_aux(max11801_client);
-	return adc_data;
+	if(max11801_client)
+		return max11801_dcm_sample_aux(max11801_client);
+	return 0;
 }
 EXPORT_SYMBOL_GPL(max11801_read_adc);
 

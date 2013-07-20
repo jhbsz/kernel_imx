@@ -275,7 +275,19 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_ENET_RX_ER__GPIO_1_24, /* set phy addr */
 #endif
 	MX6Q_PAD_GPIO_3__CCM_CLKO2,
-	MX6Q_PAD_GPIO_1__USBOTG_ID,
+
+	MX6Q_PAD_GPIO_1__PWM2_PWMO,
+	
+	/* BL_ON */ 	
+	MX6Q_PAD_KEY_COL2__GPIO_4_10,
+	/* LCD_POWER */ 	
+	MX6Q_PAD_KEY_ROW2__GPIO_4_11,
+	/* MX6_VDD_3V3_EN */
+	MX6Q_PAD_EIM_D26__GPIO_3_26,
+	/* MX6_VDD_5V_EN */
+    MX6Q_PAD_NANDF_CS2__GPIO_6_15,
+
+
 };
 
 static iomux_v3_cfg_t mx6q_sabresd_csi0_sensor_pads[] = {

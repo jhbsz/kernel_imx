@@ -152,57 +152,17 @@
 #define SABRESD_PMIC_INT_B	IMX_GPIO_NR(7, 13)
 #define SABRESD_PFUZE_INT	IMX_GPIO_NR(7, 13)
 
-#define SABRESD_EPDC_SDDO_0	IMX_GPIO_NR(2, 22)
-#define SABRESD_EPDC_SDDO_1	IMX_GPIO_NR(3, 10)
-#define SABRESD_EPDC_SDDO_2	IMX_GPIO_NR(3, 12)
-#define SABRESD_EPDC_SDDO_3	IMX_GPIO_NR(3, 11)
-#define SABRESD_EPDC_SDDO_4	IMX_GPIO_NR(2, 27)
-#define SABRESD_EPDC_SDDO_5	IMX_GPIO_NR(2, 30)
-#define SABRESD_EPDC_SDDO_6	IMX_GPIO_NR(2, 23)
-#define SABRESD_EPDC_SDDO_7	IMX_GPIO_NR(2, 26)
-#define SABRESD_EPDC_SDDO_8	IMX_GPIO_NR(2, 24)
-#define SABRESD_EPDC_SDDO_9	IMX_GPIO_NR(3, 15)
-#define SABRESD_EPDC_SDDO_10	IMX_GPIO_NR(3, 16)
-#define SABRESD_EPDC_SDDO_11	IMX_GPIO_NR(3, 23)
-#define SABRESD_EPDC_SDDO_12	IMX_GPIO_NR(3, 19)
-#define SABRESD_EPDC_SDDO_13	IMX_GPIO_NR(3, 13)
-#define SABRESD_EPDC_SDDO_14	IMX_GPIO_NR(3, 14)
-#define SABRESD_EPDC_SDDO_15	IMX_GPIO_NR(5, 2)
-#define SABRESD_EPDC_GDCLK	IMX_GPIO_NR(2, 17)
-#define SABRESD_EPDC_GDSP	IMX_GPIO_NR(2, 16)
-#define SABRESD_EPDC_GDOE	IMX_GPIO_NR(6, 6)
-#define SABRESD_EPDC_GDRL	IMX_GPIO_NR(5, 4)
-#define SABRESD_EPDC_SDCLK	IMX_GPIO_NR(3, 31)
-#define SABRESD_EPDC_SDOEZ	IMX_GPIO_NR(3, 30)
-#define SABRESD_EPDC_SDOED	IMX_GPIO_NR(3, 26)
-#define SABRESD_EPDC_SDOE	IMX_GPIO_NR(3, 27)
-#define SABRESD_EPDC_SDLE	IMX_GPIO_NR(3, 1)
-#define SABRESD_EPDC_SDCLKN	IMX_GPIO_NR(3, 0)
-#define SABRESD_EPDC_SDSHR	IMX_GPIO_NR(2, 29)
-#define SABRESD_EPDC_PWRCOM	IMX_GPIO_NR(2, 28)
-#define SABRESD_EPDC_PWRSTAT	IMX_GPIO_NR(2, 21)
-#define SABRESD_EPDC_PWRCTRL0	IMX_GPIO_NR(2, 20)
-#define SABRESD_EPDC_PWRCTRL1	IMX_GPIO_NR(2, 19)
-#define SABRESD_EPDC_PWRCTRL2	IMX_GPIO_NR(2, 18)
-#define SABRESD_EPDC_PWRCTRL3	IMX_GPIO_NR(3, 28)
-#define SABRESD_EPDC_BDR0	IMX_GPIO_NR(3, 2)
-#define SABRESD_EPDC_BDR1	IMX_GPIO_NR(3, 3)
-#define SABRESD_EPDC_SDCE0	IMX_GPIO_NR(3, 4)
-#define SABRESD_EPDC_SDCE1	IMX_GPIO_NR(3, 5)
-#define SABRESD_EPDC_SDCE2	IMX_GPIO_NR(3, 6)
-#define SABRESD_EPDC_SDCE3	IMX_GPIO_NR(3, 7)
-#define SABRESD_EPDC_SDCE4	IMX_GPIO_NR(3, 8)
+
 #define SABRESD_EPDC_PMIC_WAKE	IMX_GPIO_NR(3, 20)
 #define SABRESD_EPDC_PMIC_INT	IMX_GPIO_NR(2, 25)
 #define SABRESD_EPDC_VCOM	IMX_GPIO_NR(3, 17)
 #define SABRESD_CHARGE_NOW	IMX_GPIO_NR(1, 2)
 #define SABRESD_CHARGE_DONE	IMX_GPIO_NR(1, 1)
-#define SABRESD_ELAN_CE		IMX_GPIO_NR(2, 18)
-#define SABRESD_ELAN_RST	IMX_GPIO_NR(3, 8)
-#define SABRESD_ELAN_INT	IMX_GPIO_NR(3, 28)
-#define SABRESD_FEC_PHY_RESET  IMX_GPIO_NR(2, 29)
-#define SABRESD_FEC_PHY_ADDR   IMX_GPIO_NR(1, 24)
 
+#define BL_ON				IMX_GPIO_NR(4, 10)
+#define LCD_POWER			IMX_GPIO_NR(4, 11)
+#define MX6_VDD_3V3_EN		IMX_GPIO_NR(3, 26)
+#define MX6_VDD_5V_EN		IMX_GPIO_NR(6, 15)
 
 #ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
 #define MX6_ENET_IRQ		IMX_GPIO_NR(1, 6)
@@ -213,18 +173,14 @@
 
 static struct clk *sata_clk;
 static struct clk *clko;
-static int mma8451_position;
 static int mag3110_position = 1;
-static int max11801_mode = 1;
 static int caam_enabled;
 static int uart5_enabled;
 
 extern char *gp_reg_id;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
-extern int epdc_enabled;
 
-static int max17135_regulator_init(struct max17135 *max17135);
 
 static const struct esdhc_platform_data mx6q_sabresd_sd2_data __initconst = {
 	.cd_gpio = SABRESD_SD2_CD,
@@ -271,81 +227,7 @@ static inline void mx6q_sabresd_init_uart(void)
 	imx6q_add_imx_uart(0, NULL);
 }
 
-#ifndef CONFIG_ENET_RMII
-static int mx6q_sabresd_fec_phy_init(struct phy_device *phydev)
-{
-	int val;
 
-	/* set phy addr to 0 */
-	gpio_request(SABRESD_FEC_PHY_ADDR, "phy-addr");
-	gpio_direction_output(SABRESD_FEC_PHY_ADDR, 0);
-
-	/* reset phy */
-	gpio_request(SABRESD_FEC_PHY_RESET, "phy-rst");
-	gpio_direction_output(SABRESD_FEC_PHY_RESET, 0);
-	mdelay(1);
-	gpio_direction_output(SABRESD_FEC_PHY_RESET, 1);
-
-	/* check phy power */
-	val = phy_read(phydev, 0x0);
-	if (val & BMCR_PDOWN) {
-		phy_write(phydev, 0x0, (val & ~BMCR_PDOWN));
-	}
-
-	return 0;
-}
-#else
-static int mx6q_sabresd_fec_phy_init(struct phy_device *phydev)
-{
-	unsigned short val;
-
-	/* Ar8031 phy SmartEEE feature cause link status generates glitch,
-	 * which cause ethernet link down/up issue, so disable SmartEEE
-	 */
-	phy_write(phydev, 0xd, 0x3);
-	phy_write(phydev, 0xe, 0x805d);
-	phy_write(phydev, 0xd, 0x4003);
-	val = phy_read(phydev, 0xe);
-	val &= ~(0x1 << 8);
-	phy_write(phydev, 0xe, val);
-
-	/* To enable AR8031 ouput a 125MHz clk from CLK_25M */
-	phy_write(phydev, 0xd, 0x7);
-	phy_write(phydev, 0xe, 0x8016);
-	phy_write(phydev, 0xd, 0x4007);
-	val = phy_read(phydev, 0xe);
-
-	val &= 0xffe3;
-	val |= 0x18;
-	phy_write(phydev, 0xe, val);
-
-	/* Introduce tx clock delay */
-	phy_write(phydev, 0x1d, 0x5);
-	val = phy_read(phydev, 0x1e);
-	val |= 0x0100;
-	phy_write(phydev, 0x1e, val);
-
-	/*check phy power*/
-	val = phy_read(phydev, 0x0);
-
-	if (val & BMCR_PDOWN)
-		phy_write(phydev, 0x0, (val & ~BMCR_PDOWN));
-
-	return 0;
-}
-#endif
-
-static struct fec_platform_data fec_data __initdata = {
-	.init = mx6q_sabresd_fec_phy_init,
-#ifdef CONFIG_ENET_RMII
-	.phy = PHY_INTERFACE_MODE_RMII,
-#else
-	.phy = PHY_INTERFACE_MODE_RGMII,
-#endif	
-#ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
-	.gpio_irq = MX6_ENET_IRQ,
-#endif
-};
 
 static int mx6q_sabresd_spi_cs[] = {
 	SABRESD_ECSPI1_CS0,
@@ -412,27 +294,6 @@ static struct mxc_audio_platform_data rt5633_data = {
 //	.hp_active_low = 1,
 };
 
-static int mxc_rt5633_init(void)
-{
-	struct clk *clko2, *parent;
-	int rate;
-
-	clko2 = clk_get(NULL, "clko2_clk");
-	if (IS_ERR(clko2))
-		pr_err("can't get CLKO2 clock.\n");
-
-	parent = clk_get(NULL, "osc_clk");
-	if (!IS_ERR(parent)) {
-		clk_set_parent(clko2, parent);
-		clk_put(parent);
-	}
-	rate = clk_round_rate(clko2, 12000000);
-	clk_set_rate(clko2, rate);
-
-	rt5633_data.sysclk = rate;
-
-	return 0;
-}
 
 
 static void mx6q_csi0_cam_powerdown(int powerdown)
@@ -550,185 +411,6 @@ static struct fsl_mxc_camera_platform_data mipi_csi2_data = {
 	.pwdn = mx6q_mipi_powerdown,
 };
 
-#define mV_to_uV(mV) (mV * 1000)
-#define uV_to_mV(uV) (uV / 1000)
-#define V_to_uV(V) (mV_to_uV(V * 1000))
-#define uV_to_V(uV) (uV_to_mV(uV) / 1000)
-
-static struct regulator_consumer_supply display_consumers[] = {
-	{
-		/* MAX17135 */
-		.supply = "DISPLAY",
-	},
-};
-
-static struct regulator_consumer_supply vcom_consumers[] = {
-	{
-		/* MAX17135 */
-		.supply = "VCOM",
-	},
-};
-
-static struct regulator_consumer_supply v3p3_consumers[] = {
-	{
-		/* MAX17135 */
-		.supply = "V3P3",
-	},
-};
-
-static struct regulator_init_data max17135_init_data[] = {
-	{
-		.constraints = {
-			.name = "DISPLAY",
-			.valid_ops_mask =  REGULATOR_CHANGE_STATUS,
-		},
-		.num_consumer_supplies = ARRAY_SIZE(display_consumers),
-		.consumer_supplies = display_consumers,
-	}, {
-		.constraints = {
-			.name = "GVDD",
-			.min_uV = V_to_uV(20),
-			.max_uV = V_to_uV(20),
-		},
-	}, {
-		.constraints = {
-			.name = "GVEE",
-			.min_uV = V_to_uV(-22),
-			.max_uV = V_to_uV(-22),
-		},
-	}, {
-		.constraints = {
-			.name = "HVINN",
-			.min_uV = V_to_uV(-22),
-			.max_uV = V_to_uV(-22),
-		},
-	}, {
-		.constraints = {
-			.name = "HVINP",
-			.min_uV = V_to_uV(20),
-			.max_uV = V_to_uV(20),
-		},
-	}, {
-		.constraints = {
-			.name = "VCOM",
-			.min_uV = mV_to_uV(-4325),
-			.max_uV = mV_to_uV(-500),
-			.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
-			REGULATOR_CHANGE_STATUS,
-		},
-		.num_consumer_supplies = ARRAY_SIZE(vcom_consumers),
-		.consumer_supplies = vcom_consumers,
-	}, {
-		.constraints = {
-			.name = "VNEG",
-			.min_uV = V_to_uV(-15),
-			.max_uV = V_to_uV(-15),
-		},
-	}, {
-		.constraints = {
-			.name = "VPOS",
-			.min_uV = V_to_uV(15),
-			.max_uV = V_to_uV(15),
-		},
-	}, {
-		.constraints = {
-			.name = "V3P3",
-			.valid_ops_mask =  REGULATOR_CHANGE_STATUS,
-		},
-		.num_consumer_supplies = ARRAY_SIZE(v3p3_consumers),
-		.consumer_supplies = v3p3_consumers,
-	},
-};
-
-static struct platform_device max17135_sensor_device = {
-	.name = "max17135_sensor",
-	.id = 0,
-};
-
-static struct max17135_platform_data max17135_pdata __initdata = {
-	.vneg_pwrup = 1,
-	.gvee_pwrup = 1,
-	.vpos_pwrup = 2,
-	.gvdd_pwrup = 1,
-	.gvdd_pwrdn = 1,
-	.vpos_pwrdn = 2,
-	.gvee_pwrdn = 1,
-	.vneg_pwrdn = 1,
-	.gpio_pmic_pwrgood = SABRESD_EPDC_PWRSTAT,
-	.gpio_pmic_vcom_ctrl = SABRESD_EPDC_VCOM,
-	.gpio_pmic_wakeup = SABRESD_EPDC_PMIC_WAKE,
-	.gpio_pmic_v3p3 = SABRESD_EPDC_PWRCTRL0,
-	.gpio_pmic_intr = SABRESD_EPDC_PMIC_INT,
-	.regulator_init = max17135_init_data,
-	.init = max17135_regulator_init,
-};
-
-static int __init max17135_regulator_init(struct max17135 *max17135)
-{
-	struct max17135_platform_data *pdata = &max17135_pdata;
-	int i, ret;
-
-	if (!epdc_enabled) {
-		printk(KERN_DEBUG
-			"max17135_regulator_init abort: EPDC not enabled\n");
-		return 0;
-	}
-
-	max17135->gvee_pwrup = pdata->gvee_pwrup;
-	max17135->vneg_pwrup = pdata->vneg_pwrup;
-	max17135->vpos_pwrup = pdata->vpos_pwrup;
-	max17135->gvdd_pwrup = pdata->gvdd_pwrup;
-	max17135->gvdd_pwrdn = pdata->gvdd_pwrdn;
-	max17135->vpos_pwrdn = pdata->vpos_pwrdn;
-	max17135->vneg_pwrdn = pdata->vneg_pwrdn;
-	max17135->gvee_pwrdn = pdata->gvee_pwrdn;
-
-	max17135->max_wait = pdata->vpos_pwrup + pdata->vneg_pwrup +
-		pdata->gvdd_pwrup + pdata->gvee_pwrup;
-
-	max17135->gpio_pmic_pwrgood = pdata->gpio_pmic_pwrgood;
-	max17135->gpio_pmic_vcom_ctrl = pdata->gpio_pmic_vcom_ctrl;
-	max17135->gpio_pmic_wakeup = pdata->gpio_pmic_wakeup;
-	max17135->gpio_pmic_v3p3 = pdata->gpio_pmic_v3p3;
-	max17135->gpio_pmic_intr = pdata->gpio_pmic_intr;
-
-	gpio_request(max17135->gpio_pmic_wakeup, "epdc-pmic-wake");
-	gpio_direction_output(max17135->gpio_pmic_wakeup, 0);
-
-	gpio_request(max17135->gpio_pmic_vcom_ctrl, "epdc-vcom");
-	gpio_direction_output(max17135->gpio_pmic_vcom_ctrl, 0);
-
-	gpio_request(max17135->gpio_pmic_v3p3, "epdc-v3p3");
-	gpio_direction_output(max17135->gpio_pmic_v3p3, 0);
-
-	gpio_request(max17135->gpio_pmic_intr, "epdc-pmic-int");
-	gpio_direction_input(max17135->gpio_pmic_intr);
-
-	gpio_request(max17135->gpio_pmic_pwrgood, "epdc-pwrstat");
-	gpio_direction_input(max17135->gpio_pmic_pwrgood);
-
-	max17135->vcom_setup = false;
-	max17135->init_done = false;
-
-	for (i = 0; i < MAX17135_NUM_REGULATORS; i++) {
-		ret = max17135_register_regulator(max17135, i,
-			&pdata->regulator_init[i]);
-		if (ret != 0) {
-			printk(KERN_ERR"max17135 regulator init failed: %d\n",
-				ret);
-			return ret;
-		}
-	}
-
-	/*
-	 * TODO: We cannot enable full constraints for now, since
-	 * it results in the PFUZE regulators being disabled
-	 * at the end of boot, which disables critical regulators.
-	 */
-	/*regulator_has_full_constraints();*/
-
-	return 0;
-}
 
 static struct imxi2c_platform_data mx6q_sabresd_i2c_data = {
 	.bitrate = 100000,
@@ -754,19 +436,10 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ov5640", 0x3c),
 		.platform_data = (void *)&camera_data,
-	},
-	{
-		I2C_BOARD_INFO("max11801", 0x48),
-		.platform_data = (void *)&max11801_mode,
-		.irq = gpio_to_irq(SABRESD_TS_INT),
-	},
+	},	
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("max17135", 0x48),
-		.platform_data = &max17135_pdata,
-	},
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
 		.irq = gpio_to_irq(SABRESD_CAP_TCH_INT1),
@@ -780,257 +453,13 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		I2C_BOARD_INFO("isl29023", 0x44),
 		.irq  = gpio_to_irq(SABRESD_ALS_INT),
 		.platform_data = &ls_data,
-	}, {
-		I2C_BOARD_INFO("elan-touch", 0x10),
-		.irq = gpio_to_irq(SABRESD_ELAN_INT),
-	},
+	}, 
 	{
 		I2C_BOARD_INFO("mxc_ldb_i2c", 0x50),
 		.platform_data = (void *)0,
 	},
 };
 
-static int epdc_get_pins(void)
-{
-	int ret = 0;
-
-	/* Claim GPIOs for EPDC pins - used during power up/down */
-	ret |= gpio_request(SABRESD_EPDC_SDDO_0, "epdc_d0");
-	ret |= gpio_request(SABRESD_EPDC_SDDO_1, "epdc_d1");
-	ret |= gpio_request(SABRESD_EPDC_SDDO_2, "epdc_d2");
-	ret |= gpio_request(SABRESD_EPDC_SDDO_3, "epdc_d3");
-	ret |= gpio_request(SABRESD_EPDC_SDDO_4, "epdc_d4");
-	ret |= gpio_request(SABRESD_EPDC_SDDO_5, "epdc_d5");
-	ret |= gpio_request(SABRESD_EPDC_SDDO_6, "epdc_d6");
-	ret |= gpio_request(SABRESD_EPDC_SDDO_7, "epdc_d7");
-	ret |= gpio_request(SABRESD_EPDC_GDCLK, "epdc_gdclk");
-	ret |= gpio_request(SABRESD_EPDC_GDSP, "epdc_gdsp");
-	ret |= gpio_request(SABRESD_EPDC_GDOE, "epdc_gdoe");
-	ret |= gpio_request(SABRESD_EPDC_GDRL, "epdc_gdrl");
-	ret |= gpio_request(SABRESD_EPDC_SDCLK, "epdc_sdclk");
-	ret |= gpio_request(SABRESD_EPDC_SDOE, "epdc_sdoe");
-	ret |= gpio_request(SABRESD_EPDC_SDLE, "epdc_sdle");
-	ret |= gpio_request(SABRESD_EPDC_SDSHR, "epdc_sdshr");
-	ret |= gpio_request(SABRESD_EPDC_BDR0, "epdc_bdr0");
-	ret |= gpio_request(SABRESD_EPDC_SDCE0, "epdc_sdce0");
-	ret |= gpio_request(SABRESD_EPDC_SDCE1, "epdc_sdce1");
-	ret |= gpio_request(SABRESD_EPDC_SDCE2, "epdc_sdce2");
-
-	return ret;
-}
-
-static void epdc_put_pins(void)
-{
-	gpio_free(SABRESD_EPDC_SDDO_0);
-	gpio_free(SABRESD_EPDC_SDDO_1);
-	gpio_free(SABRESD_EPDC_SDDO_2);
-	gpio_free(SABRESD_EPDC_SDDO_3);
-	gpio_free(SABRESD_EPDC_SDDO_4);
-	gpio_free(SABRESD_EPDC_SDDO_5);
-	gpio_free(SABRESD_EPDC_SDDO_6);
-	gpio_free(SABRESD_EPDC_SDDO_7);
-	gpio_free(SABRESD_EPDC_GDCLK);
-	gpio_free(SABRESD_EPDC_GDSP);
-	gpio_free(SABRESD_EPDC_GDOE);
-	gpio_free(SABRESD_EPDC_GDRL);
-	gpio_free(SABRESD_EPDC_SDCLK);
-	gpio_free(SABRESD_EPDC_SDOE);
-	gpio_free(SABRESD_EPDC_SDLE);
-	gpio_free(SABRESD_EPDC_SDSHR);
-	gpio_free(SABRESD_EPDC_BDR0);
-	gpio_free(SABRESD_EPDC_SDCE0);
-	gpio_free(SABRESD_EPDC_SDCE1);
-	gpio_free(SABRESD_EPDC_SDCE2);
-}
-
-static void epdc_enable_pins(void)
-{
-	/* Configure MUX settings to enable EPDC use */
-	mxc_iomux_v3_setup_multiple_pads(mx6dl_sabresd_epdc_enable_pads, \
-				ARRAY_SIZE(mx6dl_sabresd_epdc_enable_pads));
-
-	gpio_direction_input(SABRESD_EPDC_SDDO_0);
-	gpio_direction_input(SABRESD_EPDC_SDDO_1);
-	gpio_direction_input(SABRESD_EPDC_SDDO_2);
-	gpio_direction_input(SABRESD_EPDC_SDDO_3);
-	gpio_direction_input(SABRESD_EPDC_SDDO_4);
-	gpio_direction_input(SABRESD_EPDC_SDDO_5);
-	gpio_direction_input(SABRESD_EPDC_SDDO_6);
-	gpio_direction_input(SABRESD_EPDC_SDDO_7);
-	gpio_direction_input(SABRESD_EPDC_GDCLK);
-	gpio_direction_input(SABRESD_EPDC_GDSP);
-	gpio_direction_input(SABRESD_EPDC_GDOE);
-	gpio_direction_input(SABRESD_EPDC_GDRL);
-	gpio_direction_input(SABRESD_EPDC_SDCLK);
-	gpio_direction_input(SABRESD_EPDC_SDOE);
-	gpio_direction_input(SABRESD_EPDC_SDLE);
-	gpio_direction_input(SABRESD_EPDC_SDSHR);
-	gpio_direction_input(SABRESD_EPDC_BDR0);
-	gpio_direction_input(SABRESD_EPDC_SDCE0);
-	gpio_direction_input(SABRESD_EPDC_SDCE1);
-	gpio_direction_input(SABRESD_EPDC_SDCE2);
-}
-
-static void epdc_disable_pins(void)
-{
-	/* Configure MUX settings for EPDC pins to
-	 * GPIO and drive to 0. */
-	mxc_iomux_v3_setup_multiple_pads(mx6dl_sabresd_epdc_disable_pads, \
-				ARRAY_SIZE(mx6dl_sabresd_epdc_disable_pads));
-
-	gpio_direction_output(SABRESD_EPDC_SDDO_0, 0);
-	gpio_direction_output(SABRESD_EPDC_SDDO_1, 0);
-	gpio_direction_output(SABRESD_EPDC_SDDO_2, 0);
-	gpio_direction_output(SABRESD_EPDC_SDDO_3, 0);
-	gpio_direction_output(SABRESD_EPDC_SDDO_4, 0);
-	gpio_direction_output(SABRESD_EPDC_SDDO_5, 0);
-	gpio_direction_output(SABRESD_EPDC_SDDO_6, 0);
-	gpio_direction_output(SABRESD_EPDC_SDDO_7, 0);
-	gpio_direction_output(SABRESD_EPDC_GDCLK, 0);
-	gpio_direction_output(SABRESD_EPDC_GDSP, 0);
-	gpio_direction_output(SABRESD_EPDC_GDOE, 0);
-	gpio_direction_output(SABRESD_EPDC_GDRL, 0);
-	gpio_direction_output(SABRESD_EPDC_SDCLK, 0);
-	gpio_direction_output(SABRESD_EPDC_SDOE, 0);
-	gpio_direction_output(SABRESD_EPDC_SDLE, 0);
-	gpio_direction_output(SABRESD_EPDC_SDSHR, 0);
-	gpio_direction_output(SABRESD_EPDC_BDR0, 0);
-	gpio_direction_output(SABRESD_EPDC_SDCE0, 0);
-	gpio_direction_output(SABRESD_EPDC_SDCE1, 0);
-	gpio_direction_output(SABRESD_EPDC_SDCE2, 0);
-}
-
-static struct fb_videomode e60_v110_mode = {
-	.name = "E60_V110",
-	.refresh = 50,
-	.xres = 800,
-	.yres = 600,
-	.pixclock = 18604700,
-	.left_margin = 8,
-	.right_margin = 178,
-	.upper_margin = 4,
-	.lower_margin = 10,
-	.hsync_len = 20,
-	.vsync_len = 4,
-	.sync = 0,
-	.vmode = FB_VMODE_NONINTERLACED,
-	.flag = 0,
-};
-static struct fb_videomode e60_v220_mode = {
-	.name = "E60_V220",
-	.refresh = 85,
-	.xres = 800,
-	.yres = 600,
-	.pixclock = 30000000,
-	.left_margin = 8,
-	.right_margin = 164,
-	.upper_margin = 4,
-	.lower_margin = 8,
-	.hsync_len = 4,
-	.vsync_len = 1,
-	.sync = 0,
-	.vmode = FB_VMODE_NONINTERLACED,
-	.flag = 0,
-	.refresh = 85,
-	.xres = 800,
-	.yres = 600,
-};
-static struct fb_videomode e060scm_mode = {
-	.name = "E060SCM",
-	.refresh = 85,
-	.xres = 800,
-	.yres = 600,
-	.pixclock = 26666667,
-	.left_margin = 8,
-	.right_margin = 100,
-	.upper_margin = 4,
-	.lower_margin = 8,
-	.hsync_len = 4,
-	.vsync_len = 1,
-	.sync = 0,
-	.vmode = FB_VMODE_NONINTERLACED,
-	.flag = 0,
-};
-static struct fb_videomode e97_v110_mode = {
-	.name = "E97_V110",
-	.refresh = 50,
-	.xres = 1200,
-	.yres = 825,
-	.pixclock = 32000000,
-	.left_margin = 12,
-	.right_margin = 128,
-	.upper_margin = 4,
-	.lower_margin = 10,
-	.hsync_len = 20,
-	.vsync_len = 4,
-	.sync = 0,
-	.vmode = FB_VMODE_NONINTERLACED,
-	.flag = 0,
-};
-
-static struct imx_epdc_fb_mode panel_modes[] = {
-	{
-		&e60_v110_mode,
-		4,      /* vscan_holdoff */
-		10,     /* sdoed_width */
-		20,     /* sdoed_delay */
-		10,     /* sdoez_width */
-		20,     /* sdoez_delay */
-		428,    /* gdclk_hp_offs */
-		20,     /* gdsp_offs */
-		0,      /* gdoe_offs */
-		1,      /* gdclk_offs */
-		1,      /* num_ce */
-	},
-	{
-		&e60_v220_mode,
-		4,      /* vscan_holdoff */
-		10,     /* sdoed_width */
-		20,     /* sdoed_delay */
-		10,     /* sdoez_width */
-		20,     /* sdoez_delay */
-		465,    /* gdclk_hp_offs */
-		20,     /* gdsp_offs */
-		0,      /* gdoe_offs */
-		9,      /* gdclk_offs */
-		1,      /* num_ce */
-	},
-	{
-		&e060scm_mode,
-		4,      /* vscan_holdoff */
-		10,     /* sdoed_width */
-		20,     /* sdoed_delay */
-		10,     /* sdoez_width */
-		20,     /* sdoez_delay */
-		419,    /* gdclk_hp_offs */
-		20,     /* gdsp_offs */
-		0,      /* gdoe_offs */
-		5,      /* gdclk_offs */
-		1,      /* num_ce */
-	},
-	{
-		&e97_v110_mode,
-		8,      /* vscan_holdoff */
-		10,     /* sdoed_width */
-		20,     /* sdoed_delay */
-		10,     /* sdoez_width */
-		20,     /* sdoez_delay */
-		632,    /* gdclk_hp_offs */
-		20,     /* gdsp_offs */
-		0,      /* gdoe_offs */
-		1,      /* gdclk_offs */
-		3,      /* num_ce */
-	}
-};
-
-static struct imx_epdc_fb_platform_data epdc_data = {
-	.epdc_mode = panel_modes,
-	.num_modes = ARRAY_SIZE(panel_modes),
-	.get_pins = epdc_get_pins,
-	.put_pins = epdc_put_pins,
-	.enable_pins = epdc_enable_pins,
-	.disable_pins = epdc_disable_pins,
-};
 
 static void imx6q_sabresd_usbotg_vbus(bool on)
 {
@@ -1304,11 +733,11 @@ static struct fsl_mxc_lcd_platform_data lcdif_data = {
 
 static struct fsl_mxc_ldb_platform_data ldb_data = {
 	.ipu_id = 0,
-	.disp_id = 1,
+	.disp_id = 0,
 	.ext_ref = 1,
-	.mode = LDB_SEP1,
+	.mode = LDB_SEP0,
 	.sec_ipu_id = 0,
-	.sec_disp_id = 0,
+	.sec_disp_id = 1,
 };
 
 static struct max8903_pdata charger1_data = {
@@ -1595,7 +1024,7 @@ static void __init imx6q_add_device_buttons(void) {}
 #endif
 
 static struct platform_pwm_backlight_data mx6_sabresd_pwm_backlight_data = {
-	.pwm_id = 0,
+	.pwm_id = 1,
 	.max_brightness = 248,
 	.dft_brightness = 128,
 	.pwm_period_ns = 50000,
@@ -1764,8 +1193,6 @@ static void __init mx6_sparkauto_board_init(void)
 {
 	int i;
 	int ret;
-	struct clk *clko, *clko2;
-	struct clk *new_parent;
 	int rate;
 	struct clk *parent;
 
@@ -1776,15 +1203,6 @@ static void __init mx6_sparkauto_board_init(void)
 		mxc_iomux_v3_setup_multiple_pads(mx6dl_sparkauto_pads,
 			ARRAY_SIZE(mx6dl_sparkauto_pads));
 	}
-
-#ifdef CONFIG_FEC_1588
-	/* Set GPIO_16 input for IEEE-1588 ts_clk and RMII reference clock
-	 * For MX6 GPR1 bit21 meaning:
-	 * Bit21:       0 - GPIO_16 pad output
-	 *              1 - GPIO_16 pad input
-	 */
-	 mxc_iomux_set_gpr_register(1, 21, 1, 1);
-#endif
 
 	gp_reg_id = sabresd_dvfscore_data.reg_id;
 	soc_reg_id = sabresd_dvfscore_data.soc_id;
@@ -1863,16 +1281,6 @@ static void __init mx6_sparkauto_board_init(void)
 
 	imx6q_add_anatop_thermal_imx(1, &mx6q_sabresd_anatop_thermal_data);
 	
-#ifdef CONFIG_ENET_RMII
-	/* Set RGMII_TX_CTL output for RMII reference clock */
-	mxc_iomux_set_gpr_register(1, 21, 1, 1);
-#endif	
-	imx6_init_fec(fec_data);
-#ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
-	/* Make sure the IOMUX_OBSRV_MUX1 is set to ENET_IRQ. */
-	mxc_iomux_set_specialbits_register(IOMUX_OBSRV_MUX1_OFFSET,
-		OBSRV_MUX1_ENET_IRQ, OBSRV_MUX1_MASK);
-#endif
 
 	imx6q_add_pm_imx(0, &mx6q_sabresd_pm_data);
 
@@ -1899,17 +1307,6 @@ static void __init mx6_sparkauto_board_init(void)
 	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
-
-	/*
-	 * Disable HannStar touch panel CABC function,
-	 * this function turns the panel's backlight automatically
-	 * according to the content shown on the panel which
-	 * may cause annoying unstable backlight issue.
-	 */
-	gpio_request(SABRESD_CABC_EN0, "cabc-en0");
-	gpio_direction_output(SABRESD_CABC_EN0, 0);
-	gpio_request(SABRESD_CABC_EN1, "cabc-en1");
-	gpio_direction_output(SABRESD_CABC_EN1, 0);
 
 	imx6q_add_mxc_pwm(0);
 	imx6q_add_mxc_pwm(1);
@@ -1941,25 +1338,23 @@ static void __init mx6_sparkauto_board_init(void)
 	gpio_request(SABRESD_ALS_INT, "als-int");
 	gpio_direction_input(SABRESD_ALS_INT);
 
+	gpio_request(BL_ON, "bl_on");
+	gpio_direction_output(BL_ON, 1);
+	gpio_request(LCD_POWER, "lcd_power");
+	gpio_direction_output(LCD_POWER, 1);
+	gpio_request(MX6_VDD_3V3_EN, "vdd_3v3_en");
+	gpio_direction_output(MX6_VDD_3V3_EN, 1);
+	gpio_request(MX6_VDD_5V_EN, "vdd_5v_en");
+	gpio_direction_output(MX6_VDD_5V_EN, 1);
+
+	
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
 
 	if (cpu_is_mx6dl()) {
 		imx6dl_add_imx_pxp();
 		imx6dl_add_imx_pxp_client();
-		if (epdc_enabled) {
-			mxc_register_device(&max17135_sensor_device, NULL);
-			imx6dl_add_imx_epdc(&epdc_data);
-		}
 	}
-	/*
-	ret = gpio_request_array(mx6q_sabresd_flexcan_gpios,
-			ARRAY_SIZE(mx6q_sabresd_flexcan_gpios));
-	if (ret)
-		pr_err("failed to request flexcan1-gpios: %d\n", ret);
-	else
-		imx6q_add_flexcan0(&mx6q_sabresd_flexcan0_pdata);
-	*/
 
 	/* Enable Aux_5V */
 	gpio_request(SABRESD_AUX_5V_EN, "aux_5v_en");
@@ -1971,26 +1366,6 @@ static void __init mx6_sparkauto_board_init(void)
 	platform_device_register(&sabresd_max8903_charger_1);
 	pm_power_off = mx6_snvs_poweroff;
 	imx6q_add_busfreq();
-
-	if (cpu_is_mx6dl()) {
-		mxc_iomux_v3_setup_multiple_pads(mx6dl_arm2_elan_pads,
-						ARRAY_SIZE(mx6dl_arm2_elan_pads));
-
-		/* ELAN Touchscreen */
-		gpio_request(SABRESD_ELAN_INT, "elan-interrupt");
-		gpio_direction_input(SABRESD_ELAN_INT);
-
-		gpio_request(SABRESD_ELAN_CE, "elan-cs");
-		gpio_direction_output(SABRESD_ELAN_CE, 1);
-		gpio_direction_output(SABRESD_ELAN_CE, 0);
-
-		gpio_request(SABRESD_ELAN_RST, "elan-rst");
-		gpio_direction_output(SABRESD_ELAN_RST, 1);
-		gpio_direction_output(SABRESD_ELAN_RST, 0);
-		mdelay(1);
-		gpio_direction_output(SABRESD_ELAN_RST, 1);
-		gpio_direction_output(SABRESD_ELAN_CE, 1);
-	}
 
 	imx6_add_armpmu();
 	imx6q_add_perfmon(0);
