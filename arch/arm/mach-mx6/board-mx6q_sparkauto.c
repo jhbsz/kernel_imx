@@ -57,7 +57,7 @@
 #include <linux/mfd/wm8994/gpio.h>
 #include <sound/wm8962.h>
 #include <linux/mfd/mxc-hdmi-core.h>
-
+#include <linux/wlan_plat.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
 #include <mach/mxc_dvfs.h>
@@ -164,6 +164,15 @@
 #define MX6_VDD_3V3_EN		IMX_GPIO_NR(3, 26)
 #define MX6_VDD_5V_EN		IMX_GPIO_NR(6, 15)
 
+#define WIFI_PWR		IMX_GPIO_NR(2, 29)
+#define WIFI_HOST_WAKE	IMX_GPIO_NR(7, 8)
+#define WIFI_RESET		IMX_GPIO_NR(6, 18)
+
+
+#define FEC_PHY_ADDR	IMX_GPIO_NR(1, 24)
+#define FEC_PHY_RESET 	IMX_GPIO_NR(5, 4)
+
+
 #ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
 #define MX6_ENET_IRQ		IMX_GPIO_NR(1, 6)
 #define IOMUX_OBSRV_MUX1_OFFSET	0x3c
@@ -172,10 +181,8 @@
 #endif
 
 static struct clk *sata_clk;
-static struct clk *clko;
 static int mag3110_position = 1;
 static int caam_enabled;
-static int uart5_enabled;
 
 extern char *gp_reg_id;
 extern char *soc_reg_id;
@@ -193,12 +200,12 @@ static const struct esdhc_platform_data mx6q_sabresd_sd2_data __initconst = {
 };
 
 static const struct esdhc_platform_data mx6q_sabresd_sd3_data __initconst = {
-	.cd_gpio = SABRESD_SD3_CD,
+	//.cd_gpio = SABRESD_SD3_CD,
 	//.wp_gpio = SABRESD_SD3_WP,
 	.keep_power_at_suspend = 1,
-	.support_8bit = 1,
+	.support_8bit = 0,
 	.delay_line = 0,
-	.cd_type = ESDHC_CD_CONTROLLER,
+	.cd_type = ESDHC_CD_PERMANENT,
 	.runtime_pm = 1,
 };
 
@@ -215,18 +222,47 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
-static const struct imxuart_platform_data mx6q_sd_uart5_data __initconst = {
+static const struct imxuart_platform_data mx6q_uart3_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS,
-	.dma_req_rx = MX6Q_DMA_REQ_UART5_RX,
-	.dma_req_tx = MX6Q_DMA_REQ_UART5_TX,
+	.dma_req_rx = MX6Q_DMA_REQ_UART3_RX,
+	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
 };
 
-static inline void mx6q_sabresd_init_uart(void)
-{
-	imx6q_add_imx_uart(2, NULL);
-	imx6q_add_imx_uart(0, NULL);
+static inline void mx6q_sparkauto_init_uart(void)
+{	
+	imx6q_add_imx_uart(0, NULL);	
+	imx6q_add_imx_uart(1, NULL);
+	imx6q_add_imx_uart(2, &mx6q_uart3_data);
+	imx6q_add_imx_uart(3, NULL);
+	imx6q_add_imx_uart(4, NULL);	
 }
 
+static int mx6q_fec_phy_init(struct phy_device *phydev)
+{
+	int val;
+
+	/* set phy addr to 0 */
+	gpio_request(FEC_PHY_ADDR, "phy-addr");
+	gpio_direction_output(FEC_PHY_ADDR, 0);
+
+	/* reset phy */
+	gpio_request(FEC_PHY_RESET, "phy-rst");
+	gpio_direction_output(FEC_PHY_RESET, 0);
+	mdelay(1);
+	gpio_direction_output(FEC_PHY_RESET, 1);
+
+	/* check phy power */
+	val = phy_read(phydev, 0x0);
+	if (val & BMCR_PDOWN) {
+		phy_write(phydev, 0x0, (val & ~BMCR_PDOWN));
+	}
+
+	return 0;
+}
+static struct fec_platform_data fec_data __initdata = {
+	.init = mx6q_fec_phy_init,
+	.phy = PHY_INTERFACE_MODE_RMII,
+};
 
 
 static int mx6q_sabresd_spi_cs[] = {
@@ -879,21 +915,6 @@ static int __init imx6q_init_audio(void)
 	return 0;
 }
 
-static void gps_power_on(bool on)
-{
-	/* Enable/disable aux_3v15 */
-	gpio_request(SABRESD_AUX_3V15_EN, "aux_3v15_en");
-	gpio_direction_output(SABRESD_AUX_3V15_EN, 1);
-	gpio_set_value(SABRESD_AUX_3V15_EN, on);
-	gpio_free(SABRESD_AUX_3V15_EN);
-	/*Enable/disable gps_en*/
-	gpio_request(SABRESD_GPS_EN, "gps_en");
-	gpio_direction_output(SABRESD_GPS_EN, 1);
-	gpio_set_value(SABRESD_GPS_EN, on);
-	gpio_free(SABRESD_GPS_EN);
-
-}
-
 #if defined(CONFIG_LEDS_TRIGGER) || defined(CONFIG_LEDS_GPIO)
 
 #define GPIO_LED(gpio_led, name_led, act_low, state_suspend, trigger)	\
@@ -940,8 +961,7 @@ static struct platform_device imx6q_gpio_led_device = {
  */
 static void __init imx6q_add_device_gpio_leds(void)
 {
-	if (!uart5_enabled)
-		platform_device_register(&imx6q_gpio_led_device);
+	platform_device_register(&imx6q_gpio_led_device);
 }
 #else
 static void __init imx6q_add_device_gpio_leds(void) {}
@@ -1146,45 +1166,59 @@ static int __init imx6x_add_ram_console(void)
 {
 	return platform_device_register(&android_ram_console);
 }
-#else
-#define imx6x_add_ram_console() do {} while (0)
 #endif
 
-static iomux_v3_cfg_t mx6q_uart5_pads[] = {
-	MX6Q_PAD_KEY_ROW1__UART5_RXD,
-	MX6Q_PAD_KEY_COL1__UART5_TXD,
-	MX6Q_PAD_KEY_COL4__UART5_RTS,
-	MX6Q_PAD_KEY_ROW4__UART5_CTS,
-	/* gpio for reset */
-	MX6Q_PAD_GPIO_2__GPIO_1_2,
+
+#ifdef CONFIG_BCMDHD
+static int bcm4330_wifi_power(int on){	
+	gpio_request(WIFI_PWR, "wifi_pwr");
+	gpio_direction_output(WIFI_PWR, on?0:1);
+	gpio_free(WIFI_PWR);
+	return 0;
+}
+static int bcm4330_wifi_reset(int on){	
+	gpio_request(WIFI_RESET, "wifi_pwr");
+	gpio_direction_output(WIFI_RESET, 0);
+	msleep(10);
+	gpio_direction_output(WIFI_RESET, 0);
+	gpio_free(WIFI_RESET);
+	return 0;
+}
+int bcm4330_carddetect(int val){
+	return 0;
+}
+
+static struct resource brcm_wifi_resources[] = {
+	[0] = {
+		.name		= "bcmdhd_wlan_irq",
+		.start		= gpio_to_irq(WIFI_HOST_WAKE),
+		.end		= gpio_to_irq(WIFI_HOST_WAKE),
+		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL
+	},
 };
 
-static iomux_v3_cfg_t mx6dl_uart5_pads[] = {
-	MX6DL_PAD_KEY_ROW1__UART5_RXD,
-	MX6DL_PAD_KEY_COL1__UART5_TXD,
-	MX6DL_PAD_KEY_COL4__UART5_RTS,
-	MX6DL_PAD_KEY_ROW4__UART5_CTS,
-	/* gpio for reset */
-	MX6DL_PAD_GPIO_2__GPIO_1_2,
+static struct wifi_platform_data brcm_wifi_control = {
+	.set_power      = bcm4330_wifi_power,
+	.set_reset      = bcm4330_wifi_reset,
+	.set_carddetect = bcm4330_carddetect,
 };
-static int __init uart5_setup(char * __unused)
-{
-	uart5_enabled = 1;
-	return 1;
-}
-__setup("bluetooth", uart5_setup);
 
-static void __init uart5_init(void)
+static struct platform_device brcm_wifi_device = {
+        .name           = "bcmdhd_wlan",
+        .id             = -1,
+        .num_resources  = ARRAY_SIZE(brcm_wifi_resources),
+        .resource       = brcm_wifi_resources,
+        .dev            = {
+                .platform_data = &brcm_wifi_control,
+        },
+};
+
+int __init broadcom_wifi_init(void)
 {
-	printk(KERN_INFO "uart5 is added\n");
-	if (cpu_is_mx6q())
-		mxc_iomux_v3_setup_multiple_pads(mx6q_uart5_pads,
-				ARRAY_SIZE(mx6q_uart5_pads));
-	else if (cpu_is_mx6dl())
-		mxc_iomux_v3_setup_multiple_pads(mx6dl_uart5_pads,
-				ARRAY_SIZE(mx6dl_uart5_pads));
-	imx6q_add_imx_uart(4, &mx6q_sd_uart5_data);
+	return platform_device_register(&brcm_wifi_device);
 }
+late_initcall(broadcom_wifi_init);
+#endif
 
 /*!
  * Board specific initialization.
@@ -1207,14 +1241,15 @@ static void __init mx6_sparkauto_board_init(void)
 
 	gp_reg_id = sabresd_dvfscore_data.reg_id;
 	soc_reg_id = sabresd_dvfscore_data.soc_id;
-	mx6q_sabresd_init_uart();
+	mx6q_sparkauto_init_uart();
+
+	
+	#ifdef CONFIG_ANDROID_RAM_CONSOLE
 	imx6x_add_ram_console();
+	#endif
 
 	/*add bt support*/
-	if (uart5_enabled) {
-		uart5_init();
-		mxc_register_device(&mxc_bt_rfkill, &mxc_bt_rfkill_data);
-	}
+	mxc_register_device(&mxc_bt_rfkill, &mxc_bt_rfkill_data);
 	/*
 	 * MX6DL/Solo only supports single IPU
 	 * The following codes are used to change ipu id
@@ -1282,6 +1317,12 @@ static void __init mx6_sparkauto_board_init(void)
 
 	imx6q_add_anatop_thermal_imx(1, &mx6q_sabresd_anatop_thermal_data);
 	
+	/*enable ethernet after debugging with lan8720a okay*/
+	#if 0
+	/* Set RGMII_TX_CTL output for RMII reference clock */
+	mxc_iomux_set_gpr_register(1, 21, 1, 1);
+	imx6_init_fec(fec_data);
+	#endif
 
 	imx6q_add_pm_imx(0, &mx6q_sabresd_pm_data);
 
@@ -1362,7 +1403,6 @@ static void __init mx6_sparkauto_board_init(void)
 	gpio_direction_output(SABRESD_AUX_5V_EN, 1);
 	gpio_set_value(SABRESD_AUX_5V_EN, 1);
 
-	gps_power_on(true);
 	/* Register charger chips */
 	platform_device_register(&sabresd_max8903_charger_1);
 	pm_power_off = mx6_snvs_poweroff;
