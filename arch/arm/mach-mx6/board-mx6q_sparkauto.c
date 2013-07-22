@@ -104,8 +104,6 @@
 
 #define SABRESD_SD3_CD		IMX_GPIO_NR(7, 8)
 #define SABRESD_SD3_WP		IMX_GPIO_NR(2, 1)
-#define SABRESD_SD2_CD		IMX_GPIO_NR(2, 2)
-#define SABRESD_SD2_WP		IMX_GPIO_NR(2, 3)
 #define SABRESD_CHARGE_DOK_B	IMX_GPIO_NR(2, 24)
 #define SABRESD_GPS_RESET	IMX_GPIO_NR(2, 28)
 #define SABRESD_SENSOR_EN	IMX_GPIO_NR(2, 31)
@@ -164,13 +162,22 @@
 #define MX6_VDD_3V3_EN		IMX_GPIO_NR(3, 26)
 #define MX6_VDD_5V_EN		IMX_GPIO_NR(6, 15)
 
-#define WIFI_PWR		IMX_GPIO_NR(2, 29)
-#define WIFI_HOST_WAKE	IMX_GPIO_NR(7, 8)
-#define WIFI_RESET		IMX_GPIO_NR(6, 18)
+#define WIFI_PWR			IMX_GPIO_NR(2, 29)
+#define WIFI_HOST_WAKE		IMX_GPIO_NR(7, 8)
+#define WIFI_RESET			IMX_GPIO_NR(6, 18)
 
 
-#define FEC_PHY_ADDR	IMX_GPIO_NR(1, 24)
-#define FEC_PHY_RESET 	IMX_GPIO_NR(5, 4)
+#define FEC_PHY_ADDR		IMX_GPIO_NR(1, 24)
+#define FEC_PHY_RESET 		IMX_GPIO_NR(5, 4)
+
+
+#define GPIO_KEY_VOLUP		IMX_GPIO_NR(3,8)
+#define GPIO_KEY_VOLDOWN	IMX_GPIO_NR(2,23)
+#define GPIO_KEY_RETURN		IMX_GPIO_NR(2,25)
+
+
+#define SPARKAUTO_SD1_CD		IMX_GPIO_NR(5, 2)
+#define SPARKAUTO_SD1_WP		IMX_GPIO_NR(6, 31)
 
 
 #ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
@@ -188,20 +195,15 @@ extern char *gp_reg_id;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
 
-
-static const struct esdhc_platform_data mx6q_sabresd_sd2_data __initconst = {
-	.cd_gpio = SABRESD_SD2_CD,
-	.wp_gpio = SABRESD_SD2_WP,
+/*WIFI SDIO*/
+static const struct esdhc_platform_data mx6q_sabresd_sd1_data __initconst = {	
+	.always_present = 1,//trying to set 
 	.keep_power_at_suspend = 1,
-	.support_8bit = 1,
-	.delay_line = 0,
-	.cd_type = ESDHC_CD_CONTROLLER,
 	.runtime_pm = 1,
 };
 
 static const struct esdhc_platform_data mx6q_sabresd_sd3_data __initconst = {
-	//.cd_gpio = SABRESD_SD3_CD,
-	//.wp_gpio = SABRESD_SD3_WP,
+	.always_present = 1,
 	.keep_power_at_suspend = 1,
 	.support_8bit = 0,
 	.delay_line = 0,
@@ -237,6 +239,14 @@ static inline void mx6q_sparkauto_init_uart(void)
 	imx6q_add_imx_uart(4, NULL);	
 }
 
+static void max6q_fec_reset(void){
+	/* reset phy */
+	gpio_request(FEC_PHY_RESET, "phy-rst");
+	gpio_direction_output(FEC_PHY_RESET, 0);
+	mdelay(1);
+	gpio_direction_output(FEC_PHY_RESET, 1);
+	gpio_free(FEC_PHY_RESET);
+}
 static int mx6q_fec_phy_init(struct phy_device *phydev)
 {
 	int val;
@@ -244,13 +254,10 @@ static int mx6q_fec_phy_init(struct phy_device *phydev)
 	/* set phy addr to 0 */
 	gpio_request(FEC_PHY_ADDR, "phy-addr");
 	gpio_direction_output(FEC_PHY_ADDR, 0);
+	gpio_free(FEC_PHY_ADDR);
 
 	/* reset phy */
-	gpio_request(FEC_PHY_RESET, "phy-rst");
-	gpio_direction_output(FEC_PHY_RESET, 0);
-	mdelay(1);
-	gpio_direction_output(FEC_PHY_RESET, 1);
-
+	max6q_fec_reset();
 	/* check phy power */
 	val = phy_read(phydev, 0x0);
 	if (val & BMCR_PDOWN) {
@@ -979,68 +986,32 @@ static void __init imx6q_add_device_gpio_leds(void) {}
 	.debounce_interval = debounce,				\
 }
 
-static struct gpio_keys_button sabresd_buttons[] = {
-	GPIO_BUTTON(SABRESD_VOLUME_UP, KEY_VOLUMEUP, 1, "volume-up", 0, 1),
-	GPIO_BUTTON(SABRESD_VOLUME_DN, KEY_POWER, 1, "volume-down", 1, 1),
+
+static struct gpio_keys_button sparkauto_buttons[] = {
+	GPIO_BUTTON(GPIO_KEY_VOLUP, KEY_VOLUMEUP, 1, "volume-up", 0, 1),
+	GPIO_BUTTON(GPIO_KEY_VOLDOWN, KEY_VOLUMEDOWN, 1, "volume-down", 0, 1),
+	GPIO_BUTTON(GPIO_KEY_RETURN, KEY_BACK, 1, "power-key", 0, 1),
 };
 
-static struct gpio_keys_platform_data sabresd_button_data = {
-	.buttons	= sabresd_buttons,
-	.nbuttons	= ARRAY_SIZE(sabresd_buttons),
+static struct gpio_keys_platform_data sparkauto_button_data = {
+	.buttons	= sparkauto_buttons,
+	.nbuttons	= ARRAY_SIZE(sparkauto_buttons),
 };
 
-static struct gpio_keys_button new_sabresd_buttons[] = {
-	GPIO_BUTTON(SABRESD_VOLUME_UP, KEY_VOLUMEUP, 1, "volume-up", 0, 1),
-	GPIO_BUTTON(SABRESD_VOLUME_DN, KEY_VOLUMEDOWN, 1, "volume-down", 0, 1),
-	GPIO_BUTTON(SABRESD_POWER_OFF, KEY_POWER, 1, "power-key", 1, 1),
-};
-
-static struct gpio_keys_platform_data new_sabresd_button_data = {
-	.buttons	= new_sabresd_buttons,
-	.nbuttons	= ARRAY_SIZE(new_sabresd_buttons),
-};
-
-static struct platform_device sabresd_button_device = {
+static struct platform_device sparkauto_button_device = {
 	.name		= "gpio-keys",
 	.id		= -1,
 	.num_resources  = 0,
+	.dev		= {
+		.platform_data = &sparkauto_button_data,
+	}
+	
 };
 
 static void __init imx6q_add_device_buttons(void)
 {
-	/* fix me */
-	/* For new sabresd(RevB4 ane above) change the
-	 * ONOFF key(SW1) design, the SW1 now connect
-	 * to GPIO_3_29, it can be use as a general power
-	 * key that Android reuired. But those old sabresd
-	 * such as RevB or older could not support this
-	 * change, so it needs a way to distinguish different
-	 * boards. Before board id/rev are defined cleary,
-	 * there is a simple way to achive this, that is using
-	 * SOC revison to identify differnt board revison.
-	 *
-	 * With the new sabresd change and SW mapping the
-	 * SW1 as power key, below function related to power
-	 * key are OK on new sabresd board(B4 or above).
-	 * 	1 Act as power button to power on the device when device is power off
-	 * 	2 Act as power button to power on the device(need keep press SW1 >5s)
-	 *	3 Act as power key to let device suspend/resume
-	 *	4 Act screenshort(hold power key and volume down key for 2s)
-	 */
-	if (mx6q_revision() >= IMX_CHIP_REVISION_1_2 ||
-			mx6dl_revision() >= IMX_CHIP_REVISION_1_1)
-		platform_device_add_data(&sabresd_button_device,
-				&new_sabresd_button_data,
-				sizeof(new_sabresd_button_data));
-	else
-		platform_device_add_data(&sabresd_button_device,
-				&sabresd_button_data,
-				sizeof(sabresd_button_data));
-
-	platform_device_register(&sabresd_button_device);
+	platform_device_register(&sparkauto_button_device);
 }
-#else
-static void __init imx6q_add_device_buttons(void) {}
 #endif
 
 static struct platform_pwm_backlight_data mx6_sabresd_pwm_backlight_data = {
@@ -1318,20 +1289,22 @@ static void __init mx6_sparkauto_board_init(void)
 	imx6q_add_anatop_thermal_imx(1, &mx6q_sabresd_anatop_thermal_data);
 	
 	/*enable ethernet after debugging with lan8720a okay*/
-	#if 0
 	/* Set RGMII_TX_CTL output for RMII reference clock */
-	mxc_iomux_set_gpr_register(1, 21, 1, 1);
+	mxc_iomux_set_gpr_register(1, 21, 1, 1);	
 	imx6_init_fec(fec_data);
-	#endif
+	max6q_fec_reset();
 
 	imx6q_add_pm_imx(0, &mx6q_sabresd_pm_data);
 
 	/* Move sd4 to first because sd4 connect to emmc.
 	   Mfgtools want emmc is mmcblk0 and other sd card is mmcblk1.
+	   mmc0 is emmc
+	   mmc1 is sd card
+	   mmc2 is wifi
 	*/
 	imx6q_add_sdhci_usdhc_imx(3, &mx6q_sabresd_sd4_data);
+	imx6q_add_sdhci_usdhc_imx(0, &mx6q_sabresd_sd1_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6q_sabresd_sd3_data);
-	imx6q_add_sdhci_usdhc_imx(1, &mx6q_sabresd_sd2_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
 	imx6q_sabresd_init_usb();
 	/* SATA is not supported by MX6DL/Solo */
@@ -1367,7 +1340,10 @@ static void __init mx6_sparkauto_board_init(void)
 		imx6q_add_ion(0, &imx_ion_data,
 			sizeof(imx_ion_data) + sizeof(struct ion_platform_heap));
 
+	
+	#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	imx6q_add_device_buttons();
+	#endif
 
 	/* enable sensor 3v3 and 1v8 */
 	gpio_request(SABRESD_SENSOR_EN, "sensor-en");
@@ -1389,6 +1365,12 @@ static void __init mx6_sparkauto_board_init(void)
 	gpio_request(MX6_VDD_5V_EN, "vdd_5v_en");
 	gpio_direction_output(MX6_VDD_5V_EN, 1);
 
+
+	
+	#ifdef CONFIG_BCMDHD
+	//turn on wifi power
+	bcm4330_wifi_power(1);
+	#endif
 	
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
