@@ -195,23 +195,111 @@ extern char *gp_reg_id;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
 
-/*WIFI SDIO*/
-static const struct esdhc_platform_data mx6q_sabresd_sd1_data __initconst = {	
-	.always_present = 1,//trying to set 
-	.keep_power_at_suspend = 1,
-	.runtime_pm = 1,
+#define MX6Q_USDHC_PAD_SETTING(id, speed)	\
+mx6q_sd##id##_##speed##mhz[] = {		\
+	MX6Q_PAD_SD##id##_CLK__USDHC##id##_CLK_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_CMD__USDHC##id##_CMD_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_DAT0__USDHC##id##_DAT0_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_DAT1__USDHC##id##_DAT1_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_DAT2__USDHC##id##_DAT2_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_DAT3__USDHC##id##_DAT3_##speed##MHZ,	\
+}
+
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(1, 50);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(1, 100);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(1, 200);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 50);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 100);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 200);
+
+enum sd_pad_mode {
+	SD_PAD_MODE_LOW_SPEED,
+	SD_PAD_MODE_MED_SPEED,
+	SD_PAD_MODE_HIGH_SPEED,
 };
 
-static const struct esdhc_platform_data mx6q_sabresd_sd3_data __initconst = {
+static int plt_sd_pad_change(unsigned int index, int clock)
+{
+	/* LOW speed is the default state of SD pads */
+	static enum sd_pad_mode pad_mode = SD_PAD_MODE_LOW_SPEED;
+
+	iomux_v3_cfg_t *sd_pads_200mhz = NULL;
+	iomux_v3_cfg_t *sd_pads_100mhz = NULL;
+	iomux_v3_cfg_t *sd_pads_50mhz = NULL;
+
+	u32 sd_pads_200mhz_cnt;
+	u32 sd_pads_100mhz_cnt;
+	u32 sd_pads_50mhz_cnt;
+
+	printk("%s slot%d to cll %dkHz\n",__func__,index,clock/1000);
+
+	switch (index) {
+	case 2:
+		sd_pads_200mhz = mx6q_sd3_200mhz;
+		sd_pads_100mhz = mx6q_sd3_100mhz;
+		sd_pads_50mhz = mx6q_sd3_50mhz;
+
+		sd_pads_200mhz_cnt = ARRAY_SIZE(mx6q_sd3_200mhz);
+		sd_pads_100mhz_cnt = ARRAY_SIZE(mx6q_sd3_100mhz);
+		sd_pads_50mhz_cnt = ARRAY_SIZE(mx6q_sd3_50mhz);
+		break;
+	case 0:
+		sd_pads_200mhz = mx6q_sd1_200mhz;
+		sd_pads_100mhz = mx6q_sd1_100mhz;
+		sd_pads_50mhz = mx6q_sd1_50mhz;
+
+		sd_pads_200mhz_cnt = ARRAY_SIZE(mx6q_sd1_200mhz);
+		sd_pads_100mhz_cnt = ARRAY_SIZE(mx6q_sd1_100mhz);
+		sd_pads_50mhz_cnt = ARRAY_SIZE(mx6q_sd1_50mhz);
+		break;
+	default:
+		printk(KERN_ERR "no such SD host controller index %d\n", index);
+		return -EINVAL;
+	}
+
+	if (clock > 100000000) {
+		if (pad_mode == SD_PAD_MODE_HIGH_SPEED)
+			return 0;
+		BUG_ON(!sd_pads_200mhz);
+		pad_mode = SD_PAD_MODE_HIGH_SPEED;
+		return mxc_iomux_v3_setup_multiple_pads(sd_pads_200mhz,
+							sd_pads_200mhz_cnt);
+	} else if (clock > 52000000) {
+		if (pad_mode == SD_PAD_MODE_MED_SPEED)
+			return 0;
+		BUG_ON(!sd_pads_100mhz);
+		pad_mode = SD_PAD_MODE_MED_SPEED;
+		return mxc_iomux_v3_setup_multiple_pads(sd_pads_100mhz,
+							sd_pads_100mhz_cnt);
+	} else {
+		if (pad_mode == SD_PAD_MODE_LOW_SPEED)
+			return 0;
+		BUG_ON(!sd_pads_50mhz);
+		pad_mode = SD_PAD_MODE_LOW_SPEED;
+		return mxc_iomux_v3_setup_multiple_pads(sd_pads_50mhz,
+							sd_pads_50mhz_cnt);
+	}
+}
+
+
+/*Micro SD*/
+static const struct esdhc_platform_data mx6q_sd1_data __initconst = {	
+	.cd_gpio = SPARKAUTO_SD1_CD,
+	.keep_power_at_suspend = 1,
+	.platform_pad_change = plt_sd_pad_change,
+	.cd_type 			= ESDHC_CD_CONTROLLER,
+};
+
+/*WIFI SDIO*/
+static const struct esdhc_platform_data mx6q_sd3_data __initconst = {
 	.always_present = 1,
 	.keep_power_at_suspend = 1,
-	.support_8bit = 0,
-	.delay_line = 0,
 	.cd_type = ESDHC_CD_PERMANENT,
-	.runtime_pm = 1,
+	//.platform_pad_change = plt_sd_pad_change,
 };
 
-static const struct esdhc_platform_data mx6q_sabresd_sd4_data __initconst = {
+/*eMMC*/
+static const struct esdhc_platform_data mx6q_sd4_data __initconst = {
 	.always_present = 1,
 	.keep_power_at_suspend = 1,
 	.support_8bit = 1,
@@ -1140,7 +1228,7 @@ static int __init imx6x_add_ram_console(void)
 #endif
 
 
-#ifdef CONFIG_BCMDHD
+#if  defined(CONFIG_BCMDHD)||defined(CONFIG_BCMDHD_MODULE)
 static int bcm4330_wifi_power(int on){	
 	gpio_request(WIFI_PWR, "wifi_pwr");
 	gpio_direction_output(WIFI_PWR, on?0:1);
@@ -1151,7 +1239,7 @@ static int bcm4330_wifi_reset(int on){
 	gpio_request(WIFI_RESET, "wifi_pwr");
 	gpio_direction_output(WIFI_RESET, 0);
 	msleep(10);
-	gpio_direction_output(WIFI_RESET, 0);
+	gpio_direction_output(WIFI_RESET, 1);
 	gpio_free(WIFI_RESET);
 	return 0;
 }
@@ -1302,9 +1390,9 @@ static void __init mx6_sparkauto_board_init(void)
 	   mmc1 is sd card
 	   mmc2 is wifi
 	*/
-	imx6q_add_sdhci_usdhc_imx(3, &mx6q_sabresd_sd4_data);
-	imx6q_add_sdhci_usdhc_imx(0, &mx6q_sabresd_sd1_data);
-	imx6q_add_sdhci_usdhc_imx(2, &mx6q_sabresd_sd3_data);
+	imx6q_add_sdhci_usdhc_imx(3, &mx6q_sd4_data);
+	//imx6q_add_sdhci_usdhc_imx(0, &mx6q_sd1_data);
+	imx6q_add_sdhci_usdhc_imx(2, &mx6q_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
 	imx6q_sabresd_init_usb();
 	/* SATA is not supported by MX6DL/Solo */
@@ -1367,7 +1455,7 @@ static void __init mx6_sparkauto_board_init(void)
 
 
 	
-	#ifdef CONFIG_BCMDHD
+	#if  defined(CONFIG_BCMDHD)||defined(CONFIG_BCMDHD_MODULE)
 	//turn on wifi power
 	bcm4330_wifi_power(1);
 	#endif
