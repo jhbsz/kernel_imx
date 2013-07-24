@@ -37,16 +37,13 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_CSI0_DAT6__AUDMUX_AUD3_TXFS,
 	MX6Q_PAD_CSI0_DAT7__AUDMUX_AUD3_RXD,
 
-	/* CAN1  */
-	//MX6Q_PAD_KEY_ROW2__HDMI_TX_CEC_LINE,
-	/* MX6Q_PAD_KEY_COL2__CAN1_TXCAN, */
 	//MX6Q_PAD_GPIO_1__GPIO_1_1,		/* user defiend green led */
 	MX6Q_PAD_GPIO_2__GPIO_1_2,		/* user defined red led */
 	MX6Q_PAD_GPIO_7__GPIO_1_7,		/* NERR */
 
 	/* CCM  */
-	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* SGTL500 sys_mclk */
-	MX6Q_PAD_GPIO_3__CCM_CLKO2,		/* J5 - Camera MCLK */
+	MX6Q_PAD_GPIO_0__CCM_CLKO,		
+	MX6Q_PAD_GPIO_3__CCM_CLKO2,		
 
 	/* ECSPI1 */
 	MX6Q_PAD_KEY_COL0__ECSPI1_SCLK,
@@ -85,9 +82,6 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_GPIO_5__I2C3_SCL,
 	MX6Q_PAD_GPIO_6__I2C3_SDA,
 
-	/* I2C2, Camera, MIPI */
-	MX6Q_PAD_KEY_COL2__GPIO_4_10,
-	MX6Q_PAD_KEY_ROW2__GPIO_4_11,
 	/* I2C3 */
 	//MX6Q_PAD_GPIO_3__I2C3_SCL,	/* GPIO1[3] */
 	//MX6Q_PAD_GPIO_6__I2C3_SDA,
@@ -153,7 +147,8 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	//MX6Q_PAD_ENET_RX_ER__ANATOP_USBOTG_ID,
 
 	/* USB power pin */
-	MX6Q_PAD_EIM_D22__GPIO_3_22,
+	MX6Q_PAD_GPIO_4__GPIO_1_4,/*HUB PWR EN*/
+	MX6Q_PAD_GPIO_18__GPIO_7_13,/*HUB RESET*/
 	//MX6Q_PAD_ENET_TXD1__GPIO_1_29,
 
 	/* USB OC pin */
@@ -250,7 +245,7 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	
 };
 
-static iomux_v3_cfg_t mx6q_sabresd_csi0_sensor_pads[] = {
+static iomux_v3_cfg_t mx6q_sparkauto_csi0_sensor_pads[] = {
 	/* IPU1 Camera */
 	MX6Q_PAD_CSI0_DAT12__IPU1_CSI0_D_12,
 	MX6Q_PAD_CSI0_DAT13__IPU1_CSI0_D_13,
@@ -267,24 +262,9 @@ static iomux_v3_cfg_t mx6q_sabresd_csi0_sensor_pads[] = {
 
 	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* camera clk */
 
-	MX6Q_PAD_SD1_DAT0__GPIO_1_16,		/* camera PWDN */
-	MX6Q_PAD_SD1_DAT1__GPIO_1_17,		/* camera RESET */
+	MX6Q_PAD_GPIO_17__GPIO_7_12,		/* camera PWDN */
+	MX6Q_PAD_KEY_ROW4__GPIO_4_15,		/* camera RESET */
 };
 
-static iomux_v3_cfg_t mx6q_sabresd_mipi_sensor_pads[] = {
-	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* camera clk */
 
-	MX6Q_PAD_SD1_DAT2__GPIO_1_19,		/* camera PWDN */
-	MX6Q_PAD_SD1_CLK__GPIO_1_20,		/* camera RESET */
-};
-
-static iomux_v3_cfg_t mx6q_sabresd_hdmi_ddc_pads[] = {
-	MX6Q_PAD_KEY_COL3__HDMI_TX_DDC_SCL, /* HDMI DDC SCL */
-	MX6Q_PAD_KEY_ROW3__HDMI_TX_DDC_SDA, /* HDMI DDC SDA */
-};
-
-static iomux_v3_cfg_t mx6q_sabresd_i2c2_pads[] = {
-	MX6Q_PAD_KEY_COL3__I2C2_SCL,	/* I2C2 SCL */
-	MX6Q_PAD_KEY_ROW3__I2C2_SDA,	/* I2C2 SDA */
-};
 #endif
