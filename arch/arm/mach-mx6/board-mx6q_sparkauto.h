@@ -31,19 +31,20 @@
 
 
 static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
-	/* AUDMUX */
+	/* Audio Codec */	
 	MX6Q_PAD_CSI0_DAT4__AUDMUX_AUD3_TXC,
 	MX6Q_PAD_CSI0_DAT5__AUDMUX_AUD3_TXD,
 	MX6Q_PAD_CSI0_DAT6__AUDMUX_AUD3_TXFS,
 	MX6Q_PAD_CSI0_DAT7__AUDMUX_AUD3_RXD,
+	MX6Q_PAD_EIM_D22__GPIO_3_22,/*Codec PWR EN*/
 
 	//MX6Q_PAD_GPIO_1__GPIO_1_1,		/* user defiend green led */
 	MX6Q_PAD_GPIO_2__GPIO_1_2,		/* user defined red led */
 	MX6Q_PAD_GPIO_7__GPIO_1_7,		/* NERR */
 
 	/* CCM  */
-	MX6Q_PAD_GPIO_0__CCM_CLKO,		
-	MX6Q_PAD_GPIO_3__CCM_CLKO2,		
+	MX6Q_PAD_GPIO_0__CCM_CLKO,		/*For CSI Camera*/
+	MX6Q_PAD_GPIO_3__CCM_CLKO2,		/*For Audio Codec*/
 
 	/* ECSPI1 */
 	MX6Q_PAD_KEY_COL0__ECSPI1_SCLK,
@@ -57,22 +58,13 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_EIM_CS0__GPIO_2_23,/* Volume Down */
 	MX6Q_PAD_EIM_OE__GPIO_2_25,	/* Return Key */
 
-	/* CAP_TCH_INT1 */
-	MX6Q_PAD_NANDF_CLE__GPIO_6_7,
 
-	/* CAP_TCH_INT0 */
-	MX6Q_PAD_NANDF_ALE__GPIO_6_8,
-
-	/* eCompass int */
-	MX6Q_PAD_EIM_D16__GPIO_3_16,
+	/*Touch Panel*/
+	MX6Q_PAD_GPIO_19__GPIO_4_5,		/*tsc2007 irq*/
 
 	/* GPIO5 */
 	MX6Q_PAD_EIM_WAIT__GPIO_5_0,	/* J12 - Boot Mode Select */
-	MX6Q_PAD_EIM_A24__GPIO_5_4,	/* J12 - Boot Mode Select */
-
-	/* GPIO6 */
-	MX6Q_PAD_EIM_A23__GPIO_6_6,	/* J12 - Boot Mode Select */
-	MX6Q_PAD_NANDF_RB0__GPIO_6_10, /* AUX_5V Enable */
+	MX6Q_PAD_EIM_A24__GPIO_5_4,		/* J12 - Boot Mode Select */
 
 	/* I2C */
 	MX6Q_PAD_CSI0_DAT9__I2C1_SCL,
@@ -194,8 +186,6 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	//MX6Q_PAD_ENET_RXD0__GPIO_1_27, /* UOK_B */
 	MX6Q_PAD_EIM_CS1__GPIO_2_24,   /* DOK_B */
 
-	/* Audio Codec */
-	MX6Q_PAD_GPIO_9__GPIO_1_9,			/* MICROPHONE_DET */
 
 	/*GPS AUX_3V15_EN*/
 	MX6Q_PAD_NANDF_WP_B__GPIO_6_9,
@@ -240,13 +230,12 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_SD3_DAT7__GPIO_6_17,/*BT_SHUTDOWN*/
 	MX6Q_PAD_SD2_CLK__GPIO_1_10,/*BT_RESET*/
 	MX6Q_PAD_SD2_CMD__GPIO_1_11,/*BT_HOST_WAKE*/
-	
+
 	
 	
 };
 
 static iomux_v3_cfg_t mx6q_sparkauto_csi0_sensor_pads[] = {
-	/* IPU1 Camera */
 	MX6Q_PAD_CSI0_DAT12__IPU1_CSI0_D_12,
 	MX6Q_PAD_CSI0_DAT13__IPU1_CSI0_D_13,
 	MX6Q_PAD_CSI0_DAT14__IPU1_CSI0_D_14,
@@ -265,6 +254,31 @@ static iomux_v3_cfg_t mx6q_sparkauto_csi0_sensor_pads[] = {
 	MX6Q_PAD_GPIO_17__GPIO_7_12,		/* camera PWDN */
 	MX6Q_PAD_KEY_ROW4__GPIO_4_15,		/* camera RESET */
 };
+
+/*ADV7181C based video decoder*/
+static iomux_v3_cfg_t mx6q_sparkauto_csi1_sensor_pads[] = {
+	MX6Q_PAD_EIM_A17__IPU2_CSI1_D_12,
+	MX6Q_PAD_EIM_A18__IPU2_CSI1_D_13,
+	MX6Q_PAD_EIM_A19__IPU2_CSI1_D_14,
+	MX6Q_PAD_EIM_A20__IPU2_CSI1_D_15,
+	MX6Q_PAD_EIM_A21__IPU2_CSI1_D_16,
+	MX6Q_PAD_EIM_A22__IPU2_CSI1_D_17,
+	MX6Q_PAD_EIM_A23__IPU2_CSI1_D_18,
+	MX6Q_PAD_EIM_EB2__IPU2_CSI1_D_19,
+	MX6Q_PAD_EIM_D23__IPU2_CSI1_DATA_EN,
+	MX6Q_PAD_EIM_EB3__IPU2_CSI1_HSYNC,
+	MX6Q_PAD_EIM_A16__IPU2_CSI1_PIXCLK,
+	MX6Q_PAD_EIM_D29__IPU2_CSI1_VSYNC,
+
+	/*Video Decoder ADV7181*/
+	MX6Q_PAD_EIM_EB0__GPIO_2_28,		/*PWR_EN*/
+	MX6Q_PAD_EIM_WAIT__GPIO_5_0,		/*RESET*/
+	MX6Q_PAD_EIM_D28__GPIO_3_28,		/*Interrupt*/
+	
+};
+
+
+
 
 
 #endif

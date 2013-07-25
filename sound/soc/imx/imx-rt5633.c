@@ -39,7 +39,6 @@
 #include <mach/audmux.h>
 
 #include "imx-ssi.h"
-#include "../codecs/rt5633.h"
 
 static struct imx_rt5633_priv {
 	int sysclk;
@@ -48,25 +47,6 @@ static struct imx_rt5633_priv {
 } card_priv;
 
 static struct snd_soc_card snd_soc_card_imx;
-static struct snd_soc_jack hs_jack;
-
-/* Headphones jack detection DAPM pins */
-static struct snd_soc_jack_pin hs_jack_pins[] = {
-	{
-		.pin = "Headphone Jack",
-		.mask = SND_JACK_HEADPHONE,
-	},
-};
-
-/* Headphones jack detection gpios */
-static struct snd_soc_jack_gpio hs_jack_gpios[] = {
-	[0] = {
-		/* gpio is set on per-platform basis */
-		.name		= "hp-gpio",
-		.report		= SND_JACK_HEADPHONE,
-		.debounce_time	= 200,
-	},
-};
 
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
 {
@@ -178,27 +158,7 @@ static int imx_rt5633_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_enable_pin(&codec->dapm, "Headphone Jack");
 
 	snd_soc_dapm_sync(&codec->dapm);
-#if 0
-	if (hs_jack_gpios[0].gpio != -1) {
-		/* Jack detection API stuff */
-		ret = snd_soc_jack_new(codec, "Headphone Jack",
-					   SND_JACK_HEADPHONE, &hs_jack);
-		if (ret)
-			return ret;
 
-		ret = snd_soc_jack_add_pins(&hs_jack, ARRAY_SIZE(hs_jack_pins),
-					hs_jack_pins);
-		if (ret) {
-			printk(KERN_ERR "failed to call  snd_soc_jack_add_pins\n");
-			return ret;
-		}
-
-		ret = snd_soc_jack_add_gpios(&hs_jack,
-				ARRAY_SIZE(hs_jack_gpios), hs_jack_gpios);
-		if (ret)
-			printk(KERN_WARNING "failed to call snd_soc_jack_add_gpios\n");
-	}
-#endif
 	return 0;
 }
 
@@ -213,7 +173,7 @@ static struct snd_soc_dai_link imx_dai[] = {
 		.name = "HiFi",
 		.stream_name = "HiFi",
 		.codec_dai_name	= "rt5633",
-		.codec_name	= "rt5633.0-001c",
+		.codec_name	= "rt5633.1-001c",
 		.cpu_dai_name	= "imx-ssi.1",
 		.platform_name	= "imx-pcm-audio.1",
 		.init		= imx_rt5633_init,

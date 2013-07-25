@@ -85,7 +85,10 @@
 #include "board-mx6dl_sparkauto.h"
 #include <mach/imx_rfkill.h>
 
-#define SABRESD_USR_DEF_GRN_LED	IMX_GPIO_NR(1, 1)
+#include <linux/i2c/at24.h>
+#include <linux/i2c/tsc2007.h>
+
+
 #define SABRESD_BT_RESET	IMX_GPIO_NR(1, 2)
 #define SABRESD_USR_DEF_RED_LED	IMX_GPIO_NR(1, 2)
 #define SABRESD_VOLUME_UP	IMX_GPIO_NR(1, 4)
@@ -105,22 +108,18 @@
 
 #define SABRESD_CAN1_STBY	IMX_GPIO_NR(4, 5)
 #define SABRESD_ECSPI1_CS0  IMX_GPIO_NR(4, 9)
-#define SABRESD_CODEC_PWR_EN	IMX_GPIO_NR(4, 10)
 #define SABRESD_PCIE_DIS_B	IMX_GPIO_NR(4, 14)
 
 #define SABRESD_DI0_D0_CS	IMX_GPIO_NR(5, 0)
 #define SABRESD_CHARGE_FLT_1_B	IMX_GPIO_NR(5, 2)
 #define SABRESD_PCIE_WAKE_B	IMX_GPIO_NR(5, 20)
 
-#define SABRESD_CAP_TCH_INT1	IMX_GPIO_NR(6, 7)
-#define SABRESD_CAP_TCH_INT0	IMX_GPIO_NR(6, 8)
 #define SABRESD_DISP_RST_B	IMX_GPIO_NR(6, 11)
 #define SABRESD_DISP_PWR_EN	IMX_GPIO_NR(6, 14)
 #define SABRESD_CABC_EN0	IMX_GPIO_NR(6, 15)
 #define SABRESD_CABC_EN1	IMX_GPIO_NR(6, 16)
 #define SABRESD_AUX_3V15_EN	IMX_GPIO_NR(6, 9)
 #define SABRESD_DISP0_WR_REVB	IMX_GPIO_NR(6, 9)
-#define SABRESD_AUX_5V_EN	IMX_GPIO_NR(6, 10)
 #define SABRESD_DI1_D0_CS	IMX_GPIO_NR(6, 31)
 
 #define SABRESD_HEADPHONE_DET	IMX_GPIO_NR(7, 8)
@@ -129,12 +128,12 @@
 #define SABRESD_PFUZE_INT	IMX_GPIO_NR(7, 13)
 
 
-#define SABRESD_EPDC_PMIC_WAKE	IMX_GPIO_NR(3, 20)
-#define SABRESD_EPDC_PMIC_INT	IMX_GPIO_NR(2, 25)
-#define SABRESD_EPDC_VCOM	IMX_GPIO_NR(3, 17)
 #define SABRESD_CHARGE_NOW	IMX_GPIO_NR(1, 2)
 #define SABRESD_CHARGE_DONE	IMX_GPIO_NR(1, 1)
 
+/*
+\*Below IO is configured for programing facility ,properly iomux should be done in header file xxxx_sparkauto.h
+*/
 #define BL_ON				IMX_GPIO_NR(4, 10)
 #define LCD_POWER			IMX_GPIO_NR(4, 11)
 #define MX6_VDD_3V3_EN		IMX_GPIO_NR(3, 26)
@@ -163,17 +162,15 @@
 #define SPARKAUTO_CSI0_PWN	IMX_GPIO_NR(7, 12)
 #define SPARKAUTO_CSI0_RST	IMX_GPIO_NR(4, 15)
 
+#define SPARKAUTO_CODEC_PWR_EN	IMX_GPIO_NR(3, 22)
 
-#ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
-#define MX6_ENET_IRQ		IMX_GPIO_NR(1, 6)
-#define IOMUX_OBSRV_MUX1_OFFSET	0x3c
-#define OBSRV_MUX1_MASK			0x3f
-#define OBSRV_MUX1_ENET_IRQ		0x9
-#endif
 
-static struct clk *sata_clk;
-static int mag3110_position = 1;
-static int caam_enabled;
+#define SPARKAUTO_TVIN_RST		IMX_GPIO_NR(5, 0)
+#define SPARKAUTO_TVIN_PWR_EN	IMX_GPIO_NR(2, 28)
+#define SPARKAUTO_TVIN_INT		IMX_GPIO_NR(3, 28)
+
+#define TSC2007_IRQGPIO			IMX_GPIO_NR(4, 5)
+
 
 extern char *gp_reg_id;
 extern char *soc_reg_id;
@@ -307,20 +304,59 @@ static void spi_device_init(void)
 				ARRAY_SIZE(imx6_sabresd_spi_nor_device));
 }
 
-static struct imx_ssi_platform_data mx6_sabresd_ssi_pdata = {
+static struct imx_ssi_platform_data mx6_sparkauto_ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
-static struct platform_device mx6_sabresd_audio_rt5633_device = {
+static struct platform_device mx6_sparkauto_audio_rt5633_device = {
 	.name = "imx-rt5633",
 };
+
+static struct clk *clko2;
+static struct mxc_audio_platform_data rt5633_data;
+
+static int rt5633_clk_enable(int enable)
+{
+	if (enable)
+		clk_enable(clko2);
+	else
+		clk_disable(clko2);
+
+	return 0;
+}
+
+static int mxc_rt5633_init(void)
+{
+	int rate;
+	struct clk *parent;
+
+	clko2 = clk_get(NULL, "clko2_clk");
+	if (IS_ERR(clko2))
+		pr_err("can't get CLKO2 clock.\n");
+
+	parent = clk_get(NULL, "osc_clk");
+	if (!IS_ERR(parent)) {
+		clk_set_parent(clko2, parent);
+		clk_put(parent);
+	}
+	rate = clk_round_rate(clko2, 12000000);
+	clk_set_rate(clko2, rate);
+
+	rt5633_data.sysclk = rate;
+
+	//enable clko2 since somtimes codec require it for initialization
+	clk_enable(clko2);
+
+	return 0;
+}
 
 static struct mxc_audio_platform_data rt5633_data = {
 	.ssi_num = 1,
 	.src_port = 2,
 	.ext_port = 3,
-//	.hp_gpio = SABRESD_HEADPHONE_DET,
-//	.hp_active_low = 1,
+	.init = mxc_rt5633_init,
+	.clock_enable = rt5633_clk_enable,
+
 };
 
 
@@ -392,19 +428,72 @@ static struct fsl_mxc_camera_platform_data camera_data = {
 	.pwdn = mx6q_csi0_cam_powerdown,
 };
 
+static void mx6q_csi1_io_init(void)
+{
+	iomux_v3_cfg_t *tvin_pads = NULL;
+	u32 tvin_pads_cnt;
 
+	if (cpu_is_mx6q()) {
+		tvin_pads = mx6q_sparkauto_csi1_sensor_pads;
+		tvin_pads_cnt = ARRAY_SIZE(mx6q_sparkauto_csi1_sensor_pads);
+	}else {
+		BUG();
+	}
+
+	BUG_ON(!tvin_pads);
+	mxc_iomux_v3_setup_multiple_pads(tvin_pads, tvin_pads_cnt);
+	/* Tvin reset */
+	gpio_request(SPARKAUTO_TVIN_RST, "tvin-reset");
+	gpio_direction_output(SPARKAUTO_TVIN_RST, 1);
+
+	/* Tvin power down */
+	gpio_request(SPARKAUTO_TVIN_PWR_EN, "cam-pwdn");
+	gpio_direction_output(SPARKAUTO_TVIN_PWR_EN, 0);
+	msleep(1);
+	gpio_set_value(SPARKAUTO_TVIN_PWR_EN, 1);
+
+	if (cpu_is_mx6q())
+		mxc_iomux_set_gpr_register(1, 20, 1, 1);
+	else if (cpu_is_mx6dl())
+		mxc_iomux_set_gpr_register(13, 0, 3, 4);
+
+}
+
+
+static struct fsl_mxc_tvin_platform_data tvin_data = {
+	.io_init = mx6q_csi1_io_init,
+	.cvbs = true,
+};
+
+
+static struct at24_platform_data eeprom_data = {
+	.byte_len	= SZ_32K / 8,	
+	.page_size	= 32,	
+	.flags		= AT24_FLAG_ADDR16|AT24_FLAG_IRUGO,
+};
+
+
+static struct tsc2007_platform_data tsc2007_info = {
+	.model			= 2007,
+	.x_plate_ohms	= 180,
+};
 
 static struct imxi2c_platform_data mx6q_sparkauto_i2c_data = {
 	.bitrate = 100000,
 };
 
-
+/*
+ * There are two version of IO board v1 and v2.
+ * For v1 ,eeprom is connected on i2c bus 0 (on my hand)
+ * For v2 ,eeprom is connected on i2c bus 1
+*/
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
-		I2C_BOARD_INFO("wm89**", 0x1a),
-	},
-	{
-		I2C_BOARD_INFO("rt5633", 0x1c),
+		I2C_BOARD_INFO("adv7180", 0x21),
+		.platform_data = (void *)&tvin_data,
+	},{
+		I2C_BOARD_INFO("at24", 0x54),
+		.platform_data	= &eeprom_data,	
 	},
 };
 
@@ -412,19 +501,27 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ov5640", 0x3c),
 		.platform_data = (void *)&camera_data,
+	},{
+		I2C_BOARD_INFO("rt5633", 0x1c),
+	},{
+		I2C_BOARD_INFO("mxc_ldb_i2c", 0x50),
 	},	
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
+	/*
 	{
-		I2C_BOARD_INFO("mxc_ldb_i2c", 0x50),
-		.platform_data = (void *)0,
-	},
+		I2C_BOARD_INFO("tsc2007", 0x48),
+		.platform_data	= &tsc2007_info,
+		.irq		= gpio_to_irq(TSC2007_IRQGPIO),
+	}
+	*/
 };
 
 
 static void imx6q_sparkauto_usbotg_vbus(bool on)
 {
+	if(on){}
 }
 
 static void imx6q_sparkauto_host1_vbus(bool on)
@@ -469,104 +566,8 @@ static void __init imx6q_sparkauto_init_usb(void)
 
 }
 
-/* HW Initialization, if return 0, initialization is successful. */
-static int mx6q_sabresd_sata_init(struct device *dev, void __iomem *addr)
-{
-	u32 tmpdata;
-	int ret = 0;
-	struct clk *clk;
 
-	sata_clk = clk_get(dev, "imx_sata_clk");
-	if (IS_ERR(sata_clk)) {
-		dev_err(dev, "no sata clock.\n");
-		return PTR_ERR(sata_clk);
-	}
-	ret = clk_enable(sata_clk);
-	if (ret) {
-		dev_err(dev, "can't enable sata clock.\n");
-		goto put_sata_clk;
-	}
 
-	/* Set PHY Paremeters, two steps to configure the GPR13,
-	 * one write for rest of parameters, mask of first write is 0x07FFFFFD,
-	 * and the other one write for setting the mpll_clk_off_b
-	 *.rx_eq_val_0(iomuxc_gpr13[26:24]),
-	 *.los_lvl(iomuxc_gpr13[23:19]),
-	 *.rx_dpll_mode_0(iomuxc_gpr13[18:16]),
-	 *.sata_speed(iomuxc_gpr13[15]),
-	 *.mpll_ss_en(iomuxc_gpr13[14]),
-	 *.tx_atten_0(iomuxc_gpr13[13:11]),
-	 *.tx_boost_0(iomuxc_gpr13[10:7]),
-	 *.tx_lvl(iomuxc_gpr13[6:2]),
-	 *.mpll_ck_off(iomuxc_gpr13[1]),
-	 *.tx_edgerate_0(iomuxc_gpr13[0]),
-	 */
-	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x07FFFFFD) | 0x0593A044), IOMUXC_GPR13);
-
-	/* enable SATA_PHY PLL */
-	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x2) | 0x2), IOMUXC_GPR13);
-
-	/* Get the AHB clock rate, and configure the TIMER1MS reg later */
-	clk = clk_get(NULL, "ahb");
-	if (IS_ERR(clk)) {
-		dev_err(dev, "no ahb clock.\n");
-		ret = PTR_ERR(clk);
-		goto release_sata_clk;
-	}
-	tmpdata = clk_get_rate(clk) / 1000;
-	clk_put(clk);
-
-#ifdef CONFIG_SATA_AHCI_PLATFORM
-	ret = sata_init(addr, tmpdata);
-	if (ret == 0)
-		return ret;
-#else
-	usleep_range(1000, 2000);
-	/* AHCI PHY enter into PDDQ mode if the AHCI module is not enabled */
-	tmpdata = readl(addr + PORT_PHY_CTL);
-	writel(tmpdata | PORT_PHY_CTL_PDDQ_LOC, addr + PORT_PHY_CTL);
-	pr_info("No AHCI save PWR: PDDQ %s\n", ((readl(addr + PORT_PHY_CTL)
-					>> 20) & 1) ? "enabled" : "disabled");
-#endif
-
-release_sata_clk:
-	/* disable SATA_PHY PLL */
-	writel((readl(IOMUXC_GPR13) & ~0x2), IOMUXC_GPR13);
-	clk_disable(sata_clk);
-put_sata_clk:
-	clk_put(sata_clk);
-
-	return ret;
-}
-
-#ifdef CONFIG_SATA_AHCI_PLATFORM
-static void mx6q_sabresd_sata_exit(struct device *dev)
-{
-	clk_disable(sata_clk);
-	clk_put(sata_clk);
-}
-
-static struct ahci_platform_data mx6q_sabresd_sata_data = {
-	.init = mx6q_sabresd_sata_init,
-	.exit = mx6q_sabresd_sata_exit,
-};
-#endif
-
-static void mx6q_sabresd_flexcan0_switch(int enable)
-{
-	if (enable) {
-		gpio_set_value(SABRESD_CAN1_STBY, 1);
-	} else {
-		gpio_set_value(SABRESD_CAN1_STBY, 0);
-	}
-}
-
-static const struct flexcan_platform_data
-	mx6q_sabresd_flexcan0_pdata __initconst = {
-	.transceiver_switch = mx6q_sabresd_flexcan0_switch,
-};
 
 static struct viv_gpu_platform_data imx6q_gpu_pdata __initdata = {
 	.reserved_mem_size = SZ_128M + SZ_64M - SZ_16M,
@@ -704,15 +705,11 @@ static struct imx_bt_rfkill_platform_data mxc_bt_rfkill_data = {
 static void sabresd_suspend_enter(void)
 {
 	/* suspend preparation */
-	/* Disable AUX 5V */
-	gpio_set_value(SABRESD_AUX_5V_EN, 0);
 }
 
 static void sabresd_suspend_exit(void)
 {
 	/* resume restore */
-	/* Enable AUX 5V */
-	gpio_set_value(SABRESD_AUX_5V_EN, 1);
 }
 static const struct pm_platform_data mx6q_sabresd_pm_data __initconst = {
 	.name = "imx_pm",
@@ -720,39 +717,39 @@ static const struct pm_platform_data mx6q_sabresd_pm_data __initconst = {
 	.suspend_exit = sabresd_suspend_exit,
 };
 
-static struct regulator_consumer_supply sabresd_vmmc_consumers[] = {
+static struct regulator_consumer_supply sparkauto_vmmc_consumers[] = {
+	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.0"),	
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.1"),
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.2"),
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.3"),
 };
 
-static struct regulator_init_data sabresd_vmmc_init = {
-	.num_consumer_supplies = ARRAY_SIZE(sabresd_vmmc_consumers),
-	.consumer_supplies = sabresd_vmmc_consumers,
+static struct regulator_init_data sparkauto_vmmc_init = {
+	.num_consumer_supplies = ARRAY_SIZE(sparkauto_vmmc_consumers),
+	.consumer_supplies = sparkauto_vmmc_consumers,
 };
 
-static struct fixed_voltage_config sabresd_vmmc_reg_config = {
+static struct fixed_voltage_config sparkauto_vmmc_reg_config = {
 	.supply_name		= "vmmc",
 	.microvolts		= 3300000,
 	.gpio			= -1,
-	.init_data		= &sabresd_vmmc_init,
+	.init_data		= &sparkauto_vmmc_init,
 };
 
-static struct platform_device sabresd_vmmc_reg_devices = {
+static struct platform_device sparkauto_vmmc_reg_devices = {
 	.name	= "reg-fixed-voltage",
 	.id	= 3,
 	.dev	= {
-		.platform_data = &sabresd_vmmc_reg_config,
+		.platform_data = &sparkauto_vmmc_reg_config,
 	},
 };
 
 static int __init imx6q_init_audio(void)
 {
-	mxc_register_device(&mx6_sabresd_audio_rt5633_device,
+	mxc_register_device(&mx6_sparkauto_audio_rt5633_device,
 				    &rt5633_data);
-	imx6q_add_imx_ssi(1, &mx6_sabresd_ssi_pdata);
+	imx6q_add_imx_ssi(1, &mx6_sparkauto_ssi_pdata);
 
-	//mxc_rt5633_init();
 	return 0;
 }
 
@@ -936,12 +933,6 @@ static struct mipi_csi2_platform_data mipi_csi2_pdata = {
 	.pixel_clk = "emi_clk",
 };
 
-static int __init caam_setup(char *__unused)
-{
-	caam_enabled = 1;
-	return 1;
-}
-early_param("caam", caam_setup);
 
 #define SNVS_LPCR 0x38
 static void mx6_snvs_poweroff(void)
@@ -1032,9 +1023,6 @@ static void __init mx6_sparkauto_board_init(void)
 {
 	int i;
 	int ret;
-	struct clk *clko2;
-	int rate;
-	struct clk *parent;
 
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_sparkauto_pads,
@@ -1089,8 +1077,7 @@ static void __init mx6_sparkauto_board_init(void)
 	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
 	imx6q_add_imx_snvs_rtc();
 
-	if (1 == caam_enabled)
-		imx6q_add_imx_caam();
+	imx6q_add_imx_caam();
 
 	imx6q_add_device_gpio_leds();
 
@@ -1137,18 +1124,10 @@ static void __init mx6_sparkauto_board_init(void)
 	imx6q_add_sdhci_usdhc_imx(2, &mx6q_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
 	imx6q_sparkauto_init_usb();
-	/* SATA is not supported by MX6DL/Solo */
-	if (cpu_is_mx6q()) {
-#ifdef CONFIG_SATA_AHCI_PLATFORM
-		imx6q_add_ahci(0, &mx6q_sabresd_sata_data);
-#else
-		mx6q_sabresd_sata_init(NULL,
-			(void __iomem *)ioremap(MX6Q_SATA_BASE_ADDR, SZ_4K));
-#endif
-	}
+
 	imx6q_add_vpu();
 	imx6q_init_audio();
-	platform_device_register(&sabresd_vmmc_reg_devices);
+	platform_device_register(&sparkauto_vmmc_reg_devices);
 	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
@@ -1196,11 +1175,6 @@ static void __init mx6_sparkauto_board_init(void)
 		imx6dl_add_imx_pxp_client();
 	}
 
-	/* Enable Aux_5V */
-	gpio_request(SABRESD_AUX_5V_EN, "aux_5v_en");
-	gpio_direction_output(SABRESD_AUX_5V_EN, 1);
-	gpio_set_value(SABRESD_AUX_5V_EN, 1);
-
 	/* Register charger chips */
 	pm_power_off = mx6_snvs_poweroff;
 	imx6q_add_busfreq();
@@ -1210,22 +1184,6 @@ static void __init mx6_sparkauto_board_init(void)
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
 
-		
-
-	clko2 = clk_get(NULL, "clko2_clk");
-	if (IS_ERR(clko2))
-		pr_err("can't get CLKO2 clock.\n");
-
-	parent = clk_get(NULL, "osc_clk");
-	if (!IS_ERR(parent)) {
-		clk_set_parent(clko2, parent);
-		clk_put(parent);
-	}
-	rate = clk_round_rate(clko2, 12000000);
-	clk_set_rate(clko2, rate);
-
-	rt5633_data.sysclk = rate;
-	clk_enable(clko2);
 }
 
 extern void __iomem *twd_base;
