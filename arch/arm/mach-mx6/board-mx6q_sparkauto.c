@@ -90,46 +90,11 @@
 
 
 #define SABRESD_BT_RESET	IMX_GPIO_NR(1, 2)
-#define SABRESD_USR_DEF_RED_LED	IMX_GPIO_NR(1, 2)
-#define SABRESD_VOLUME_UP	IMX_GPIO_NR(1, 4)
-#define SABRESD_VOLUME_DN	IMX_GPIO_NR(1, 5)
-#define SABRESD_MICROPHONE_DET	IMX_GPIO_NR(1, 9)
-#define SABRESD_ACCL_INT	IMX_GPIO_NR(1, 18)
-#define SABRESD_MIPICSI_PWN	IMX_GPIO_NR(1, 19)
-#define SABRESD_MIPICSI_RST	IMX_GPIO_NR(1, 20)
-#define SABRESD_RGMII_RST	IMX_GPIO_NR(1, 25)
-#define SABRESD_RGMII_INT	IMX_GPIO_NR(1, 26)
-#define SABRESD_CHARGE_UOK_B	IMX_GPIO_NR(1, 27)
-#define SABRESD_USBH1_PWR_EN	IMX_GPIO_NR(1, 29)
-#define SABRESD_DISP0_PWR_EN	IMX_GPIO_NR(1, 30)
 
-#define SABRESD_SD3_CD		IMX_GPIO_NR(7, 8)
-#define SABRESD_SD3_WP		IMX_GPIO_NR(2, 1)
-
-#define SABRESD_CAN1_STBY	IMX_GPIO_NR(4, 5)
-#define SABRESD_ECSPI1_CS0  IMX_GPIO_NR(4, 9)
-#define SABRESD_PCIE_DIS_B	IMX_GPIO_NR(4, 14)
-
-#define SABRESD_DI0_D0_CS	IMX_GPIO_NR(5, 0)
-#define SABRESD_CHARGE_FLT_1_B	IMX_GPIO_NR(5, 2)
-#define SABRESD_PCIE_WAKE_B	IMX_GPIO_NR(5, 20)
 
 #define SABRESD_DISP_RST_B	IMX_GPIO_NR(6, 11)
 #define SABRESD_DISP_PWR_EN	IMX_GPIO_NR(6, 14)
-#define SABRESD_CABC_EN0	IMX_GPIO_NR(6, 15)
-#define SABRESD_CABC_EN1	IMX_GPIO_NR(6, 16)
-#define SABRESD_AUX_3V15_EN	IMX_GPIO_NR(6, 9)
-#define SABRESD_DISP0_WR_REVB	IMX_GPIO_NR(6, 9)
-#define SABRESD_DI1_D0_CS	IMX_GPIO_NR(6, 31)
 
-#define SABRESD_HEADPHONE_DET	IMX_GPIO_NR(7, 8)
-#define SABRESD_PCIE_RST_B_REVB	IMX_GPIO_NR(7, 12)
-#define SABRESD_PMIC_INT_B	IMX_GPIO_NR(7, 13)
-#define SABRESD_PFUZE_INT	IMX_GPIO_NR(7, 13)
-
-
-#define SABRESD_CHARGE_NOW	IMX_GPIO_NR(1, 2)
-#define SABRESD_CHARGE_DONE	IMX_GPIO_NR(1, 1)
 
 /*
 \*Below IO is configured for programing facility ,properly iomux should be done in header file xxxx_sparkauto.h
@@ -171,7 +136,12 @@
 
 #define TSC2007_IRQGPIO			IMX_GPIO_NR(4, 5)
 
+#define SPARKAUTO_ECSPI1_CS0 	IMX_GPIO_NR(3, 19)
 
+
+#define MODEM_PWR_EN	IMX_GPIO_NR(3, 13)
+#define MODEM_RST		IMX_GPIO_NR(3, 11)
+#define MODEM_WAKEUP	IMX_GPIO_NR(2, 24)
 extern char *gp_reg_id;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
@@ -255,17 +225,17 @@ static struct fec_platform_data fec_data __initdata = {
 };
 
 
-static int mx6q_sabresd_spi_cs[] = {
-	SABRESD_ECSPI1_CS0,
+static int mx6q_sparkauto_spi_cs[] = {
+	SPARKAUTO_ECSPI1_CS0,
 };
 
-static const struct spi_imx_master mx6q_sabresd_spi_data __initconst = {
-	.chipselect     = mx6q_sabresd_spi_cs,
-	.num_chipselect = ARRAY_SIZE(mx6q_sabresd_spi_cs),
+static const struct spi_imx_master mx6q_sparkauto_spi_data __initconst = {
+	.chipselect     = mx6q_sparkauto_spi_cs,
+	.num_chipselect = ARRAY_SIZE(mx6q_sparkauto_spi_cs),
 };
 
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
-static struct mtd_partition imx6_sabresd_spi_nor_partitions[] = {
+static struct mtd_partition imx6_sparkauto_spi_nor_partitions[] = {
 	{
 	 .name = "bootloader",
 	 .offset = 0,
@@ -278,30 +248,30 @@ static struct mtd_partition imx6_sabresd_spi_nor_partitions[] = {
 	},
 };
 
-static struct flash_platform_data imx6_sabresd__spi_flash_data = {
+static struct flash_platform_data imx6_sparkauto__spi_flash_data = {
 	.name = "m25p80",
-	.parts = imx6_sabresd_spi_nor_partitions,
-	.nr_parts = ARRAY_SIZE(imx6_sabresd_spi_nor_partitions),
-	.type = "sst25vf016b",
+	.parts = imx6_sparkauto_spi_nor_partitions,
+	.nr_parts = ARRAY_SIZE(imx6_sparkauto_spi_nor_partitions),
+	.type = "sst25vf032b",
 };
 #endif
 
-static struct spi_board_info imx6_sabresd_spi_nor_device[] __initdata = {
+static struct spi_board_info imx6_sparkauto_spi_nor_device[] __initdata = {
 #if defined(CONFIG_MTD_M25P80)
 	{
 		.modalias = "m25p80",
 		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
 		.bus_num = 0,
 		.chip_select = 0,
-		.platform_data = &imx6_sabresd__spi_flash_data,
+		.platform_data = &imx6_sparkauto__spi_flash_data,
 	},
 #endif
 };
 
 static void spi_device_init(void)
 {
-	spi_register_board_info(imx6_sabresd_spi_nor_device,
-				ARRAY_SIZE(imx6_sabresd_spi_nor_device));
+	spi_register_board_info(imx6_sparkauto_spi_nor_device,
+				ARRAY_SIZE(imx6_sparkauto_spi_nor_device));
 }
 
 static struct imx_ssi_platform_data mx6_sparkauto_ssi_pdata = {
@@ -765,19 +735,8 @@ static int __init imx6q_init_audio(void)
 	.default_trigger	= "max8903-"trigger,		\
 }
 
-/* use to show a external power source is connected
- * GPIO_LED(SABRESD_CHARGE_DONE, "chg_detect", 0, 1, "ac-online"),
- */
 static struct gpio_led imx6q_gpio_leds[] = {
-	GPIO_LED(SABRESD_CHARGE_NOW, "chg_now_led", 0, 1,
-		"charger-charging"),
-/* For the latest B4 board, this GPIO_1 is connected to POR_B,
-which will reset the whole board if this pin's level is changed,
-so, for the latest board, we have to avoid using this pin as
-GPIO.
-	GPIO_LED(SABRESD_CHARGE_DONE, "chg_done_led", 0, 1,
-			"charger-full"),
-*/
+
 };
 
 static struct gpio_led_platform_data imx6q_gpio_leds_data = {
@@ -1016,13 +975,29 @@ int __init broadcom_wifi_init(void)
 late_initcall(broadcom_wifi_init);
 #endif
 
+#warning FIXME:add modem wakeup support
+int __init generic_modem_init(void){
+	gpio_request(MODEM_PWR_EN, "modem_pwr");
+	gpio_direction_output(MODEM_PWR_EN, 0);
+	gpio_free(MODEM_PWR_EN);
+	
+	gpio_request(MODEM_RST, "modem_rst");
+	gpio_direction_output(MODEM_RST, 0);
+	msleep(10);
+	gpio_direction_output(MODEM_RST, 1);	
+	gpio_free(MODEM_RST);
+	
+	return 0;
+	
+}
+
+
 /*!
  * Board specific initialization.
  */
 static void __init mx6_sparkauto_board_init(void)
 {
 	int i;
-	int ret;
 
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_sparkauto_pads,
@@ -1090,16 +1065,9 @@ static void __init mx6_sparkauto_board_init(void)
 			ARRAY_SIZE(mxc_i2c1_board_info));
 	i2c_register_board_info(2, mxc_i2c2_board_info,
 			ARRAY_SIZE(mxc_i2c2_board_info));
-	ret = gpio_request(SABRESD_PFUZE_INT, "pFUZE-int");
-	if (ret) {
-		printk(KERN_ERR"request pFUZE-int error!!\n");
-		return;
-	} else {
-		gpio_direction_input(SABRESD_PFUZE_INT);
-		mx6q_sabresd_init_pfuze100(SABRESD_PFUZE_INT);
-	}
+
 	/* SPI */
-	imx6q_add_ecspi(0, &mx6q_sabresd_spi_data);
+	imx6q_add_ecspi(0, &mx6q_sparkauto_spi_data);
 	spi_device_init();
 
 
@@ -1183,6 +1151,9 @@ static void __init mx6_sparkauto_board_init(void)
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
+
+
+	generic_modem_init();
 
 }
 

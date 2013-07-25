@@ -38,7 +38,6 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_CSI0_DAT7__AUDMUX_AUD3_RXD,
 	MX6Q_PAD_EIM_D22__GPIO_3_22,/*Codec PWR EN*/
 
-	//MX6Q_PAD_GPIO_1__GPIO_1_1,		/* user defiend green led */
 	MX6Q_PAD_GPIO_2__GPIO_1_2,		/* user defined red led */
 	MX6Q_PAD_GPIO_7__GPIO_1_7,		/* NERR */
 
@@ -47,10 +46,10 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_GPIO_3__CCM_CLKO2,		/*For Audio Codec*/
 
 	/* ECSPI1 */
-	MX6Q_PAD_KEY_COL0__ECSPI1_SCLK,
-	MX6Q_PAD_KEY_ROW0__ECSPI1_MOSI,
-	MX6Q_PAD_KEY_COL1__ECSPI1_MISO,
-	MX6Q_PAD_KEY_ROW1__GPIO_4_9,
+	MX6Q_PAD_EIM_D16__ECSPI1_SCLK,
+	MX6Q_PAD_EIM_D17__ECSPI1_MISO,
+	MX6Q_PAD_EIM_D18__ECSPI1_MOSI,
+	MX6Q_PAD_EIM_D19__GPIO_3_19,
 
 
 	/* GPIO KeyPad */
@@ -231,7 +230,12 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_SD2_CLK__GPIO_1_10,/*BT_RESET*/
 	MX6Q_PAD_SD2_CMD__GPIO_1_11,/*BT_HOST_WAKE*/
 
-	
+
+	/*Modem*/
+	MX6Q_PAD_EIM_DA11__GPIO_3_11,/*Modem Reset*/
+	MX6Q_PAD_EIM_DA13__GPIO_3_13,/*Modem Power*/	
+	MX6Q_PAD_EIM_DA9__GPIO_3_9,	 /*Modem Wakeup Enable*/		
+	MX6Q_PAD_EIM_CS1__GPIO_2_24, /*Modem Wakup*/
 	
 };
 
