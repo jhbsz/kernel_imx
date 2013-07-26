@@ -21,6 +21,7 @@
 #ifndef IMX_RFKILL_H
 #define IMX_RFKILL_H
 struct imx_bt_rfkill_platform_data {
+	char* name;
 	int (*power_change) (int status);
 };
 

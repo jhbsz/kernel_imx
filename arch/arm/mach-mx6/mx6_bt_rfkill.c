@@ -100,7 +100,7 @@ static int mxc_bt_rfkill_probe(struct platform_device *dev)
 	if (rc)
 		goto error_check_func;
 
-	rfk = rfkill_alloc("mxc-bt", &dev->dev, RFKILL_TYPE_BLUETOOTH,
+	rfk = rfkill_alloc(data->name?data->name:"mxc-bt", &dev->dev, RFKILL_TYPE_BLUETOOTH,
 			   &mxc_bt_rfkill_ops, data);
 
 	if (!rfk) {

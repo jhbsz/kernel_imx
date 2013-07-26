@@ -91,7 +91,6 @@
 #include "board-mx6dl_sparkauto.h"
 #include "generic_devices.h"
 
-#define SABRESD_BT_RESET	IMX_GPIO_NR(1, 2)
 
 
 #define SABRESD_DISP_RST_B	IMX_GPIO_NR(6, 11)
@@ -106,7 +105,7 @@
 #define MX6_VDD_3V3_EN		IMX_GPIO_NR(3, 26)
 #define MX6_VDD_5V_EN		IMX_GPIO_NR(6, 15)
 
-#define WIFI_PWR			IMX_GPIO_NR(2, 29)
+#define WIFI_MODULE_PWR		IMX_GPIO_NR(2, 29)
 #define WIFI_HOST_WAKE		IMX_GPIO_NR(7, 8)
 #define WIFI_RESET			IMX_GPIO_NR(6, 18)
 
@@ -144,6 +143,11 @@
 #define MODEM_PWR_EN		IMX_GPIO_NR(3, 13)
 #define MODEM_RST			IMX_GPIO_NR(3, 11)
 #define MODEM_WAKEUP		IMX_GPIO_NR(2, 24)
+
+
+#define BT_SHUTDOWN		IMX_GPIO_NR(6, 17)
+#define BT_RESET		IMX_GPIO_NR(1, 10)
+
 extern char *gp_reg_id;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
@@ -647,33 +651,8 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 	},
 };
 
-static void mx6q_sd_bt_reset(void)
-{
-	printk(KERN_INFO "mx6q_sd_bt_reset");
-	gpio_request(SABRESD_BT_RESET, "bt-reset");
-	gpio_direction_output(SABRESD_BT_RESET, 0);
-	/* pull down reset pin at least >5ms */
-	mdelay(6);
-	/* pull up after power supply BT */
-	gpio_direction_output(SABRESD_BT_RESET, 1);
-	gpio_free(SABRESD_BT_RESET);
-	msleep(100);
-}
 
-static int mx6q_sd_bt_power_change(int status)
-{
-	if (status)
-		mx6q_sd_bt_reset();
-	return 0;
-}
 
-static struct platform_device mxc_bt_rfkill = {
-	.name = "mxc_bt_rfkill",
-};
-
-static struct imx_bt_rfkill_platform_data mxc_bt_rfkill_data = {
-	.power_change = mx6q_sd_bt_power_change,
-};
 static void sabresd_suspend_enter(void)
 {
 	/* suspend preparation */
@@ -925,16 +904,51 @@ static int __init imx6x_add_ram_console(void)
 }
 #endif
 
+static int mx6q_sd_bt_power_change(int status)
+{
+	if (status){		
+		printk(KERN_INFO "mx6q_sd_bt_reset");
+		gpio_request(BT_RESET, "bt-reset");
+		gpio_direction_output(BT_RESET, 0);
+		/* pull down reset pin at least >5ms */
+		mdelay(6);
+		/* pull up after power supply BT */
+		gpio_direction_output(BT_RESET, 1);
+		gpio_free(BT_RESET);
+		msleep(100);	
+	}
+	return 0;
+}
+
+static struct platform_device mxc_bt_rfkill = {
+	.name = "mxc_bt_rfkill",
+};
+
+static struct imx_bt_rfkill_platform_data mxc_bt_rfkill_data = {
+	.name		  = "bluetooth",
+	.power_change = mx6q_sd_bt_power_change,
+};
+
 
 #if  defined(CONFIG_BCMDHD)||defined(CONFIG_BCMDHD_MODULE)
+static int bcm4330_module_power(int on){
+	gpio_request(WIFI_MODULE_PWR, "wifi_module_pwr");
+	gpio_direction_output(WIFI_MODULE_PWR, on?0:1);
+	gpio_free(WIFI_MODULE_PWR);
+
+	gpio_request(BT_SHUTDOWN, "bt_shutdown");
+	gpio_direction_output(BT_SHUTDOWN, on?1:0);
+	gpio_free(BT_SHUTDOWN);
+	return 0;
+}
 static int bcm4330_wifi_power(int on){	
-	gpio_request(WIFI_PWR, "wifi_pwr");
-	gpio_direction_output(WIFI_PWR, on?0:1);
-	gpio_free(WIFI_PWR);
+	gpio_request(WIFI_RESET, "wifi_reset");
+	gpio_direction_output(WIFI_RESET, on?1:0);
+	gpio_free(WIFI_RESET);
 	return 0;
 }
 static int bcm4330_wifi_reset(int on){	
-	gpio_request(WIFI_RESET, "wifi_pwr");
+	gpio_request(WIFI_RESET, "wifi_reset");
 	gpio_direction_output(WIFI_RESET, 0);
 	msleep(10);
 	gpio_direction_output(WIFI_RESET, 1);
@@ -974,7 +988,7 @@ int __init broadcom_wifi_init(void)
 {
 	return platform_device_register(&brcm_wifi_device);
 }
-late_initcall(broadcom_wifi_init);
+device_initcall(broadcom_wifi_init);
 #endif
 
 #warning FIXME:add modem wakeup support
@@ -1136,8 +1150,8 @@ static void __init mx6_sparkauto_board_init(void)
 
 	
 	#if  defined(CONFIG_BCMDHD)||defined(CONFIG_BCMDHD_MODULE)
-	//turn on wifi power
-	bcm4330_wifi_power(1);
+	//turn on module power
+	bcm4330_module_power(1);
 	#endif
 	
 	if (cpu_is_mx6dl()) {
