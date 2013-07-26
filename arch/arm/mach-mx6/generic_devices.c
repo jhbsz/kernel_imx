@@ -1,12 +1,13 @@
 #include <linux/i2c.h>
 #include <linux/w1-gpio.h>
 #include <linux/pn544.h>
+#include <mach/devices-common.h>
 #include "generic_devices.h"
 
 
 static struct w1_gpio_platform_data w1_gpio_pdata=
 {
-	.is_open_drain = 1,
+	.is_open_drain = 0,
 };
 struct platform_device *__init generic_add_device_w1(
 		int w1_io)
@@ -30,7 +31,7 @@ static struct i2c_board_info pn544_device __initdata = {
 	//.irq = IRQ_EINT(16),
 	.platform_data = &pn544_pdata,
 };
-struct platform_device *__init generic_add_device_pn544(
+int __init generic_add_device_pn544(
 		int bus,int irq,int ven,int fw)
 {
 	pn544_pdata.irq_gpio = irq;

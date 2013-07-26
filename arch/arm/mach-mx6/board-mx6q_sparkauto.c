@@ -77,17 +77,19 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/time.h>
 
+
+#include <mach/imx_rfkill.h>
+
+#include <linux/i2c/at24.h>
+#include <linux/i2c/tsc2007.h>
+
 #include "usb.h"
 #include "devices-imx6q.h"
 #include "crm_regs.h"
 #include "cpu_op-mx6.h"
 #include "board-mx6q_sparkauto.h"
 #include "board-mx6dl_sparkauto.h"
-#include <mach/imx_rfkill.h>
-
-#include <linux/i2c/at24.h>
-#include <linux/i2c/tsc2007.h>
-
+#include "generic_devices.h"
 
 #define SABRESD_BT_RESET	IMX_GPIO_NR(1, 2)
 
@@ -138,10 +140,10 @@
 
 #define SPARKAUTO_ECSPI1_CS0 	IMX_GPIO_NR(3, 19)
 
-
-#define MODEM_PWR_EN	IMX_GPIO_NR(3, 13)
-#define MODEM_RST		IMX_GPIO_NR(3, 11)
-#define MODEM_WAKEUP	IMX_GPIO_NR(2, 24)
+#define W1_EMULATED_IO		SPARKAUTO_SD1_WP
+#define MODEM_PWR_EN		IMX_GPIO_NR(3, 13)
+#define MODEM_RST			IMX_GPIO_NR(3, 11)
+#define MODEM_WAKEUP		IMX_GPIO_NR(2, 24)
 extern char *gp_reg_id;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
@@ -1154,6 +1156,9 @@ static void __init mx6_sparkauto_board_init(void)
 
 
 	generic_modem_init();
+
+	//Uncomment following to enable w1 bus emulation on SD1_WP io(SD1 not used pin)
+	generic_add_w1(W1_EMULATED_IO);
 
 }
 

@@ -13,7 +13,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/w1-gpio.h>
-
+#include <linux/delay.h>
 #include "../w1.h"
 #include "../w1_int.h"
 
@@ -41,6 +41,68 @@ static u8 w1_gpio_read_bit(void *data)
 	struct w1_gpio_platform_data *pdata = data;
 
 	return gpio_get_value(pdata->pin) ? 1 : 0;
+}
+
+static void POR_patch(struct w1_master *m){
+	 short i,cnt=0; 	
+	 unsigned char buf[40];
+	 
+	 w1_reset_bus(m);
+	 buf[0]=W1_SKIP_ROM;
+	 w1_write_block(m,buf,1);
+	 
+	 cnt=0;
+  // construct a packet to send
+	 buf[cnt++] = 0x55; // write memory command
+	 buf[cnt++] = 0x00; // address LSB
+	 buf[cnt++] = 0x00; 	 // address MSB
+// data to be written
+	 for (i = 0; i < 4; i++) buf[cnt++] = 0xff;
+// perform the block writing	 
+	w1_write_block(m,buf,cnt);
+// for reading crc bytes from DS28E10
+	 w1_read_block(m,&buf[cnt++],1);
+	 w1_read_block(m,&buf[cnt++],1);
+	 
+	 udelay(100);
+	 buf[0] = 0x00;
+	 w1_write_block(m,buf,1);  // clock 0x00 byte as required
+	 udelay(100);
+	 w1_reset_bus(m);
+	 
+
+}
+static int patched;
+static void w1_gpio_search(void *data, struct w1_master *master,
+			u8 search_type, w1_slave_found_callback slave_found)
+{
+
+	int i;
+	unsigned long long rom_id;
+	if(!patched++)
+		POR_patch(master);
+
+	//w1_search(master,search_type,slave_found);
+
+	if (w1_reset_bus(master))
+		return;
+
+	w1_write_8(master, W1_READ_ROM);
+
+	for (rom_id = 0, i = 0; i < 8; i++) {
+
+		unsigned char resp;
+
+		resp = w1_read_8(master);
+
+		rom_id |= (unsigned long long) resp << (i * 8);
+
+	}
+
+	w1_reset_bus(master);
+
+	slave_found(master, rom_id);
+	
 }
 
 static int __init w1_gpio_probe(struct platform_device *pdev)
@@ -71,6 +133,8 @@ static int __init w1_gpio_probe(struct platform_device *pdev)
 		master->write_bit = w1_gpio_write_bit_dir;
 	}
 
+	master->search = w1_gpio_search;
+
 	err = w1_add_master_device(master);
 	if (err)
 		goto free_gpio;
@@ -79,6 +143,9 @@ static int __init w1_gpio_probe(struct platform_device *pdev)
 		pdata->enable_external_pullup(1);
 
 	platform_set_drvdata(pdev, master);
+
+	
+	//POR_patch(master);
 
 	return 0;
 
