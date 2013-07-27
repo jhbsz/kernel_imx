@@ -347,12 +347,11 @@ static int __devinit tsc2007_probe(struct i2c_client *client,
 
  err_free_irq:
 	tsc2007_free_irq(ts);
-	if (pdata->exit_platform_hw)
-		pdata->exit_platform_hw();
  err_free_mem:
 	input_free_device(input_dev);
  err_no_dev:
-	pdata->exit_platform_hw();
+	if (pdata->exit_platform_hw)
+	 	pdata->exit_platform_hw();
 	kfree(ts);
 	return err;
 }
