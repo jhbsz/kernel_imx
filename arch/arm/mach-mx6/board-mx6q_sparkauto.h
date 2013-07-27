@@ -117,7 +117,7 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	/* UART
 	 * UART1:debugging
 	 * UART2:bluetooth
-	 * UART3:gps(with rtc/cts)
+	 * UART3:gps
 	 * UART4:
 	 * UART5:
 	*/
@@ -127,8 +127,6 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_SD3_DAT4__UART2_RXD,
 	MX6Q_PAD_EIM_D24__UART3_TXD,
 	MX6Q_PAD_EIM_D25__UART3_RXD,
-	MX6Q_PAD_EIM_D30__UART3_CTS,
-	MX6Q_PAD_EIM_D31__UART3_RTS,
 	MX6Q_PAD_KEY_COL0__UART4_TXD,
 	MX6Q_PAD_KEY_ROW0__UART4_RXD,
 	MX6Q_PAD_KEY_COL1__UART5_TXD,
@@ -153,8 +151,8 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_SD1_DAT1__USDHC1_DAT1,
 	MX6Q_PAD_SD1_DAT2__USDHC1_DAT2,
 	MX6Q_PAD_SD1_DAT3__USDHC1_DAT3,
-	MX6Q_PAD_EIM_A25__GPIO_5_2,		/* SD1_CD */
-	MX6Q_PAD_EIM_BCLK__GPIO_6_31,		/* SD1_WP unused*/
+	NEW_PAD_CTRL(MX6Q_PAD_EIM_A25__GPIO_5_2,MX6Q_GENERIC_PAD_CTRL),		/* SD1_CD unused*/
+	MX6Q_PAD_EIM_BCLK__GPIO_6_31,										/* SD1_WP unused*/
 
 	/* USDHC3 */
 	MX6Q_PAD_SD3_CLK__USDHC3_CLK_50MHZ,
@@ -236,6 +234,12 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	MX6Q_PAD_EIM_DA13__GPIO_3_13,/*Modem Power*/	
 	MX6Q_PAD_EIM_DA9__GPIO_3_9,	 /*Modem Wakeup Enable*/		
 	MX6Q_PAD_EIM_CS1__GPIO_2_24, /*Modem Wakup*/
+
+
+	/*DS1302 RTC*/
+	MX6Q_PAD_NANDF_CS3__GPIO_6_16,/*RTC IO*/
+	MX6Q_PAD_EIM_D27__GPIO_3_27,/*RTC CLK*/	
+	MX6Q_PAD_EIM_D31__GPIO_3_31,/*RTC RST*/
 	
 };
 

@@ -139,7 +139,6 @@
 
 #define SPARKAUTO_ECSPI1_CS0 	IMX_GPIO_NR(3, 19)
 
-#define W1_EMULATED_IO		SPARKAUTO_SD1_WP
 #define MODEM_PWR_EN		IMX_GPIO_NR(3, 13)
 #define MODEM_RST			IMX_GPIO_NR(3, 11)
 #define MODEM_WAKEUP		IMX_GPIO_NR(2, 24)
@@ -147,6 +146,18 @@
 
 #define BT_SHUTDOWN		IMX_GPIO_NR(6, 17)
 #define BT_RESET		IMX_GPIO_NR(1, 10)
+
+/*
+ * EMULATION IO START
+ *
+ * Below pins only for emulation test on board (no real component onboard)
+ */
+#define W1_EMULATED_IO	SPARKAUTO_SD1_WP
+/*
+ *
+ *EMULATION END
+ */
+
 
 extern char *gp_reg_id;
 extern char *soc_reg_id;
@@ -448,10 +459,16 @@ static struct at24_platform_data eeprom_data = {
 	.flags		= AT24_FLAG_ADDR16|AT24_FLAG_IRUGO,
 };
 
+static int ts_init(void)
+{
+	gpio_request(TSC2007_IRQGPIO, "tsc2007 irq");
+	return 0;
+}
 
 static struct tsc2007_platform_data tsc2007_info = {
 	.model			= 2007,
-	.x_plate_ohms	= 180,
+	.x_plate_ohms	= 180,	
+	.init_platform_hw	= ts_init,
 };
 
 static struct imxi2c_platform_data mx6q_sparkauto_i2c_data = {
@@ -485,13 +502,11 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
-	/*
 	{
 		I2C_BOARD_INFO("tsc2007", 0x48),
 		.platform_data	= &tsc2007_info,
 		.irq		= gpio_to_irq(TSC2007_IRQGPIO),
 	}
-	*/
 };
 
 
@@ -904,10 +919,18 @@ static int __init imx6x_add_ram_console(void)
 }
 #endif
 
-static int mx6q_sd_bt_power_change(int status)
+static int sparkauto_bt_power_change(int status)
 {
 	if (status){		
-		printk(KERN_INFO "mx6q_sd_bt_reset");
+		printk(KERN_INFO "mx6q_sd_bt_reset\n");
+		
+		gpio_request(BT_SHUTDOWN, "bt_shutdown");
+		gpio_direction_output(BT_SHUTDOWN, 0);
+		mdelay(6);
+		gpio_direction_output(BT_SHUTDOWN, 1);
+		gpio_free(BT_SHUTDOWN);
+
+		mdelay(6);
 		gpio_request(BT_RESET, "bt-reset");
 		gpio_direction_output(BT_RESET, 0);
 		/* pull down reset pin at least >5ms */
@@ -926,7 +949,7 @@ static struct platform_device mxc_bt_rfkill = {
 
 static struct imx_bt_rfkill_platform_data mxc_bt_rfkill_data = {
 	.name		  = "bluetooth",
-	.power_change = mx6q_sd_bt_power_change,
+	.power_change = sparkauto_bt_power_change,
 };
 
 
@@ -936,9 +959,6 @@ static int bcm4330_module_power(int on){
 	gpio_direction_output(WIFI_MODULE_PWR, on?0:1);
 	gpio_free(WIFI_MODULE_PWR);
 
-	gpio_request(BT_SHUTDOWN, "bt_shutdown");
-	gpio_direction_output(BT_SHUTDOWN, on?1:0);
-	gpio_free(BT_SHUTDOWN);
 	return 0;
 }
 static int bcm4330_wifi_power(int on){	
@@ -1173,6 +1193,7 @@ static void __init mx6_sparkauto_board_init(void)
 
 	//Uncomment following to enable w1 bus emulation on SD1_WP io(SD1 not used pin)
 	generic_add_w1(W1_EMULATED_IO);
+
 
 }
 
