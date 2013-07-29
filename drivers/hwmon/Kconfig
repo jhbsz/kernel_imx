@@ -1429,4 +1429,54 @@ config MXC_MMA8451
 	depends on I2C
 	default y
 
+config SENSORS_MMA845X 
+  tristate "MMA8451/MMA8452/MMA8453 device driver" 
+  depends on I2C && SYSFS 
+  default n 
+  help 
+    If you say yes here you get support for the Freescale MMA8451/ 
+    MMA8452/MMA8453 sensors. 
+config SENSORS_MMA865X 
+  tristate "MMA8652/MMA8653 device driver" 
+  depends on I2C 
+  default n 
+  help 
+    If you say yes here you get support for the Freescale MMA8652/ 
+    MMA8653 sensors. 
+config SENSORS_MMA7660 
+  tristate "MMA7660 device driver" 
+  depends on I2C 
+  default n 
+  help 
+    If you say yes here you get support for the Freescale MMA7660 
+    sensor. 
+config SENSORS_MMA_POSITION 
+  int "MMA845x or MMA7660  Accelerate Sensor Position Setting" 
+  depends on SENSORS_MMA845X || SENSORS_MMA865X || SENSORS_MMA7660 
+  default "0" 
+  help 
+   this provide the sensor position setting , value is between 0~7 
+config SENSORS_MAG_POSITION 
+  int "MAG3110 Magnetic Sensor Position Setting" 
+  depends on SENSORS_MAG3110 
+  default "0" 
+  help 
+   this provide the sensor position setting , value is between 0~7 
+config SENSORS_FXOS8700 
+  tristate "FXOS8700 Accelerometer & Magnetometer sensor device driver" 
+  depends on I2C 
+  default n 
+  help 
+          If you say yes here you get support for the Freescale FXOS8700  
+          Accelerometer & Magnetometer combo sensor. 
+config SENSORS_FXOS8700_POSITION 
+  int "FXOS8700 Sensor Position Setting" 
+  default "0" 
+  help 
+   this provide the sensor position setting , value is between 0~7 
+  config SENSORS_MPL3115 
+tristate "MPL3115 pressure device driver" 
+depends on I2C 
+default n  
+    
 endif # HWMON
