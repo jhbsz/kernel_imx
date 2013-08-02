@@ -1,4 +1,7 @@
+#include <linux/kernel.h>
+#include <linux/init.h>
 #include <linux/i2c.h>
+#include <linux/gpio.h>
 #include <linux/w1-gpio.h>
 #include <linux/pn544.h>
 #include <mach/devices-common.h>
@@ -26,9 +29,8 @@ static struct pn544_i2c_platform_data pn544_pdata = {
 };
 
 
-static struct i2c_board_info pn544_device __initdata = {
+static struct i2c_board_info pn544_device = {
 	I2C_BOARD_INFO("pn544", 0x28),
-	//.irq = IRQ_EINT(16),
 	.platform_data = &pn544_pdata,
 };
 int __init generic_add_device_pn544(
@@ -37,6 +39,7 @@ int __init generic_add_device_pn544(
 	pn544_pdata.irq_gpio = irq;
 	pn544_pdata.ven_gpio = ven;
 	pn544_pdata.firm_gpio = fw;
+	pn544_device.irq = gpio_to_irq(irq);
 
 	return i2c_register_board_info(bus, &pn544_device,1);
 }

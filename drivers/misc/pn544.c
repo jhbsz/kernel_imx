@@ -41,6 +41,9 @@
 //#define pr_debug printk
 //#define pr_warning printk
 
+static int debug_mask;
+
+module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 
 
@@ -73,7 +76,6 @@ static void pn544_disable_irq(struct pn544_dev *pn544_dev)
 static irqreturn_t pn544_dev_irq_handler(int irq, void *dev_id)
 {
 	struct pn544_dev *pn544_dev = dev_id;
-
 	if (!gpio_get_value(pn544_dev->irq_gpio)) {
 		return IRQ_HANDLED;
 	}
@@ -91,12 +93,11 @@ static ssize_t pn544_dev_read(struct file *filp, char __user *buf,
 {
 	struct pn544_dev *pn544_dev = filp->private_data;
 	char tmp[MAX_BUFFER_SIZE];
-	int ret,i;
+	int ret=0;
 
 	if (count > MAX_BUFFER_SIZE)
 		count = MAX_BUFFER_SIZE;
 
-	printk("%s : reading %zu bytes.\n", __func__, count);
 
 	mutex_lock(&pn544_dev->read_mutex);
 
@@ -117,29 +118,31 @@ static ssize_t pn544_dev_read(struct file *filp, char __user *buf,
 			goto fail;
 	}
 
+	if(debug_mask)
+		printk("pn544 << reading %zu bytes...",  count);
+
 	/* Read data */
 	ret = i2c_master_recv(pn544_dev->client, tmp, count);
 	mutex_unlock(&pn544_dev->read_mutex);
 
-	if (ret < 0) {
-		pr_err("%s: i2c_master_recv returned %d\n", __func__, ret);
+	if (ret < 0) {		
+		if(debug_mask)	printk("error,ret=%d\n", ret);
 		return ret;
-	}
-	if (ret > count) {
-		pr_err("%s: received too many bytes from i2c (%d)\n",
-			__func__, ret);
-		return -EIO;
+	}else if (ret > count) {
+		if(debug_mask) printk("too many bytes returned,ret=%d\n", ret);
+		ret = -EIO;
+		return ret;
+	}else {
+		if(debug_mask) {
+			printk("ok\n");
+			print_hex_dump_bytes("pn544 << ",DUMP_PREFIX_NONE,tmp,count);
+		}
 	}
 	if (copy_to_user(buf, tmp, ret)) {
 		pr_warning("%s : failed to copy to user space\n", __func__);
 		return -EFAULT;
 	}
 	
-	printk("IFD->PC:");
-	for(i = 0; i < ret; i++){
-		printk(" %02X", tmp[i]);
-	}
-	printk("\n");
 	
 	return ret;
 
@@ -153,7 +156,7 @@ static ssize_t pn544_dev_write(struct file *filp, const char __user *buf,
 {
 	struct pn544_dev  *pn544_dev;
 	char tmp[MAX_BUFFER_SIZE];
-	int ret,i;
+	int ret=0;
 
 	pn544_dev = filp->private_data;
 
@@ -165,18 +168,18 @@ static ssize_t pn544_dev_write(struct file *filp, const char __user *buf,
 		return -EFAULT;
 	}
 
-	printk("%s : writing %zu bytes.\n", __func__, count);
+	if(debug_mask) printk("pn544 >> writing %zu bytes...",  count);
 	/* Write data */
 	ret = i2c_master_send(pn544_dev->client, tmp, count);
 	if (ret != count) {
-		pr_err("%s : i2c_master_send returned %d\n", __func__, ret);
+		if(debug_mask) printk("%s ret=%d\n", "error", ret);
 		ret = -EIO;
+	}else{
+		if(debug_mask) {
+			printk("ok\n");
+			print_hex_dump_bytes("pn544 >> ",DUMP_PREFIX_NONE,tmp,count);
+		}
 	}
-	printk("PC->IFD:");
-	for(i = 0; i < count; i++){
-		printk(" %02X", tmp[i]);
-	}
-	printk("\n");
 	
 	return ret;
 }
@@ -194,7 +197,7 @@ static int pn544_dev_open(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static int pn544_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+static long pn544_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct pn544_dev *pn544_dev = filp->private_data;
 
@@ -203,7 +206,7 @@ static int pn544_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 		if (arg == 2) {
 			/* power on with firmware download (requires hw reset)
 			 */
-			printk("%s power on with firmware\n", __func__);
+			dev_info(&pn544_dev->client->dev,"%s power on with firmware\n", __func__);
 			gpio_set_value(pn544_dev->ven_gpio, 1);
 			gpio_set_value(pn544_dev->firm_gpio, 1);
 			msleep(10);
@@ -213,23 +216,23 @@ static int pn544_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 			msleep(10);
 		} else if (arg == 1) {
 			/* power on */
-			printk("%s power on\n", __func__);
+			dev_info(&pn544_dev->client->dev,"%s power on\n", __func__);
 			gpio_set_value(pn544_dev->firm_gpio, 0);
 			gpio_set_value(pn544_dev->ven_gpio, 1);
 			msleep(10);
 		} else  if (arg == 0) {
 			/* power off */
-			printk("%s power off\n", __func__);
+			dev_info(&pn544_dev->client->dev,"%s power off\n", __func__);
 			gpio_set_value(pn544_dev->firm_gpio, 0);
 			gpio_set_value(pn544_dev->ven_gpio, 0);
 			msleep(10);
 		} else {
-			printk("%s bad arg %u\n", __func__, arg);
+			dev_err(&pn544_dev->client->dev,"%s bad arg %lu\n", __func__, arg);
 			return -EINVAL;
 		}
 		break;
 	default:
-		printk("%s bad ioctl %u\n", __func__, cmd);
+		dev_err(&pn544_dev->client->dev,"%s bad ioctl %u\n", __func__, cmd);
 		return -EINVAL;
 	}
 
@@ -260,14 +263,14 @@ static int pn544_probe(struct i2c_client *client,
 		return  -ENODEV;
 	}
 
-	printk("nfc probe step01 is ok\n");
+	dev_info(&client->dev,"nfc probe step01 is ok\n");
 	
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		pr_err("%s : need I2C_FUNC_I2C\n", __func__);
 		return  -ENODEV;
 	}
 
-	printk("nfc probe step02 is ok\n");
+	dev_info(&client->dev,"nfc probe step02 is ok\n");
 	
 	ret = gpio_request(platform_data->irq_gpio, "nfc_int");
 	if (ret)
@@ -279,7 +282,7 @@ static int pn544_probe(struct i2c_client *client,
 	if (ret)
 		goto err_firm;
 
-	printk("nfc probe step03 is ok\n");
+	dev_info(&client->dev,"nfc probe step03 is ok\n");
 
 	pn544_dev = kzalloc(sizeof(*pn544_dev), GFP_KERNEL);
 	if (pn544_dev == NULL) {
@@ -289,7 +292,7 @@ static int pn544_probe(struct i2c_client *client,
 		goto err_exit;
 	}
 
-	printk("nfc probe step04 is ok\n");
+	dev_info(&client->dev,"nfc probe step04 is ok\n");
 	
 	pn544_dev->irq_gpio = platform_data->irq_gpio;
 	pn544_dev->ven_gpio  = platform_data->ven_gpio;
@@ -310,9 +313,12 @@ static int pn544_probe(struct i2c_client *client,
 		pr_err("%s : misc_register failed\n", __FILE__);
 		goto err_misc_register;
 	}
-	printk("nfc probe step05 is ok\n");
+	dev_info(&client->dev,"nfc probe step05 is ok\n");
 
-	#warning FIXME:pn544.c gpio config 
+	//set output for ven,firm pin
+	gpio_direction_output(platform_data->ven_gpio,0);
+	gpio_direction_output(platform_data->firm_gpio,0);	
+	gpio_direction_input(platform_data->irq_gpio);
 	#if 0
 	/* request irq.  the irq is set whenever the chip has data available
 	 * for reading.  it is cleared when all data has been read.
@@ -327,7 +333,7 @@ static int pn544_probe(struct i2c_client *client,
 	s3c_gpio_setpull(platform_data->irq_gpio, S3C_GPIO_PULL_UP);
 
 	#endif
-	pr_info("%s : requesting IRQ %d\n", __func__, client->irq);
+	dev_info(&client->dev,"%s : requesting IRQ %d\n", __func__, client->irq);
 	pn544_dev->irq_enabled = true;
 
 	ret = request_irq(client->irq, pn544_dev_irq_handler,
@@ -336,12 +342,12 @@ static int pn544_probe(struct i2c_client *client,
 		dev_err(&client->dev, "request_irq failed\n");
 		goto err_request_irq_failed;
 	}
-	printk("nfc probe step06 is ok\n");
+	dev_info(&client->dev,"nfc probe step06 is ok\n");
 	
 	pn544_disable_irq(pn544_dev);
 	i2c_set_clientdata(client, pn544_dev);
 	
-	printk("nfc probe step07 is ok\n");
+	dev_info(&client->dev,"nfc probe step07 is ok\n");
 
 	return 0;
 
