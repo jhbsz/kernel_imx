@@ -1111,10 +1111,11 @@ static void __init mx6_sparkauto_board_init(void)
 	
 	/*enable ethernet after debugging with lan8720a okay*/
 	/* Set RGMII_TX_CTL output for RMII reference clock */
+	#if 0
 	mxc_iomux_set_gpr_register(1, 21, 1, 1);	
 	imx6_init_fec(fec_data);
 	max6q_fec_reset();
-
+    #endif
 	imx6q_add_pm_imx(0, &mx6q_sabresd_pm_data);
 
 	/* Move sd4 to first because sd4 connect to emmc.
@@ -1192,7 +1193,7 @@ static void __init mx6_sparkauto_board_init(void)
 	generic_modem_init();
 
 	//Uncomment following to enable w1 bus emulation on SD1_WP io(SD1 not used pin)
-	generic_add_w1(W1_EMULATED_IO);
+	//generic_add_w1(W1_EMULATED_IO);
 
 
 }
