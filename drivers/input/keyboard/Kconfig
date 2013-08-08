@@ -356,6 +356,14 @@ config KEYBOARD_IMX
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx_keypad.
 
+config KEYBOARD_SNVS_PWRKEY
+	tristate "MX6 SNVS Power Key Driver"
+	depends on SOC_IMX6Q
+	help
+	  This is the Power key driver for the Freescale MXC application
+	  processors.
+
+
 config KEYBOARD_NEWTON
 	tristate "Newton keyboard"
 	select SERIO
