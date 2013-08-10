@@ -425,7 +425,7 @@ static ssize_t pfuze_show(struct device *dev,
 	pfuze_lock(mc_pfuze);
 	for (i = 0; i < offset; i++) {
 		pfuze_reg_read(mc_pfuze, i, &value);
-		pr_info("reg%03d: %02x\t\t", i, value);
+		pr_info("reg%02x: %02x\t\t", i, value);
 	}
 	pfuze_unlock(mc_pfuze);
 	pr_info("\n");
