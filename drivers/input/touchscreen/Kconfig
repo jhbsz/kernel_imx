@@ -795,4 +795,12 @@ config TOUCHSCREEN_DA9052
         help
           Say y here to support the touchscreen found on
           Dialog Semiconductor DA9052 PMIC
+
+config TOUCHSCREEN_FOCALTECH
+        tristate "FocalTech Touch Screen"
+        depends on I2C
+        help
+          Say y here to support the touchscreen found on
+          FocalTech touch screen
+	  
 endif
