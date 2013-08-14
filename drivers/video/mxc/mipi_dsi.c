@@ -57,18 +57,20 @@
 #define	MIPI_DSI_REG_RW_TIMEOUT		(20)
 #define	MIPI_DSI_PHY_TIMEOUT		(10)
 
+
 static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
-#ifdef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
+	#ifdef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
 	{
-	 "TRULY-WVGA",
-	 #ifdef CONFIG_NT35517_5INCH_PANEL
-	 {mipid_nt35517_get_lcd_videomode, mipid_nt35517_lcd_setup}
-	},
-	 #else
-	 {mipid_hx8369_get_lcd_videomode, mipid_hx8369_lcd_setup}
-	},	 
+		 "TRULY-WVGA",
+		 {mipid_hx8369_get_lcd_videomode, mipid_hx8369_lcd_setup},
+    },
 	#endif
-#endif
+	#ifdef CONFIG_NT35517_5INCH_PANEL
+	{
+		"NT-QHD",
+		{mipid_nt35517_get_lcd_videomode, mipid_nt35517_lcd_setup},
+	},
+	#endif
 	{
 	"", {NULL, NULL}
 	}

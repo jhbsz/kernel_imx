@@ -91,7 +91,15 @@
 #include "board-mx6dl_sparkauto.h"
 #include "generic_devices.h"
 
-
+/*add by alleny yao*/
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/fb.h>
+#include <linux/backlight.h>
+#include <linux/err.h>
+#include <linux/pwm.h>
+#include <linux/slab.h>
+/*add by allen yao*/
 
 #define SABRESD_DISP_RST_B	IMX_GPIO_NR(6, 11)
 #define SABRESD_DISP_PWR_EN	IMX_GPIO_NR(6, 14)
@@ -194,18 +202,54 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
+
+static struct pwm_device	*pwm_uart_mod=NULL; ;
+static int pwm_uart_mod_enable=1;
+module_param_named(uart_modulation, pwm_uart_mod_enable, int, S_IRUGO | S_IWUSR | S_IWGRP);
+void uart_modulation_enable(int en){
+	if(!pwm_uart_mod){
+		static iomux_v3_cfg_t pwm_uart_cfg[]={
+				/*infred pwm out*/
+				//MX6Q_PAD_DISP0_DAT9__PWM2_PWMO,		/*add by allenyao*/	
+				MX6Q_PAD_SD1_CMD__PWM4_PWMO,
+			};
+		mxc_iomux_v3_setup_multiple_pads(pwm_uart_cfg,
+			ARRAY_SIZE(pwm_uart_cfg));
+
+		pwm_uart_mod = pwm_request(3, "IRC");
+	}
+	if(pwm_uart_mod&&pwm_uart_mod_enable){
+		if(en){
+			pwm_config(pwm_uart_mod, 13158, 26315/*38kHz*/);
+			pwm_enable(pwm_uart_mod);  
+		}else{
+			pwm_config(pwm_uart_mod, 0, 26315);
+			pwm_disable(pwm_uart_mod);		
+		}
+		
+	}
+	
+}
+
+
+
 static const struct imxuart_platform_data mx6q_uart3_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS,
 	.dma_req_rx = MX6Q_DMA_REQ_UART3_RX,
 	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
 };
 
+static const struct imxuart_platform_data mx6q_uart4_data __initconst = {
+	.flags      = IMXUART_MODULATION,
+	.modulation_enable = uart_modulation_enable,
+
+};
 static inline void mx6q_sparkauto_init_uart(void)
 {	
 	imx6q_add_imx_uart(0, NULL);	
 	imx6q_add_imx_uart(1, NULL);
 	imx6q_add_imx_uart(2, &mx6q_uart3_data);
-	imx6q_add_imx_uart(3, NULL);
+	imx6q_add_imx_uart(3, &mx6q_uart4_data);
 	imx6q_add_imx_uart(4, NULL);	
 }
 
@@ -1125,7 +1169,7 @@ static void __init mx6_sparkauto_board_init(void)
 	   mmc2 is wifi
 	*/
 	imx6q_add_sdhci_usdhc_imx(3, &mx6q_sd4_data);
-	imx6q_add_sdhci_usdhc_imx(0, &mx6q_sd1_data);
+	//imx6q_add_sdhci_usdhc_imx(0, &mx6q_sd1_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6q_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
 	imx6q_sparkauto_init_usb();

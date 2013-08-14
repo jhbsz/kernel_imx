@@ -112,7 +112,7 @@ static iomux_v3_cfg_t mx6q_sparkauto_pads[] = {
 	/* MX6Q_PAD_NANDF_D0__GPIO_2_0,*/	/* J6 - LVDS Display contrast */
 
 	/* DISP_PWM */
-	MX6Q_PAD_SD1_DAT3__PWM1_PWMO,		/* GPIO1[21] */
+	MX6Q_PAD_GPIO_1__PWM2_PWMO,		/* GPIO1[21] */
 
 	/* UART
 	 * UART1:debugging

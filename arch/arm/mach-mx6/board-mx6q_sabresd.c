@@ -368,18 +368,6 @@ static struct imx_ssi_platform_data mx6_sabresd_ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
-static struct platform_device mx6_sabresd_audio_rt5633_device = {
-	.name = "imx-rt5633",
-};
-
-static struct mxc_audio_platform_data rt5633_data = {
-	.ssi_num = 1,
-	.src_port = 2,
-	.ext_port = 3,
-//	.hp_gpio = SABRESD_HEADPHONE_DET,
-//	.hp_active_low = 1,
-};
-
 static struct platform_device mx6_sabresd_audio_wm8958_device = {
 	.name = "imx-wm8958",
 };
@@ -1281,21 +1269,13 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 };
 
 static void mx6_reset_mipi_dsi(void)
-{	
-	return 0;
-	printk("com to mipi_lcd reset--allen\n");
-	//gpio_set_value(SABRESD_DISP_PWR_EN, 1);
-	//gpio_set_value(SABRESD_DISP_RST_B, 1);
-	gpio_request(SABRESD_DISP_RST_B, "mipi_lcd_reset");
-	gpio_direction_output(SABRESD_DISP_RST_B, 1);
+{
+	gpio_set_value(SABRESD_DISP_PWR_EN, 1);
+	gpio_set_value(SABRESD_DISP_RST_B, 1);
 	udelay(10);
-	//gpio_set_value(SABRESD_DISP_RST_B, 0);
-	gpio_direction_output(SABRESD_DISP_RST_B, 0);
+	gpio_set_value(SABRESD_DISP_RST_B, 0);
 	udelay(50);
-	//gpio_set_value(SABRESD_DISP_RST_B, 1);
-	gpio_direction_output(SABRESD_DISP_RST_B, 1);
-	gpio_free(SABRESD_DISP_RST_B);
-
+	gpio_set_value(SABRESD_DISP_RST_B, 1);
 
 	/*
 	 * it needs to delay 120ms minimum for reset complete
@@ -1306,19 +1286,34 @@ static void mx6_reset_mipi_dsi(void)
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.ipu_id		= 0,
 	.disp_id	= 1,
+	#ifdef MIPI_DSI_ON_SABRESD
+	.lcd_panel	= "NT-QHD",
+	#else
 	.lcd_panel	= "TRULY-WVGA",
 	.reset		= mx6_reset_mipi_dsi,
+	#endif
 };
 
 static struct ipuv3_fb_platform_data sabresd_fb_data[] = {
+	#ifdef MIPI_DSI_ON_SABRESD
 	{ /*fb0*/
 	.disp_dev = "mipi_dsi",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
-	.mode_str = "TRULY-WVGA",
+	.mode_str = "NT-QHD",
 	.default_bpp = 32,
 	.int_clk = false,
 	.late_init = false,
 	}, {
+	#else
+	{ /*fb0*/
+	.disp_dev = "ldb",
+	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
+	.mode_str = "LDB-XGA",
+	.default_bpp = 16,
+	.int_clk = false,
+	.late_init = false,
+	}, {
+	#endif
 	.disp_dev = "hdmi",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
 	.mode_str = "1920x1080M@60",
@@ -1547,10 +1542,7 @@ static int __init imx6q_init_audio(void)
 		imx6q_add_imx_ssi(1, &mx6_sabresd_ssi_pdata);
 
 		mxc_wm8958_init();
-	}else {
-		//register multi sound soc
-		mxc_register_device(&mx6_sabresd_audio_rt5633_device,
-				&rt5633_data);
+	} else {
 		platform_device_register(&sabresd_vwm8962_reg_devices);
 		mxc_register_device(&mx6_sabresd_audio_wm8962_device,
 				    &wm8962_data);

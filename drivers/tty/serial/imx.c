@@ -213,6 +213,12 @@ struct imx_port {
 	unsigned int		dma_tx_nents;
 	bool			dma_is_rxing;
 	wait_queue_head_t	dma_wait;
+
+
+	/*modulation*/
+	int enable_mod;
+	void (*modulation_enable)(int en);
+
 };
 
 struct imx_port_ucrs {
@@ -226,6 +232,7 @@ struct imx_port_ucrs {
 #else
 #define USE_IRDA(sport)	(0)
 #endif
+
 
 /*
  * Save and restore functions for UCR1, UCR2 and UCR3 registers
@@ -1131,7 +1138,13 @@ static int imx_startup(struct uart_port *port)
 			pdata->irda_enable(1);
 	}
 
+	if(sport->enable_mod&&sport->modulation_enable){
+		sport->modulation_enable(1);	
+	}
+
+
 	tty = sport->port.state->port.tty;
+
 
 	return 0;
 
@@ -1150,6 +1163,10 @@ static void imx_shutdown(struct uart_port *port)
 	struct imx_port *sport = (struct imx_port *)port;
 	unsigned long temp;
 	unsigned long flags;
+
+	if(sport->enable_mod&&sport->modulation_enable){
+		sport->modulation_enable(0);	
+		}
 
 	if (sport->enable_dma) {
 		/* We have to wait for the DMA to finish. */
@@ -1809,7 +1826,11 @@ static int serial_imx_probe(struct platform_device *pdev)
 		sport->use_dcedte = 1;
 	if (pdata && (pdata->flags & IMXUART_SDMA))
 		sport->enable_dma = 1;
-
+	if (pdata && (pdata->flags & IMXUART_MODULATION)){
+		sport->enable_mod= 1;
+		sport->modulation_enable = pdata->modulation_enable;
+	}
+	
 #ifdef CONFIG_IRDA
 	if (pdata && (pdata->flags & IMXUART_IRDA))
 		sport->use_irda = 1;

@@ -34,7 +34,7 @@ static int mipid_init_backlight(struct mipi_dsi_info *mipi_dsi);
 
 static struct fb_videomode truly_lcd_modedb[] = {
 	{
-	 "TRULY-WVGA", 60, 540, 960, 32150/*ps*/,
+	 "NT-QHD", 60, 540, 960, 32150/*ps*/,
 	 3, 3,
 	 5, 5,
 	 8, 3,
@@ -53,7 +53,6 @@ static struct mipi_lcd_config lcd_config = {
 void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 		struct mipi_lcd_config **data)
 {
-	printk("com to %s--init--allenyao\n",__func__);
 	if (cpu_is_mx6dl())
 		truly_lcd_modedb[0].pixclock = 37037; /* 27M clock*/
 	*mode = &truly_lcd_modedb[0];
@@ -64,7 +63,6 @@ void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 {
 	return 0;
-	printk("com to %s--init--allenyao\n",__func__);
 	u32 buf[DSI_CMD_BUF_MAXSIZE];
 	int err;
 
@@ -80,7 +78,6 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	CHECK_RETCODE(err);
 
 	//read ID
-	#if 1
 	buf[0] = MIPI_DSI_MAX_RET_PACK_SIZE;
 	err = mipi_dsi_pkt_write(mipi_dsi,
 				MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE,
@@ -95,7 +92,6 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 		printk("MIPI DSI LCD ID:0x%x.\n", buf[0]);
 	} 
 	
-	#if 1
 	if (!err && ((buf[0] & 0xffff) == 0x8000)) {
 		dev_info(&mipi_dsi->pdev->dev,
 				"MIPI DSI LCD ID:0x%x.\n", buf[0]);
@@ -107,8 +103,6 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 				"MIPI DSI LCD not detected!\n");
 		return err;
 	}
-	#endif
-	#endif
 
 
 	/* 
