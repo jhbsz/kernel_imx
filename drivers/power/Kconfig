@@ -265,4 +265,13 @@ config BATTERY_DA9052
 	  Say Y here to enable support for batteries charger integrated into
 	  DA9052 PMIC.
 
+config QPAD_POWERSUPPLY
+        tristate "QPad power supply including charger and battery driver"
+        depends on GENERIC_HARDIRQS
+        help
+          Say Y to enable support for the DC-DC charger and sysfs on
+	  QPad board.The driver supports controlling charger and battery
+	  based on the status of charger connections with interrupt handlers.
+	  
+
 endif # POWER_SUPPLY
