@@ -107,6 +107,34 @@ extern unsigned int system_rev;
 	board_is_rev(IMX_BOARD_REV_3)
 #define board_is_mx6_revc() \
 	board_is_rev(IMX_BOARD_REV_4)
+
+/*
+ * Set fsl_system_rev:
+ * bit 0-7: Chip Revision ID
+ * bit 8-11: Board Revision ID
+ *     0: Unknown or latest revision
+ *     1: RevA Board
+ *     2: RevB board
+ *     3: RevC board
+ * bit 12-19: Chip Silicon ID
+ *     0x63: i.MX6 Dual/Quad
+ *     0x61: i.MX6 Solo/DualLite
+ *     0x60: i.MX6 SoloLite
+ * 
+ * bit 23-20:Board Identification (type) 
+ * 0x0 : Unknown
+ * 0x1 : Sabre-AI (ARD)
+ * 0x2 : Smart Device (SD)
+ * 0x3 : Quick-Start Board (QSB)
+ * 0x4 : SoloLite EVK (SL-EVK)
+ * 0x6 : HDMI Dongle
+ * 0xA : SparkAuto
+ * 0xB : QPad
+ */
+
+#define mx6_board_id()	((system_rev>>20)&0xF)
+#define mx6_board_rev()	((system_rev>>8)&0xF)
+
 #endif
 
 #ifndef __ASSEMBLY__
