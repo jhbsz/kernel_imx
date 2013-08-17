@@ -131,6 +131,14 @@
 #define QPAD_AUDIO_INT					IMX_GPIO_NR(1, 20)
 #define QPAD_AUDIO_HEADPHONE_DET		IMX_GPIO_NR(3, 21)
 
+//QR Engine
+#define QPAD_QRE_RST		IMX_GPIO_NR(3, 8)
+#define QPAD_QRE_TRIG		IMX_GPIO_NR(3, 30)
+
+//FLASHLIGHT
+#define QPAD_FL_PWR_EN		IMX_GPIO_NR(3, 31)
+#define QPAD_FL_EN			IMX_GPIO_NR(4, 5)
+
 
 #define MX6Q_GENERIC_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_HIGH|	\
@@ -775,10 +783,40 @@ static int __init imx6x_add_ram_console(void)
 #define MODEM_PIN_WAKEAP QPAD_MODEM_WAKEAP
 #define MODEM_PIN_WAKEMODEM QPAD_MODEM_WAKEMODEM
 #include "modem.c"
-static int __init generic_modem_init(void){
+static int __init modem_init(void){
 	//dummy init for modem
 	return 0;
 	
+}
+
+
+static int __init board_misc_init(void){
+	int ret;
+	//QR Engine 
+	//Set Reset On,Trigger Off
+	ret = gpio_request(QPAD_QRE_RST, "qre-rst");
+	if (ret) {
+		pr_err("failed to get GPIO qre-rst: %d\n",
+			ret);
+		return -EINVAL;
+	}
+	gpio_direction_output(QPAD_QRE_RST,0);
+	mdelay(5);
+	gpio_direction_output(QPAD_QRE_RST,1);
+	gpio_free(QPAD_QRE_RST);
+
+	ret = gpio_request(QPAD_QRE_TRIG, "qre-trig");
+	if (ret) {
+		pr_err("failed to get GPIO qre-trig: %d\n",
+			ret);
+		return -EINVAL;
+	}
+	gpio_direction_output(QPAD_QRE_TRIG,1);
+	gpio_free(QPAD_QRE_TRIG);
+
+	//
+
+	return 0;
 }
 
 /*!
@@ -926,9 +964,12 @@ static void __init mx6_qpad_board_init(void)
 
 	nfc_init();
 
-	generic_modem_init();
+	modem_init();
 
 	generic_add_w1(W1_EMULATED_IO);
+
+	board_misc_init();
+	
 }
 
 extern void __iomem *twd_base;
