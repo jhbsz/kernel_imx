@@ -27,6 +27,7 @@
 #include <linux/platform_device.h>
 #include <linux/spi/spi.h>
 #include <linux/jiffies.h>
+#include <linux/regulator/consumer.h>
 #include <asm/delay.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -38,13 +39,27 @@
 
 #include "rt5625.h"
 
-#define RT5625_VERSION 	"0.5"
+#define RT5625_VERSION 	"1.0"
+
+#define RT5625_NUM_SUPPLIES 6
+static const char *rt5625_supply_names[RT5625_NUM_SUPPLIES] = {
+	"DBVDD",
+	"DCVDD",
+	"AVDD1",
+	"AVDD2",
+	"HPVDD",
+	"SPKVDD",
+};
+
 
 struct rt5625_priv {
 	enum snd_soc_control_type control_type;
 	struct snd_soc_codec *codec;
 	unsigned int stereo_sysclk;
 	unsigned int voice_sysclk;
+
+	
+	struct regulator_bulk_data supplies[RT5625_NUM_SUPPLIES];
 };
 
 
@@ -2291,6 +2306,7 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 {
 	struct rt5625_priv *rt5625 = (struct rt5625_priv *)snd_soc_codec_get_drvdata(codec);
 	int ret = 0;	
+	int i;
 
 	rt5625->codec = codec;
 
@@ -2318,6 +2334,24 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 	//hp_depop_mode2(codec);
 
 	
+	for (i = 0; i < ARRAY_SIZE(rt5625->supplies); i++)
+		rt5625->supplies[i].supply = rt5625_supply_names[i];
+	
+	ret = regulator_bulk_get(codec->dev, ARRAY_SIZE(rt5625->supplies),
+				 rt5625->supplies);
+	if (ret != 0) {
+		dev_err(codec->dev, "Failed to request supplies: %d\n", ret);
+		goto err;
+	}
+
+	
+	ret = regulator_bulk_enable(ARRAY_SIZE(rt5625->supplies),
+				    rt5625->supplies);
+	if (ret != 0) {
+		dev_err(codec->dev, "Failed to enable supplies: %d\n", ret);
+		goto err_get;
+	}
+
 	snd_soc_add_controls(codec, rt5625_snd_controls,
 			ARRAY_SIZE(rt5625_snd_controls));
 	snd_soc_dapm_new_controls(&codec->dapm, rt5625_dapm_widgets,
@@ -2325,7 +2359,9 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 	snd_soc_dapm_add_routes(&codec->dapm, rt5625_dapm_routes, 
 			ARRAY_SIZE(rt5625_dapm_routes));	
 	
-
+err_get:
+	regulator_bulk_free(ARRAY_SIZE(rt5625->supplies), rt5625->supplies);
+err:
 	return ret;
 
 

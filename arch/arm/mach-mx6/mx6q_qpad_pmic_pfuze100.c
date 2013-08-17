@@ -60,6 +60,7 @@
 extern u32 arm_max_freq;
 extern u32 enable_ldo_mode;
 
+
 static struct regulator_consumer_supply sw1_consumers[] = {
 	{
 		.supply	   = "VDDCORE",
@@ -73,59 +74,69 @@ static struct regulator_consumer_supply sw1c_consumers[] = {
 
 static struct regulator_consumer_supply sw2_consumers[] = {
 	{
-		.supply	   = "MICVDD",
-		.dev_name   = "0-001a",
+	 .supply = "GEN_3V3",
+	},
+	{
+	 .supply = "AVDD1",
+	 .dev_name = "0-001f",
+	},
+	{
+	 .supply = "AVDD2",
+	 .dev_name = "0-001f",
+	},
+	{
+	 .supply = "HPVDD",
+	 .dev_name = "0-001f",
 	}
 };
 static struct regulator_consumer_supply sw4_consumers[] = {
-       {
-	.supply = "AUD_1V8",
-	}
+   {
+		.supply = "SPKVDD",
+		.dev_name = "0-001f",
+   }
 };
 static struct regulator_consumer_supply swbst_consumers[] = {
-       {
+    {
 	.supply = "SWBST_5V",
 	}
 };
 static struct regulator_consumer_supply vgen1_consumers[] = {
-       {
+    {
 	.supply = "VGEN1_1V5",
 	}
 };
 static struct regulator_consumer_supply vgen2_consumers[] = {
-       {
+    {
 	.supply = "VGEN2_1V5",
 	}
 };
-static struct regulator_consumer_supply vgen4_consumers[] = {
+static struct regulator_consumer_supply vgen3_consumers[] = {
 	{
-		.supply	   = "DBVDD",
-		.dev_name   = "0-001a",
-	},
-	{
-		.supply	   = "AVDD",
-		.dev_name   = "0-001a",
-	},
-	{
-		.supply	   = "DCVDD",
-		.dev_name   = "0-001a",
-	},
-	{
-		.supply	   = "CPVDD",
-		.dev_name   = "0-001a",
-	},
-	{
-		.supply	   = "PLLVDD",
-		.dev_name   = "0-001a",
+	 .supply = "VGEN3_2V5",
 	}
 };
+
+static struct regulator_consumer_supply vgen4_consumers[] = {
+	{
+	 .supply = "VGEN4_1V8",
+	},
+	{
+	 .supply = "DBVDD",
+	 .dev_name = "0-001f",
+	},
+	{
+	 .supply = "DCVDD",
+	 .dev_name = "0-001f",
+	}
+
+};
 static struct regulator_consumer_supply vgen5_consumers[] = {
-       {
+    {
 	.supply = "VGEN5_2V8",
 	}
 };
 static struct regulator_consumer_supply vgen6_consumers[] = {
-       {
+    {
 	.supply = "VGEN6_3V3",
 	}
 };
@@ -338,6 +349,8 @@ static struct regulator_init_data vgen3_init = {
 			REGULATOR_CHANGE_STATUS,
 			.valid_modes_mask = 0,
 			},
+	.num_consumer_supplies = ARRAY_SIZE(vgen3_consumers),
+	.consumer_supplies = vgen3_consumers,
 };
 
 static struct regulator_init_data vgen4_init = {
