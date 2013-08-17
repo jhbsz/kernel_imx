@@ -102,7 +102,7 @@
 #define QPAD_CAM_RST		IMX_GPIO_NR(5, 20)
 
 
-#define W1_EMULATED_IO		IMX_GPIO_NR(3, 28)
+#define QPAD_W1_IO		IMX_GPIO_NR(3, 28)
 
 
 #define GPIO_KEY_POWER		IMX_GPIO_NR(3,29)
@@ -339,6 +339,40 @@ static struct eup2471_platform_data eup2471_pdata =
 	.flash 		= eup2471_flash,
 };
 
+#include <linux/ft5x0x_ts.h>
+
+static int ft5x0x_plat_init(void){
+	int ret;	
+	ret = gpio_request(QPAD_TP_PWR_EN, "tp-pwr");
+	if (ret) {
+		pr_err("failed to get GPIO otg-vbus: %d\n",
+			ret);
+		goto err;
+	}
+	gpio_direction_output(QPAD_TP_PWR_EN, 1);
+	gpio_free(QPAD_TP_PWR_EN);
+
+	ret = gpio_request(QPAD_TP_RST, "tp-rst");
+	if (ret) {
+		pr_err("failed to get GPIO otg-vbus: %d\n",
+			ret);
+		goto err;
+	}
+	gpio_direction_output(QPAD_TP_RST, 0);
+	msleep(50);
+	gpio_direction_output(QPAD_TP_RST, 1);
+	gpio_free(QPAD_TP_RST);
+
+err:
+	return ret;
+	
+}
+static struct ft5x0x_ts_platform_data ft5x0x_data=
+{
+	.plat_init	= ft5x0x_plat_init,
+};
+
+
 
 static struct imxi2c_platform_data mx6q_i2c_data = {
 	.bitrate = 100000,
@@ -356,7 +390,12 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
-		
+	{
+		.type			= "ft5x0x_ts",
+		.addr			= 0x3a,
+		.irq			= gpio_to_irq(QPAD_TP_IRQ),
+		.platform_data	= &ft5x0x_data,
+	},	
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
@@ -1037,7 +1076,7 @@ static void __init mx6_qpad_board_init(void)
 
 	modem_init();
 
-	generic_add_w1(W1_EMULATED_IO);
+	generic_add_w1(QPAD_W1_IO);
 
 	board_misc_init();
 	

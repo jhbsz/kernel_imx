@@ -63,6 +63,7 @@ struct ft5x0x_ts_data {
 
 	u32 identifer;
 
+	bool tpkey_enabled;
 	//firmware update	
 	#if CFG_SUPPORT_AUTO_UPG 
 	struct firmware *firmware;
@@ -768,18 +769,20 @@ static void ft5x0x_report_value(struct ft5x0x_ts_data* ft5x0x)
 	    else //maybe the touch key area
 	    {
 		#if CFG_SUPPORT_TOUCH_KEY
-		//special case for 5x0x
-		if(ft5x0x->identifer==TP_ID_5X0X)
-		{
-			if (event->au16_y[i] >= SCREEN_MAX_Y)
-			{
-				ft5x0x_touch_key_process(ft5x0x,data->input_dev, event->au16_x[i], event->au16_y[i], event->au8_touch_event[i]);
+			if(false == ft5x0x->tpkey_enabled){
+				//special case for 5x0x
+				if(ft5x0x->identifer==TP_ID_5X0X)
+				{
+					if (event->au16_y[i] >= SCREEN_MAX_Y)
+					{
+						ft5x0x_touch_key_process(ft5x0x,data->input_dev, event->au16_x[i], event->au16_y[i], event->au8_touch_event[i]);
+					}
+				}
+				else if (event->au16_x[i] >= SCREEN_MAX_X)
+				{
+					ft5x0x_touch_key_process(ft5x0x,data->input_dev, event->au16_x[i], event->au16_y[i], event->au8_touch_event[i]);
+				}	
 			}
-		}
-		else if (event->au16_x[i] >= SCREEN_MAX_X)
-		{
-			ft5x0x_touch_key_process(ft5x0x,data->input_dev, event->au16_x[i], event->au16_y[i], event->au8_touch_event[i]);
-		}		
 		#endif
 	    }
 	    
@@ -981,6 +984,11 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	printk("ft5x0x_ts_probe,%s detected\n", id->name);
+
+	if(pdata->plat_init)
+		pdata->plat_init();
+
+		
 		
 
 	ft5x0x_ts = kzalloc(sizeof(*ft5x0x_ts), GFP_KERNEL);
@@ -1001,6 +1009,10 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	//set identifier
 	ft5x0x_ts->identifer = id->driver_data;
+
+	if(FT5X0X_QUIRK_TOUCHKEY_ENABLE&pdata->quirks){
+		ft5x0x_ts->tpkey_enabled = true;
+	}
 
 
 	INIT_WORK(&ft5x0x_ts->pen_event_work, ft5x0x_ts_pen_irq_work);
@@ -1054,15 +1066,17 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	set_bit(EV_ABS, input_dev->evbit);
 
 #if CFG_SUPPORT_TOUCH_KEY
-    //setup key code area
-    set_bit(EV_SYN, input_dev->evbit);
-    set_bit(BTN_TOUCH, input_dev->keybit);
-    input_dev->keycode = tsp_keycodes;
-    for(i = 0; i < CFG_NUMOFKEYS; i++)
-    {
-	input_set_capability(input_dev, EV_KEY, ((int*)input_dev->keycode)[i]);    
-	tsp_keystatus[i] = KEY_RELEASE;
-    }
+	if(true == ft5x0x_ts->tpkey_enabled){
+	    //setup key code area
+	    set_bit(EV_SYN, input_dev->evbit);
+	    set_bit(BTN_TOUCH, input_dev->keybit);
+	    input_dev->keycode = tsp_keycodes;
+	    for(i = 0; i < CFG_NUMOFKEYS; i++)
+	    {
+		input_set_capability(input_dev, EV_KEY, ((int*)input_dev->keycode)[i]);    
+		tsp_keystatus[i] = KEY_RELEASE;
+	    }
+	}
 #endif
 
 
