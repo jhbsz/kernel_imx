@@ -2,15 +2,29 @@
 #include <linux/input.h>
 #include <linux/wakelock.h>
 
+#ifndef MODEM_WAKEUP_ENABLED
 #define MODEM_WAKEUP_ENABLED
+#endif
 
+#ifndef MODEM_PIN_POWER
 #define MODEM_PIN_POWER 121
+#endif
 
+#ifndef MODEM_PIN_RESET
 #define MODEM_PIN_RESET 127
+#endif
+
+#ifndef MODEM_PIN_ONOFF
 #define MODEM_PIN_ONOFF 126
-//#define MODEM_PIN_HOSTWAKE GPIO(110) //3V logic
-#define MODEM_PIN_HOSTWAKE 46
-#define MODEM_PIN_WAKE	142
+#endif
+
+#ifndef MODEM_PIN_WAKEAP
+#define MODEM_PIN_WAKEAP 46
+#endif
+
+#ifndef MODEM_PIN_WAKEMODEM
+#define MODEM_PIN_WAKEMODEM	142
+#endif
 
 #define MODEM_STATE_INVALID 0
 #define MODEM_STATE_ON      1
@@ -34,8 +48,8 @@ struct usb_modem
 	int gpio_reset;
 	int gpio_onoff;
 	int gpio_power;  	//negative valid
-	int gpio_hostwake;	//modem wake up host
-	int gpio_wake;		//host wakeup modem
+	int gpio_wakeap;	//modem wake up host
+	int gpio_wakemodem;		//host wakeup modem
 
 	unsigned long mfpr_pin_power;
 	unsigned long mfpr_pin_onoff;	
@@ -109,8 +123,10 @@ static int request_modem_state(struct usb_modem* modem,int state)
 		{
 			//power on
 			gpio_direction_output(modem->gpio_power,1);//power on	
+			#ifdef ARCH_MMP
 			modem->mfpr_pin_power = MFP_CFG_LPM_DRV_HIGH(GPIO121, AF0);
 			mfp_config(&modem->mfpr_pin_power,1);
+			#endif
 			if(!modem->no_pin_onoff){
 				gpio_direction_output(modem->gpio_onoff,1);
 			}
@@ -132,8 +148,10 @@ static int request_modem_state(struct usb_modem* modem,int state)
 			}
 			//just power off	
 			gpio_direction_output(modem->gpio_power,0);//power off
+			#ifdef ARCH_MMP
 			modem->mfpr_pin_power = MFP_CFG_LPM_DRV_LOW(GPIO121, AF0);
 			mfp_config(&modem->mfpr_pin_power,1);
+			#endif
 		}
 		
 	}
@@ -186,22 +204,25 @@ static void modem_enable_work(struct work_struct *work)
 //
 static void usb_modem_set_pin(struct usb_modem* modem,const char* func,const char* state)
 {
-#warning "hard coding for mfpr power pin"
 	if(!strcmp(func,"power"))
 	{
 		if(!strcmp(state,"off"))
 		{		
 			//gpio_set_value(modem->gpio_power,1);
 			gpio_direction_output(modem->gpio_power,0);//power off
+			#ifdef ARCH_MMP
 			modem->mfpr_pin_power = MFP_CFG_LPM_DRV_LOW(GPIO121, AF0);
 			mfp_config(&modem->mfpr_pin_power,1);
+			#endif
 		}
 		else if(!strcmp(state,"on"))
 		{
 			//gpio_set_value(modem->gpio_power,0);		
 			gpio_direction_output(modem->gpio_power,1);//power on
+			#ifdef ARCH_MMP
 			modem->mfpr_pin_power = MFP_CFG_LPM_DRV_HIGH(GPIO121, AF0);
 			mfp_config(&modem->mfpr_pin_power,1);
+			#endif
 		}
 	}
 	else if(!strcmp(func,"reset"))
@@ -227,6 +248,7 @@ static void usb_modem_set_pin(struct usb_modem* modem,const char* func,const cha
 			gpio_set_value(modem->gpio_onoff,0);
 		}else if(!strcmp(state,"skip")){
 			modem->no_pin_onoff=1;			
+			#ifdef ARCH_MMP
 			if(gpio_get_value(modem->gpio_onoff)){			
 				modem->mfpr_pin_onoff &= ~(MFP_LPM_STATE_MASK);
 				modem->mfpr_pin_onoff |= MFP_LPM_DRIVE_HIGH;
@@ -236,26 +258,25 @@ static void usb_modem_set_pin(struct usb_modem* modem,const char* func,const cha
 				modem->mfpr_pin_onoff |= MFP_LPM_DRIVE_LOW;
 				mfp_config(&modem->mfpr_pin_onoff,1);			
 			}
+			#endif
 			
 		}
 	}
 	else if(!strcmp(func,"wake"))
 	{
-		if(-1!=modem->gpio_wake)
+		if(gpio_is_valid(modem->gpio_wakemodem))
 		{
 			if(!strcmp(state,"on"))
 			{
-				gpio_set_value(modem->gpio_wake,1);
+				gpio_set_value(modem->gpio_wakemodem,1);
 			}
 			else if(!strcmp(state,"off"))
 			{
-				gpio_set_value(modem->gpio_wake,0);
+				gpio_set_value(modem->gpio_wakemodem,0);
 			}
 		}
 	}
-		
 
-	
 }
 static ssize_t usb_modem_show(struct device *dev,
                             struct device_attribute *attr, char *buf)
@@ -266,11 +287,11 @@ static ssize_t usb_modem_show(struct device *dev,
 	len += sprintf(buf+len, "reset [%s]\t\n", (gpio_get_value(modem->gpio_reset)>0)?"off":"on");
 	len += sprintf(buf+len, "onoff [%s]\t\n", (gpio_get_value(modem->gpio_onoff)>0)?"on":"off");
 
-	if(-1!=modem->gpio_wake)
-		len += sprintf(buf+len, "wake [%s]\t\n", (gpio_get_value(modem->gpio_wake)>0)?"on":"off");
+	if(gpio_is_valid(modem->gpio_wakemodem))
+		len += sprintf(buf+len, "wake [%s]\t\n", (gpio_get_value(modem->gpio_wakemodem)>0)?"on":"off");
 	
-	if(modem->gpio_hostwake>=0)
-		len += sprintf(buf+len, "hostwake [%s]\t\n", (gpio_get_value(modem->gpio_hostwake)>0)?"high":"low");
+	if(gpio_is_valid(modem->gpio_wakeap))
+		len += sprintf(buf+len, "hostwake [%s]\t\n", (gpio_get_value(modem->gpio_wakeap)>0)?"high":"low");
 	len += sprintf(buf+len, "modem state \"%s\"\t\n", (MODEM_STATE_ON==modem->current_state)?"on":
 		(MODEM_STATE_OFF==modem->current_state)?"off":"invalid");
 	len += sprintf(buf+len, "\n\necho state <on|off> [time_ms]\trequest state on or off with optional time_ms \n");
@@ -367,8 +388,8 @@ static ssize_t wake_state_show(struct device *dev,
 {
 	struct usb_modem* modem = platform_get_drvdata(to_platform_device(dev));
 	
-	if(-1!=modem->gpio_wake)
-		return sprintf(buf,"%d\n",(gpio_get_value(modem->gpio_wake)>0)?1:0);
+	if(gpio_is_valid(modem->gpio_wakemodem))
+		return sprintf(buf,"%d\n",(gpio_get_value(modem->gpio_wakemodem)>0)?1:0);
 	else
 		return sprintf(buf,"wake up pin invalid\n");
 		
@@ -380,8 +401,8 @@ static ssize_t wake_state_store(struct device* dev,	struct device_attribute* att
 	int new_state;
 	if(1==sscanf(buf,"%d",&new_state))
 	{
-		if(-1!=modem->gpio_wake)
-			gpio_direction_output(modem->gpio_wake,new_state);
+		if(gpio_is_valid(modem->gpio_wakemodem))
+			gpio_direction_output(modem->gpio_wakemodem,new_state);
 	}
 	return count;
 	
@@ -409,7 +430,7 @@ static int pm_suspend_notifier(struct notifier_block *nb,
 	case PM_POST_SUSPEND:{
 			if(acquire_wakeup_time&&mymodem){
 				acquire_wakeup_time=0;				
-				wake_lock_timeout(&mymodem->modem_wakelock, HZ * 10);
+				wake_lock_timeout(&mymodem->modem_wakelock, HZ * 30);
 			}
 		}
 		return NOTIFY_OK;
@@ -443,23 +464,12 @@ static irqreturn_t usb_modem_irq_handler(int irq, void *data)
 	
 	if(0==modem->screen_state)
 	{
-		#if 0
-		//using wakelock to keep system to answer call or sms
-		#if 1
-		wake_lock_timeout(&modem->modem_wakelock, HZ * 5);
-		#else
-		input_report_key(modem->idev, KEY_POWER, 1);
-		input_report_key(modem->idev, KEY_POWER, 0);
-		input_sync(modem->idev);
-		#endif
-		#else
 		acquire_wakeup_time=1;
 		mymodem = modem;
-		#endif
 	}
 
 	if(modem->irq_enable_count){
-		disable_irq_nosync(gpio_to_irq(modem->gpio_hostwake));
+		disable_irq_nosync(gpio_to_irq(modem->gpio_wakeap));
 		modem->irq_enable_count--;
 	}
 	
@@ -494,37 +504,18 @@ static int __devinit usb_modem_probe(struct platform_device *pdev)
 #ifdef MODEM_WAKEUP_ENABLED
 
 	//set host wake as input
-	gpio_direction_input(modem->gpio_hostwake);
-	ret = request_irq(gpio_to_irq(modem->gpio_hostwake), usb_modem_irq_handler,
+	gpio_direction_input(modem->gpio_wakeap);
+	ret = request_irq(gpio_to_irq(modem->gpio_wakeap), usb_modem_irq_handler,
 		IRQF_NO_SUSPEND | IRQF_SHARED | IRQF_TRIGGER_FALLING /*| IRQF_TRIGGER_RISING*/,
-		"modem hostwake", modem);
+		"modem wakeap", modem);
 	if (ret) {
 		pr_warning("Request modem hostwake irq failed %d\n", ret);				
 	}
 	else
 	{
 		modem->irq_enable_count = 0;
-		disable_irq(gpio_to_irq(modem->gpio_hostwake));
+		disable_irq(gpio_to_irq(modem->gpio_wakeap));
 	}
-	#if 0
-	modem->idev = input_allocate_device();
-	if (!modem->idev) {
-		dev_err(&pdev->dev, "Failed to allocate input dev\n");
-		return -ENOMEM;
-	}
-
-	modem->idev->name = "usb_modem";
-	modem->idev->phys = "usb_modem/input0";
-	modem->idev->dev.parent = &pdev->dev;
-	modem->idev->evbit[0] = BIT_MASK(EV_KEY);
-	modem->idev->keybit[BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER);
-	ret = input_register_device(modem->idev);
-	if (ret) {
-		dev_err(&pdev->dev, "Can't register input device: %d\n", ret);
-		input_free_device(modem->idev);
-		return -ENODEV;
-	}
-	#endif	
 	register_pm_notifier(&pm_notify_block);
 #endif
 	
@@ -538,10 +529,12 @@ static int usb_modem_suspend(struct platform_device *pdev, pm_message_t state)
 	struct usb_modem* modem = platform_get_drvdata(pdev);	
 	if(!modem->irq_enable_count){
 		modem->irq_enable_count++;
-		enable_irq(gpio_to_irq(modem->gpio_hostwake));
+		enable_irq(gpio_to_irq(modem->gpio_wakeap));
 	}
 	modem->host_suspend = 1;
 	#endif	
+
+	#ifdef ARCH_MMP
 	if(!modem->no_pin_onoff){
 		if(gpio_get_value(modem->gpio_onoff)){			
 			modem->mfpr_pin_onoff &= ~(MFP_LPM_STATE_MASK);
@@ -553,13 +546,14 @@ static int usb_modem_suspend(struct platform_device *pdev, pm_message_t state)
 			mfp_config(&modem->mfpr_pin_onoff,1);			
 		}
 	}
+	#endif
 	return 0;
 }
 static int usb_modem_resume(struct platform_device *pdev)
 {
 	struct usb_modem* modem = platform_get_drvdata(pdev);
 	if(modem){
-	//disable_irq_nosync(gpio_to_irq(modem->gpio_hostwake));
+	//disable_irq_nosync(gpio_to_irq(modem->gpio_wakeap));
 
 		modem->link_state_change = 1;	
 		wake_up_interruptible(&modem->wakeup_wqueue);
@@ -599,17 +593,23 @@ static int __init board_modem_init(void)
 	modem_pdata->modem = modem;
 	//request gpio pins
 	modem->gpio_power = MODEM_PIN_POWER;
+	#ifdef ARCH_MMP
 	modem->mfpr_pin_power = GPIO121_MODEM_PWR;
+	#endif
 	modem->gpio_reset = MODEM_PIN_RESET;
+	#ifdef ARCH_MMP
 	modem->mfpr_pin_reset = GPIO127_MODEM_RESET;
+	#endif
 	modem->gpio_onoff = MODEM_PIN_ONOFF;
+	#ifdef ARCH_MMP
 	modem->mfpr_pin_onoff=GPIO126_MODEM_ONOFF;
+	#endif
 #ifdef MODEM_WAKEUP_ENABLED	
-	modem->gpio_hostwake  = MODEM_PIN_HOSTWAKE;
-	modem->gpio_wake	  = MODEM_PIN_WAKE;
+	modem->gpio_wakeap  	= MODEM_PIN_WAKEAP;
+	modem->gpio_wakemodem	= MODEM_PIN_WAKEMODEM;
 #else
-	modem->gpio_hostwake = -1;
-	modem->gpio_wake	= -1;
+	modem->gpio_wakeap = -1;
+	modem->gpio_wakemodem	= -1;
 #endif
 	modem->modem_on_timing_ms = 3000;
 	modem->modem_off_timing_ms = 3000;
@@ -637,20 +637,20 @@ static int __init board_modem_init(void)
 	  return -EBUSY;
 	}	
 #ifdef MODEM_WAKEUP_ENABLED
-	else if (gpio_request(modem->gpio_hostwake, "modem hostwake")) 
+	else if (gpio_request(modem->gpio_wakeap, "wakeap")) 
 	{
 	  pr_warning("request modem hostwake GPIO failed\n");
 	  kfree(modem);
 	  return -EBUSY;
 	}	
-	else if (gpio_request(modem->gpio_wake, "modem wake")) 
+	else if (gpio_request(modem->gpio_wakemodem, "wakemodem")) 
 	{
 	  pr_warning("request modem wake GPIO failed\n");
 	  kfree(modem);
 	  return -EBUSY;
 	}	
 
-	gpio_direction_output(modem->gpio_wake,0);//wake
+	gpio_direction_output(modem->gpio_wakemodem,0);//wake
 	
 #endif
 

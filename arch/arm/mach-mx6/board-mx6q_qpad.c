@@ -57,7 +57,7 @@
 #include <linux/mfd/wm8994/gpio.h>
 #include <sound/wm8962.h>
 #include <linux/mfd/mxc-hdmi-core.h>
-
+#include <linux/power/qpower.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
 #include <mach/mxc_dvfs.h>
@@ -89,28 +89,56 @@
 #include "generic_devices.h"
 
 
-#define QPAD_PFUZE_INT	IMX_GPIO_NR(7, 13)
+#define QPAD_PFUZE_INT		IMX_GPIO_NR(7, 13)
+
+
 #define QPAD_CHARGE_DOK_B	IMX_GPIO_NR(2, 24)
 #define QPAD_CHARGE_UOK_B	IMX_GPIO_NR(3, 17)
 #define QPAD_CHARGE_CHG_1_B	IMX_GPIO_NR(3, 23)
 #define QPAD_CHARGE_FLT_1_B	IMX_GPIO_NR(5, 2)
+#define QPAD_BATTERY_ALERT	IMX_GPIO_NR(4, 14)
 
+#define QPAD_CAM_PWR		IMX_GPIO_NR(1, 16)
+#define QPAD_CAM_RST		IMX_GPIO_NR(5, 20)
+
+
+#define W1_EMULATED_IO		IMX_GPIO_NR(3, 28)
+
+
+#define GPIO_KEY_POWER		IMX_GPIO_NR(3,29)
+#define GPIO_KEY_MENU		IMX_GPIO_NR(3,9)
+#define GPIO_KEY_HOME		IMX_GPIO_NR(3,10)
+#define GPIO_KEY_BACK		IMX_GPIO_NR(3,11)
+#define GPIO_KEY_F1			IMX_GPIO_NR(6,9)
+#define GPIO_KEY_F2			IMX_GPIO_NR(6,10)
+
+#define QPAD_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
+
+#define QPAD_DISP_PWR_EN		IMX_GPIO_NR(2, 6)
+#define QPAD_DISP_BL_PWR_EN	IMX_GPIO_NR(4, 15)
+#define QPAD_DISP_RST_B		IMX_GPIO_NR(6, 16)
+
+#define QPAD_CSI0_PWN		IMX_GPIO_NR(1, 16)
+#define QPAD_CSI0_RST		IMX_GPIO_NR(5, 20)
+
+#define QPAD_MODEM_ONOFF		IMX_GPIO_NR(2, 2)
+#define QPAD_MODEM_RST			IMX_GPIO_NR(2, 3)
+#define QPAD_MODEM_PWR			IMX_GPIO_NR(2, 4)
+#define QPAD_MODEM_WAKEMODEM	IMX_GPIO_NR(2, 5)
+#define QPAD_MODEM_WAKEAP		IMX_GPIO_NR(1, 18)
 
 #define MX6Q_GENERIC_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_HIGH|	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
-
-#warning FIXME:Add proper NFC pin configuration
-
-#define NFC_VEN			IMX_GPIO_NR(5,24)
-#define NFC_IRQ			IMX_GPIO_NR(5,25)
-#define NFC_UPE			IMX_GPIO_NR(5,23)
+#define NFC_VEN			IMX_GPIO_NR(1,17)
+#define NFC_IRQ			IMX_GPIO_NR(6,17)
+#define NFC_UPE			IMX_GPIO_NR(1,19)
 
 static iomux_v3_cfg_t nfc_pads[] = {
-	NEW_PAD_CTRL(MX6Q_PAD_CSI0_DAT6__GPIO_5_24,MX6Q_GENERIC_PAD_CTRL),/*ven*/
-	MX6Q_PAD_CSI0_DAT7__GPIO_5_25,/*int*/
-	NEW_PAD_CTRL(MX6Q_PAD_CSI0_DAT5__GPIO_5_23,MX6Q_GENERIC_PAD_CTRL),/*upgrade*/
+	NEW_PAD_CTRL(MX6Q_PAD_SD1_DAT1__GPIO_1_17,MX6Q_GENERIC_PAD_CTRL),/*ven*/
+	MX6Q_PAD_SD3_DAT7__GPIO_6_17,/*int*/
+	NEW_PAD_CTRL(MX6Q_PAD_SD1_DAT2__GPIO_1_19,MX6Q_GENERIC_PAD_CTRL),/*upgrade*/
 };
 static int __init nfc_init(void)
 {
@@ -174,11 +202,11 @@ static struct imx_ssi_platform_data mx6_qpad_ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
-static struct platform_device mx6_qpad_audio_rt5633_device = {
-	.name = "imx-rt5633",
+static struct platform_device mx6_qpad_audio_rt5625_device = {
+	.name = "imx-rt5625",
 };
 
-static struct mxc_audio_platform_data rt5633_data = {
+static struct mxc_audio_platform_data rt5625_data = {
 	.ssi_num = 1,
 	.src_port = 2,
 	.ext_port = 3,
@@ -190,18 +218,36 @@ static struct mxc_audio_platform_data rt5633_data = {
 
 static void mx6q_csi0_cam_powerdown(int powerdown)
 {
+	if (powerdown)
+		gpio_set_value(QPAD_CSI0_PWN, 1);
+	else
+		gpio_set_value(QPAD_CSI0_PWN, 0);
 }
 
 static void mx6q_csi0_io_init(void)
 {
 	if (cpu_is_mx6q())
-		mxc_iomux_v3_setup_multiple_pads(mx6q_sabresd_csi0_sensor_pads,
-			ARRAY_SIZE(mx6q_sabresd_csi0_sensor_pads));
+		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_csi0_sensor_pads,
+			ARRAY_SIZE(mx6q_qpad_csi0_sensor_pads));
 	else if (cpu_is_mx6dl())
 		mxc_iomux_v3_setup_multiple_pads(mx6dl_sabresd_csi0_sensor_pads,
 			ARRAY_SIZE(mx6dl_sabresd_csi0_sensor_pads));
 
-	#warning FIXME:add csi0 camera reset
+	/* Camera reset */
+	gpio_request(QPAD_CSI0_RST, "cam-reset");
+	gpio_direction_output(QPAD_CSI0_RST, 1);
+
+	/* Camera power down */
+	gpio_request(QPAD_CSI0_PWN, "cam-pwdn");
+	gpio_direction_output(QPAD_CSI0_PWN, 1);
+	msleep(5);
+	gpio_set_value(QPAD_CSI0_PWN, 0);
+	msleep(5);
+	gpio_set_value(QPAD_CSI0_RST, 0);
+	msleep(1);
+	gpio_set_value(QPAD_CSI0_RST, 1);
+	msleep(5);
+	gpio_set_value(QPAD_CSI0_PWN, 1);
 	/* For MX6Q:
 	 * GPR1 bit19 and bit20 meaning:
 	 * Bit19:       0 - Enable mipi to IPU1 CSI0
@@ -234,35 +280,6 @@ static struct fsl_mxc_camera_platform_data camera_data = {
 	.pwdn = mx6q_csi0_cam_powerdown,
 };
 
-static void mx6q_mipi_powerdown(int powerdown)
-{
-	msleep(2);
-}
-
-static void mx6q_mipi_sensor_io_init(void)
-{
-	if (cpu_is_mx6q())
-		mxc_iomux_v3_setup_multiple_pads(mx6q_sabresd_mipi_sensor_pads,
-			ARRAY_SIZE(mx6q_sabresd_mipi_sensor_pads));
-	else if (cpu_is_mx6dl())
-		mxc_iomux_v3_setup_multiple_pads(mx6dl_sabresd_mipi_sensor_pads,
-			ARRAY_SIZE(mx6dl_sabresd_mipi_sensor_pads));
-	#warning FIXME:add mipi sensor reset
-
-	/*for mx6dl, mipi virtual channel 1 connect to csi 1*/
-	if (cpu_is_mx6dl())
-		mxc_iomux_set_gpr_register(13, 3, 3, 1);
-}
-
-static struct fsl_mxc_camera_platform_data mipi_csi2_data = {
-	.mclk = 24000000,
-	.mclk_source = 0,
-	.csi = 1,
-	.io_init = mx6q_mipi_sensor_io_init,
-	.pwdn = mx6q_mipi_powerdown,
-};
-
-
 
 static struct imxi2c_platform_data mx6q_i2c_data = {
 	.bitrate = 100000,
@@ -280,32 +297,26 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
-	},
-	{
-		I2C_BOARD_INFO("ov5640_mipi", 0x3c),
-		.platform_data = (void *)&mipi_csi2_data,
-	},
-	
-	
+		
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("mxc_ldb_i2c", 0x50),
-		.platform_data = (void *)1,	/* lvds port1 */
-	},
+	
 };
 
 
 static void qpad_usbotg_vbus(bool on)
 {
+	if (on)
+		gpio_set_value(QPAD_USB_OTG_PWR, 1);
+	else
+		gpio_set_value(QPAD_USB_OTG_PWR, 0);
+
 }
 
 static void qpad_host1_vbus(bool on)
 {
-
+	//dummy function since we don't have any usb hub
 }
 
 static void __init imx6q_qpad_init_usb(void)
@@ -313,6 +324,16 @@ static void __init imx6q_qpad_init_usb(void)
 	int ret = 0;
 
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
+	/* disable external charger detect,
+	 * or it will affect signal quality at dp .
+	 */
+	ret = gpio_request(QPAD_USB_OTG_PWR, "otg-vbus");
+	if (ret) {
+		pr_err("failed to get GPIO otg-vbus: %d\n",
+			ret);
+		return;
+	}
+	gpio_direction_output(QPAD_USB_OTG_PWR, 0);
 	/*
 	 *
 	 *OTG ID daisy chain set
@@ -337,7 +358,12 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 
 static void mx6_reset_mipi_dsi(void)
 {
-	#warning FIXME:add midp dsi reset
+	gpio_set_value(QPAD_DISP_PWR_EN, 1);
+	gpio_set_value(QPAD_DISP_RST_B, 1);
+	udelay(10);
+	gpio_set_value(QPAD_DISP_RST_B, 0);
+	udelay(50);
+	gpio_set_value(QPAD_DISP_RST_B, 1);
 
 	/*
 	 * it needs to delay 120ms minimum for reset complete
@@ -392,7 +418,13 @@ static struct fsl_mxc_ldb_platform_data ldb_data = {
 	.sec_disp_id = 0,
 };
 
-static struct max8903_pdata charger1_data = {
+
+
+static struct qpower_battery_pdata qbp = {
+	.alert = QPAD_BATTERY_ALERT,
+	.busid = 0,
+};
+static struct qpower_charger_pdata qcp = {
 	.dok = QPAD_CHARGE_DOK_B,
 	.uok = QPAD_CHARGE_UOK_B,
 	.chg = QPAD_CHARGE_CHG_1_B,
@@ -400,15 +432,21 @@ static struct max8903_pdata charger1_data = {
 	.dcm_always_high = true,
 	.dc_valid = true,
 	.usb_valid = true,
+	.feature_flag = QPOWER_CHARGER_FEATURE_SHORT_MODE,
+};
+static struct qpower_pdata qp = {
+	.bp = &qbp,
+	.cp = &qcp,
+	.flags = QPOWER_FEATURE_CHARGER|QPOWER_FEATURE_BATTERY,  
 };
 
-static struct platform_device sabresd_max8903_charger_1 = {
-	.name	= "max8903-charger",
-	.id	= 1,
-	.dev	= {
-		.platform_data = &charger1_data,
-	},
-};
+static int __init power_init(void){
+	
+	imx_add_platform_device("qpower", -1,
+			NULL, 0, &qp, sizeof(qp));
+	return 0;
+}
+
 
 static struct imx_ipuv3_platform_data ipu_data[] = {
 	{
@@ -492,8 +530,28 @@ static struct platform_device qpad_vmmc_reg_devices = {
 
 static int __init imx6q_init_audio(void)
 {
-	mxc_register_device(&mx6_qpad_audio_rt5633_device,
-			&rt5633_data);
+	int rate;	
+	struct clk *parent,*clko2;
+
+	clko2 = clk_get(NULL, "clko2_clk");
+	if (IS_ERR(clko2))
+		pr_err("can't get CLKO2 clock.\n");
+
+	parent = clk_get(NULL, "osc_clk");
+	if (!IS_ERR(parent)) {
+		clk_set_parent(clko2, parent);
+		clk_put(parent);
+	}
+	rate = clk_round_rate(clko2, 12000000);
+	clk_set_rate(clko2, rate);
+
+	rt5625_data.sysclk = rate;
+
+	//enable clko2 since somtimes codec require it for initialization
+	clk_enable(clko2);
+
+	mxc_register_device(&mx6_qpad_audio_rt5625_device,
+			&rt5625_data);
 	imx6q_add_imx_ssi(1, &mx6_qpad_ssi_pdata);
 
 	return 0;
@@ -552,8 +610,13 @@ static void __init imx6q_add_device_gpio_leds(void)
 	.debounce_interval = debounce,				\
 }
 
-
 static struct gpio_keys_button qpad_buttons[] = {
+	GPIO_BUTTON(GPIO_KEY_MENU, KEY_MENU, 1, "menu", 0, 1),
+	GPIO_BUTTON(GPIO_KEY_HOME, KEY_HOME, 1, "home", 0, 1),
+	GPIO_BUTTON(GPIO_KEY_BACK, KEY_BACK, 1, "back", 0, 1),	
+	GPIO_BUTTON(GPIO_KEY_F1, KEY_F1, 1, "F1", 0, 1),
+	GPIO_BUTTON(GPIO_KEY_F2, KEY_F2, 1, "F2", 0, 1),
+	GPIO_BUTTON(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1),	
 };
 
 static struct gpio_keys_platform_data qpad_button_data = {
@@ -656,14 +719,6 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 	}
 }
 
-static struct mipi_csi2_platform_data mipi_csi2_pdata = {
-	.ipu_id	 = 0,
-	.csi_id = 1,
-	.v_channel = 0,
-	.lanes = 2,
-	.dphy_clk = "mipi_pllref_clk",
-	.pixel_clk = "emi_clk",
-};
 
 
 static void mx6_snvs_poweroff(void)
@@ -695,9 +750,15 @@ static int __init imx6x_add_ram_console(void)
 #endif
 
 
-#warning FIXME:add modem wakeup support
+
+#define MODEM_PIN_POWER QPAD_MODEM_PWR
+#define MODEM_PIN_RESET QPAD_MODEM_RST
+#define MODEM_PIN_ONOFF QPAD_MODEM_ONOFF
+#define MODEM_PIN_WAKEAP QPAD_MODEM_WAKEAP
+#define MODEM_PIN_WAKEMODEM QPAD_MODEM_WAKEMODEM
+#include "modem.c"
 static int __init generic_modem_init(void){
-	
+	//dummy init for modem
 	return 0;
 	
 }
@@ -709,9 +770,6 @@ static void __init mx6_qpad_board_init(void)
 {
 	int i;
 	int ret;
-	struct clk *clko, *clko2;
-	struct clk *new_parent;
-	int rate;
 
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_pads,
@@ -760,7 +818,6 @@ static void __init mx6_qpad_board_init(void)
 	imx6q_add_v4l2_output(0);
 	imx6q_add_v4l2_capture(0, &capture_data[0]);
 	imx6q_add_v4l2_capture(1, &capture_data[1]);
-	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
 	imx6q_add_imx_snvs_rtc();
 
 	imx6q_add_imx_caam();
@@ -846,12 +903,14 @@ static void __init mx6_qpad_board_init(void)
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
 
+
+	power_init();
+
 	nfc_init();
 
 	generic_modem_init();
-	#warning FIXME:gpio based w1 emulate IO config
-	//Uncomment following to enable w1 bus emulation on SD1_WP io(SD1 not used pin)
-	//generic_add_w1(W1_EMULATED_IO);
+
+	generic_add_w1(W1_EMULATED_IO);
 }
 
 extern void __iomem *twd_base;

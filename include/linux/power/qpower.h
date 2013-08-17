@@ -96,7 +96,7 @@ struct qpower_ops{
 };
 
 struct qpower_battery_pdata{	
-	int alert_irq;
+	int alert;
 	int alert_threshold;
 
 	//bus id ,e.g i2c-0 

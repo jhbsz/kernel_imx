@@ -54,6 +54,7 @@ static enum power_supply_property psy_dc_props[] = {
 //return battery is online or not
 static int psy_battery_online(void* drvdata){
 	struct qpower_charger_data *qcd = drvdata;
+	if(qcd){}
 	return 1;
 }
 

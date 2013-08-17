@@ -82,6 +82,8 @@ struct battery_chip {
 
 	struct wake_lock wl;
 
+	int irq;
+
 	/* State Of Connect */
 	int online;
 	/* battery voltage */
@@ -199,6 +201,8 @@ static int chip_load_table(struct battery_chip *chip ,uint16_t *table,int tsize)
 		chip_write_word(chip->client,REG_OFFSET_TABLE_START+i*2,table[i]);
 	}
 	chip_table_lock(chip->client,0);
+
+	return 0;
 	
 }
 
@@ -403,6 +407,7 @@ static enum power_supply_property battery_props[] = {
 
 static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 	int ret;
+	int alert_threshold = 2;
 	chip->battery.name		= "battery";
 	chip->battery.type		= POWER_SUPPLY_TYPE_BATTERY;
 	chip->battery.get_property	= chip_get_property;
@@ -427,19 +432,34 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 
 
 	//clear alert/sleep flags,2% alert warning
-	chip_write_word(client,REG_OFFSET_CONFIG,(0x1E |(chip_read_word(client,0x0C) & 0xFF00)));
+	//alert is 1%~32%
+	if((chip->pdata->alert_threshold<=32)&&(chip->pdata->alert_threshold>0)){
+		alert_threshold = chip->pdata->alert_threshold;
+	}
+	alert_threshold = 32 - alert_threshold;
+	chip_write_word(client,REG_OFFSET_CONFIG,((alert_threshold&0x1F) |(chip_read_word(client,0x0C) & 0xFF00)));
 
 	chip_load_table(chip,default_table,ARRAY_SIZE(default_table));
 	
 	INIT_DELAYED_WORK(&chip->work, chip_work);
 	schedule_delayed_work(&chip->work, msecs_to_jiffies(0));
 
-	if(chip->pdata->alert_irq){		
-		ret = request_threaded_irq(chip->pdata->alert_irq, NULL, chip_irq_handler,
+	if(chip->pdata->alert&&gpio_is_valid(chip->pdata->alert)){		
+		
+		ret = gpio_request(chip->pdata->alert, "bat_alert");
+		if (ret < 0) {
+			dev_err(&client->dev, "failed to configure"
+				" request/direction for GPIO %d, error %d\n",
+				chip->pdata->alert, ret);
+			goto err;
+		}
+		gpio_direction_input(chip->pdata->alert);
+		chip->irq = gpio_to_irq(chip->pdata->alert);
+		ret = request_threaded_irq(chip->irq, NULL, chip_irq_handler,
 					  IRQF_TRIGGER_FALLING , client->name, chip);  
 		device_init_wakeup(&client->dev, 1);
 	}
-
+err:
 	return ret;
 }
 
