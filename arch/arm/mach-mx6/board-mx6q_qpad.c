@@ -47,7 +47,6 @@
 #include <linux/gpio.h>
 #include <linux/ion.h>
 #include <linux/etherdevice.h>
-#include <linux/power/sabresd_battery.h>
 #include <linux/regulator/anatop-regulator.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/machine.h>
@@ -785,7 +784,7 @@ static void __init imx6q_add_device_buttons(void)
 }
 #endif
 
-static struct platform_pwm_backlight_data mx6_sabresd_pwm_backlight_data = {
+static struct platform_pwm_backlight_data mx6_qpad_pwm_backlight_data = {
 	.pwm_id = 0,
 	.max_brightness = 248,
 	.dft_brightness = 128,
@@ -1064,7 +1063,7 @@ static void __init mx6_qpad_board_init(void)
 	imx6q_add_mxc_pwm(1);
 	imx6q_add_mxc_pwm(2);
 	imx6q_add_mxc_pwm(3);
-	imx6q_add_mxc_pwm_backlight(0, &mx6_sabresd_pwm_backlight_data);
+	imx6q_add_mxc_pwm_backlight(0, &mx6_qpad_pwm_backlight_data);
 
 	imx6q_add_otp();
 	imx6q_add_viim();
@@ -1187,7 +1186,7 @@ static void __init mx6q_qpad_reserve(void)
 }
 
 /*
- * initialize __mach_desc_MX6Q_SABRESD data structure.
+ * initialize __mach_desc_MX6Q_QPAD data structure.
  */
 MACHINE_START(MX6Q_QPAD, "Freescale i.MX 6Quad/DualLite/Solo QPAD")
 	/* Maintainer: Freescale Semiconductor, Inc. */
