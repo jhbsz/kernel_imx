@@ -269,7 +269,7 @@ static iomux_v3_cfg_t mx6dl_qpad_pads[] = {
 	MX6DL_PAD_GPIO_2__GPIO_1_2,
 };
 
-static iomux_v3_cfg_t mx6dl_sabresd_csi0_sensor_pads[] = {
+static iomux_v3_cfg_t mx6dl_qpad_csi0_sensor_pads[] = {
 	/* IPU1 Camera */
 	MX6DL_PAD_CSI0_DAT12__IPU1_CSI0_D_12,
 	MX6DL_PAD_CSI0_DAT13__IPU1_CSI0_D_13,
@@ -290,113 +290,5 @@ static iomux_v3_cfg_t mx6dl_sabresd_csi0_sensor_pads[] = {
 	MX6DL_PAD_SD1_DAT1__GPIO_1_17,		/* camera RESET */
 };
 
-static iomux_v3_cfg_t mx6dl_sabresd_mipi_sensor_pads[] = {
-	MX6DL_PAD_GPIO_0__CCM_CLKO,		/* camera clk */
 
-	MX6DL_PAD_SD1_DAT2__GPIO_1_19,		/* camera PWDN */
-	MX6DL_PAD_SD1_CLK__GPIO_1_20,		/* camera RESET */
-};
-
-static iomux_v3_cfg_t mx6dl_sabresd_epdc_enable_pads[] = {
-	/* EPDC */
-	MX6DL_PAD_EIM_A16__EPDC_SDDO_0,
-	MX6DL_PAD_EIM_DA10__EPDC_SDDO_1,
-	MX6DL_PAD_EIM_DA12__EPDC_SDDO_2,
-	MX6DL_PAD_EIM_DA11__EPDC_SDDO_3,
-	MX6DL_PAD_EIM_LBA__EPDC_SDDO_4,
-	MX6DL_PAD_EIM_EB2__EPDC_SDDO_5,
-	MX6DL_PAD_EIM_CS0__EPDC_SDDO_6,
-	MX6DL_PAD_EIM_RW__EPDC_SDDO_7,
-	MX6DL_PAD_EIM_A21__EPDC_GDCLK,
-	MX6DL_PAD_EIM_A22__EPDC_GDSP,
-	MX6DL_PAD_EIM_A23__EPDC_GDOE,
-	MX6DL_PAD_EIM_A24__EPDC_GDRL,
-	MX6DL_PAD_EIM_D31__EPDC_SDCLK,
-	MX6DL_PAD_EIM_D27__EPDC_SDOE,
-	MX6DL_PAD_EIM_DA1__EPDC_SDLE,
-	MX6DL_PAD_EIM_EB1__EPDC_SDSHR,
-	MX6DL_PAD_EIM_DA2__EPDC_BDR_0,
-	MX6DL_PAD_EIM_DA4__EPDC_SDCE_0,
-	MX6DL_PAD_EIM_DA5__EPDC_SDCE_1,
-	MX6DL_PAD_EIM_DA6__EPDC_SDCE_2,
-
-	/* EPD PMIC (Maxim 17135) pins */
-	MX6DL_PAD_EIM_A17__GPIO_2_21, /* EPDC_PWRSTAT */
-	MX6DL_PAD_EIM_D17__GPIO_3_17, /* EPDC_VCOM0 */
-	MX6DL_PAD_EIM_A18__GPIO_2_20, /* EPDC_PWRCTRL0 */
-	MX6DL_PAD_EIM_D20__GPIO_3_20, /* EPDC_PMIC_WAKEUP */
-	/*
-	 * Depopulate R121, R123, R133, R138, R139,
-	 * R167, R168, and R627 when using E-BOOK
-	 * Card in 16-bit Data Mode. Meanwhile, comments
-	 * the conflict PIN configurations in above tables
-	 */
-	/*
-	MX6DL_PAD_EIM_CS1__EPDC_SDDO_8,
-	MX6DL_PAD_EIM_DA15__EPDC_SDDO_9,
-	MX6DL_PAD_EIM_D16__EPDC_SDDO_10,
-	MX6DL_PAD_EIM_D23__EPDC_SDDO_11
-	MX6DL_PAD_EIM_D19__EPDC_SDDO_12,
-	MX6DL_PAD_EIM_DA13__EPDC_SDDO_13,
-	MX6DL_PAD_EIM_DA14__EPDC_SDDO_14,
-	MX6DL_PAD_EIM_A25__EPDC_SDDO_15,
-	 */
-};
-
-static iomux_v3_cfg_t mx6dl_sabresd_epdc_disable_pads[] = {
-	/* EPDC */
-	MX6DL_PAD_EIM_A16__GPIO_2_22,
-	MX6DL_PAD_EIM_DA10__GPIO_3_10,
-	MX6DL_PAD_EIM_DA12__GPIO_3_12,
-	MX6DL_PAD_EIM_DA11__GPIO_3_11,
-	MX6DL_PAD_EIM_LBA__GPIO_2_27,
-	MX6DL_PAD_EIM_EB2__GPIO_2_30,
-	MX6DL_PAD_EIM_CS0__GPIO_2_23,
-	MX6DL_PAD_EIM_RW__GPIO_2_26,
-	MX6DL_PAD_EIM_A21__GPIO_2_17,
-	MX6DL_PAD_EIM_A22__GPIO_2_16,
-	MX6DL_PAD_EIM_A23__GPIO_6_6,
-	MX6DL_PAD_EIM_A24__GPIO_5_4,
-	MX6DL_PAD_EIM_D31__GPIO_3_31,
-	MX6DL_PAD_EIM_D27__GPIO_3_27,
-	MX6DL_PAD_EIM_DA1__GPIO_3_1,
-	MX6DL_PAD_EIM_EB1__GPIO_2_29,
-	MX6DL_PAD_EIM_DA2__GPIO_3_2,
-	MX6DL_PAD_EIM_DA4__GPIO_3_4,
-	MX6DL_PAD_EIM_DA5__GPIO_3_5,
-	MX6DL_PAD_EIM_DA6__GPIO_3_6,
-
-	/*
-	 * Depopulate R121, R123, R133, R138, R139,
-	 * R167, R168, and R627 when using E-BOOK
-	 * Card in 16-bit Data Mode. Meanwhile, comments
-	 * the conflict PIN configurations in above tables
-	 */
-	/*
-	MX6DL_PAD_EIM_CS1__EPDC_SDDO_8,
-	MX6DL_PAD_EIM_DA15__EPDC_SDDO_9,
-	MX6DL_PAD_EIM_D16__EPDC_SDDO_10,
-	MX6DL_PAD_EIM_D23__EPDC_SDDO_11
-	MX6DL_PAD_EIM_D19__EPDC_SDDO_12,
-	MX6DL_PAD_EIM_DA13__EPDC_SDDO_13,
-	MX6DL_PAD_EIM_DA14__EPDC_SDDO_14,
-	MX6DL_PAD_EIM_A25__EPDC_SDDO_15,
-	 */
-};
-
-static iomux_v3_cfg_t mx6dl_arm2_elan_pads[] = {
-	MX6DL_PAD_EIM_A20__GPIO_2_18,
-	MX6DL_PAD_EIM_DA8__GPIO_3_8,
-	MX6DL_PAD_EIM_D28__GPIO_3_28,
-};
-
-static iomux_v3_cfg_t mx6dl_sabresd_hdmi_ddc_pads[] = {
-	MX6DL_PAD_KEY_COL3__HDMI_TX_DDC_SCL, /* HDMI DDC SCL */
-	MX6DL_PAD_KEY_ROW3__HDMI_TX_DDC_SDA, /* HDMI DDC SDA */
-};
-
-static iomux_v3_cfg_t mx6dl_sabresd_i2c2_pads[] = {
-	MX6DL_PAD_KEY_COL3__I2C2_SCL,	/* I2C2 SCL */
-	MX6DL_PAD_KEY_ROW3__I2C2_SDA,	/* I2C2 SDA */
-};
 #endif

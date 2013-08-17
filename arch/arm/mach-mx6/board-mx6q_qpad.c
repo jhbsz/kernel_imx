@@ -230,8 +230,8 @@ static void mx6q_csi0_io_init(void)
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_csi0_sensor_pads,
 			ARRAY_SIZE(mx6q_qpad_csi0_sensor_pads));
 	else if (cpu_is_mx6dl())
-		mxc_iomux_v3_setup_multiple_pads(mx6dl_sabresd_csi0_sensor_pads,
-			ARRAY_SIZE(mx6dl_sabresd_csi0_sensor_pads));
+		mxc_iomux_v3_setup_multiple_pads(mx6dl_qpad_csi0_sensor_pads,
+			ARRAY_SIZE(mx6dl_qpad_csi0_sensor_pads));
 
 	/* Camera reset */
 	gpio_request(QPAD_CSI0_RST, "cam-reset");
