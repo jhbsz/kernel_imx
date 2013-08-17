@@ -144,6 +144,12 @@
 #define QPAD_TP_RST			IMX_GPIO_NR(8, 8)
 #define QPAD_TP_IRQ			IMX_GPIO_NR(6, 7)
 
+//Sensor
+#define QPAD_SENSOR_PWR		IMX_GPIO_NR(2, 31)
+#define QPAD_SENSOR_RST		IMX_GPIO_NR(2, 23)
+#define QPAD_SENSOR_INT1	IMX_GPIO_NR(3, 16)
+#define QPAD_SENSOR_INT2	IMX_GPIO_NR(3, 15)
+
 #define MX6Q_GENERIC_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_HIGH|	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
@@ -381,7 +387,7 @@ static struct imxi2c_platform_data mx6q_i2c_data = {
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
-		I2C_BOARD_INFO("wm89**", 0x1a),
+		I2C_BOARD_INFO("rt5625", 0x1f),
 	},
 	{
 		I2C_BOARD_INFO("ov564x", 0x3c),
@@ -403,8 +409,11 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.type	= "eup2471",
 		.addr	= 0x37,
 		.platform_data = &eup2471_pdata,
+	},	
+	{
+		.type	= "fxos8700",
+		.addr	= 0x4c,
 	},
-	
 };
 
 
@@ -924,8 +933,27 @@ static int __init board_misc_init(void){
 	gpio_direction_output(QPAD_QRE_TRIG,1);
 	gpio_free(QPAD_QRE_TRIG);
 
-	//
+	//Sensor ,FXO8700 driver don't use interrupt but using polling
+	ret = gpio_request(QPAD_SENSOR_PWR, "sensor-pwr");
+	if (ret) {
+		pr_err("failed to get GPIO sensor-pwr: %d\n",
+			ret);
+		return -EINVAL;
+	}
+	gpio_direction_output(QPAD_SENSOR_PWR,1);
+	gpio_free(QPAD_SENSOR_PWR);
+	ret = gpio_request(QPAD_SENSOR_RST, "sensor-rst");
+	if (ret) {
+		pr_err("failed to get GPIO sensor-pwr: %d\n",
+			ret);
+		return -EINVAL;
+	}
+	gpio_direction_output(QPAD_SENSOR_RST,0);
+	mdelay(5);
+	gpio_direction_output(QPAD_SENSOR_RST,1);
+	gpio_free(QPAD_SENSOR_RST);
 
+	
 	return 0;
 }
 
