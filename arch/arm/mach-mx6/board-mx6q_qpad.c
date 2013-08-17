@@ -139,6 +139,10 @@
 #define QPAD_FL_PWR_EN		IMX_GPIO_NR(3, 31)
 #define QPAD_FL_EN			IMX_GPIO_NR(4, 5)
 
+//Touch Panel
+#define QPAD_TP_PWR_EN		IMX_GPIO_NR(2, 28)
+#define QPAD_TP_RST			IMX_GPIO_NR(8, 8)
+#define QPAD_TP_IRQ			IMX_GPIO_NR(6, 7)
 
 #define MX6Q_GENERIC_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_HIGH|	\
@@ -273,6 +277,68 @@ static struct fsl_mxc_camera_platform_data camera_data = {
 	.pwdn = mx6q_csi0_cam_powerdown,
 };
 
+#include <linux/i2c/eup2471.h>
+
+
+static int eup2471_enable(int on)
+{
+	int en = QPAD_FL_PWR_EN;
+
+	if (gpio_request(en, "eup2471 enable")) {
+		printk(KERN_INFO "gpio %d request failed\n", en);
+		return -EINVAL;
+	}
+
+	printk("eup2471 %s\n", on?"enable":"disable");
+	if (on)
+	{
+		gpio_direction_output(en, 1);
+		udelay(10);
+	}
+	else
+	{
+		gpio_direction_output(en, 0);
+	}
+
+	gpio_free(en);
+
+	return 0;
+}
+
+static int eup2471_flash(int on)
+{
+	int en = QPAD_FL_EN;
+
+	if (gpio_request(en, "eup2471 flash on")) {
+		printk(KERN_INFO "gpio %d request failed\n", en);
+		return -EINVAL;
+	}
+
+	printk("eup2471 flash %s\n", on?"on":"off");
+	if (on)
+	{
+		gpio_direction_output(en, 0);
+		udelay(10);
+
+		gpio_direction_output(en, 1);
+		udelay(10);
+	}
+	else
+	{
+		gpio_direction_output(en, 0);
+	}
+
+	gpio_free(en);
+
+	return 0;
+}
+
+static struct eup2471_platform_data eup2471_pdata = 
+{
+	.enable 	= eup2471_enable,
+	.flash 		= eup2471_flash,
+};
+
 
 static struct imxi2c_platform_data mx6q_i2c_data = {
 	.bitrate = 100000,
@@ -294,6 +360,11 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
+	{
+		.type	= "eup2471",
+		.addr	= 0x37,
+		.platform_data = &eup2471_pdata,
+	},
 	
 };
 
