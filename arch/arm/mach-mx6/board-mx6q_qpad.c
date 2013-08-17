@@ -127,6 +127,11 @@
 #define QPAD_MODEM_WAKEMODEM	IMX_GPIO_NR(2, 5)
 #define QPAD_MODEM_WAKEAP		IMX_GPIO_NR(1, 18)
 
+#define QPAD_AUDIO_RST					IMX_GPIO_NR(7, 11)
+#define QPAD_AUDIO_INT					IMX_GPIO_NR(1, 20)
+#define QPAD_AUDIO_HEADPHONE_DET		IMX_GPIO_NR(3, 21)
+
+
 #define MX6Q_GENERIC_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_HIGH|	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
@@ -195,26 +200,6 @@ static inline void mx6q_qpad_init_uart(void)
 	imx6q_add_imx_uart(3, NULL);
 	imx6q_add_imx_uart(4, NULL);	
 }
-
-
-
-static struct imx_ssi_platform_data mx6_qpad_ssi_pdata = {
-	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
-};
-
-static struct platform_device mx6_qpad_audio_rt5625_device = {
-	.name = "imx-rt5625",
-};
-
-static struct mxc_audio_platform_data rt5625_data = {
-	.ssi_num = 1,
-	.src_port = 2,
-	.ext_port = 3,
-//	.hp_gpio = SABRESD_HEADPHONE_DET,
-//	.hp_active_low = 1,
-};
-
-
 
 static void mx6q_csi0_cam_powerdown(int powerdown)
 {
@@ -528,10 +513,29 @@ static struct platform_device qpad_vmmc_reg_devices = {
 	},
 };
 
+
+
+static struct imx_ssi_platform_data mx6_qpad_ssi_pdata = {
+	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
+};
+
+static struct platform_device mx6_qpad_audio_rt5625_device = {
+	.name = "imx-rt5625",
+};
+
+static struct mxc_audio_platform_data rt5625_data = {
+	.ssi_num = 1,
+	.src_port = 2,
+	.ext_port = 3,
+	.hp_gpio = QPAD_AUDIO_HEADPHONE_DET,
+	.hp_active_low = 1,
+};
+
 static int __init imx6q_init_audio(void)
 {
-	int rate;	
+	int ret,rate;	
 	struct clk *parent,*clko2;
+	
 
 	clko2 = clk_get(NULL, "clko2_clk");
 	if (IS_ERR(clko2))
@@ -549,6 +553,20 @@ static int __init imx6q_init_audio(void)
 
 	//enable clko2 since somtimes codec require it for initialization
 	clk_enable(clko2);
+
+	//reset audio codec
+	ret = gpio_request(QPAD_AUDIO_RST, "audio-rst");
+	if (ret) {
+		pr_err("failed to get GPIO audio-rst: %d\n",
+			ret);
+		return -EINVAL;
+	}
+	gpio_direction_output(QPAD_AUDIO_RST, 0);
+	mdelay(5);
+	gpio_direction_output(QPAD_AUDIO_RST, 1);
+	
+
+	
 
 	mxc_register_device(&mx6_qpad_audio_rt5625_device,
 			&rt5625_data);

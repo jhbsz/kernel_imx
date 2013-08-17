@@ -120,6 +120,7 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	/* Audio Codec */
 	MX6Q_PAD_EIM_D21__GPIO_3_21,		/* MICROPHONE_DET */
 	MX6Q_PAD_GPIO_16__GPIO_7_11,		/*AUDIO_RST_N*/
+	MX6Q_PAD_SD1_CLK__GPIO_1_20,		/*AUDIO_INT*/
 	
 	/*Hardware Monitor*/
 	MX6Q_PAD_EIM_EB3__GPIO_2_31,		/*SENSOR_POWER_EN*/
