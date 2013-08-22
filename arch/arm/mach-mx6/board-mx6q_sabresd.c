@@ -1282,12 +1282,19 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 
 static void mx6_reset_mipi_dsi(void)
 {
-	gpio_set_value(SABRESD_DISP_PWR_EN, 1);
-	gpio_set_value(SABRESD_DISP_RST_B, 1);
+	printk("com to mipi_lcd reset--allen\n");
+	//gpio_set_value(SABRESD_DISP_PWR_EN, 1);
+	//gpio_set_value(SABRESD_DISP_RST_B, 1);
+	gpio_request(SABRESD_DISP_RST_B, "mipi_lcd_reset");
+	gpio_direction_output(SABRESD_DISP_RST_B, 1);
 	udelay(10);
-	gpio_set_value(SABRESD_DISP_RST_B, 0);
+	//gpio_set_value(SABRESD_DISP_RST_B, 0);
+	gpio_direction_output(SABRESD_DISP_RST_B, 0);
 	udelay(50);
-	gpio_set_value(SABRESD_DISP_RST_B, 1);
+	//gpio_set_value(SABRESD_DISP_RST_B, 1);
+	gpio_direction_output(SABRESD_DISP_RST_B, 1);
+	gpio_free(SABRESD_DISP_RST_B);
+
 
 	/*
 	 * it needs to delay 120ms minimum for reset complete
@@ -1304,10 +1311,10 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 
 static struct ipuv3_fb_platform_data sabresd_fb_data[] = {
 	{ /*fb0*/
-	.disp_dev = "ldb",
-	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
-	.mode_str = "LDB-XGA",
-	.default_bpp = 16,
+	.disp_dev = "mipi_dsi",
+	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
+	.mode_str = "TRULY-WVGA",
+	.default_bpp = 32,
 	.int_clk = false,
 	.late_init = false,
 	}, {

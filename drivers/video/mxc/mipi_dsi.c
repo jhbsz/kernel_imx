@@ -61,7 +61,7 @@ static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
 #ifdef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
 	{
 	 "TRULY-WVGA",
-	 {mipid_hx8369_get_lcd_videomode, mipid_hx8369_lcd_setup}
+	 {mipid_nt35517_get_lcd_videomode, mipid_nt35517_lcd_setup}
 	},
 #endif
 	{
@@ -584,8 +584,10 @@ static int mipi_dsi_lcd_init(struct mipi_dsi_info *mipi_dsi,
 				setting->dft_mode_str,
 				mipi_lcd_modedb, size, NULL,
 				setting->default_bpp);
-	if (err != 1)
+	if (err != 1){
+		printk("the err is %d\n",err);
 		fb_videomode_to_var(&setting->fbi->var, mipi_lcd_modedb);
+	}
 
 	INIT_LIST_HEAD(&setting->fbi->modelist);
 	for (i = 0; i < size; i++) {
