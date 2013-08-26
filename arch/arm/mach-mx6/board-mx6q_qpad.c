@@ -498,6 +498,7 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 static void mx6_reset_mipi_dsi(void)
 {
 	gpio_set_value(QPAD_DISP_PWR_EN, 1);
+	return;
 	gpio_set_value(QPAD_DISP_RST_B, 1);
 	udelay(10);
 	gpio_set_value(QPAD_DISP_RST_B, 0);
@@ -519,10 +520,10 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 
 static struct ipuv3_fb_platform_data qpad_fb_data[] = {
 	{ /*fb0*/
-	.disp_dev = "ldb",
-	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
-	.mode_str = "LDB-XGA",
-	.default_bpp = 16,
+	.disp_dev = "mipi_dsi",
+	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
+	.mode_str = "TRULY-WVGA",
+	.default_bpp = 32,
 	.int_clk = false,
 	.late_init = false,
 	}, {

@@ -1281,7 +1281,8 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 };
 
 static void mx6_reset_mipi_dsi(void)
-{
+{	
+	return 0;
 	printk("com to mipi_lcd reset--allen\n");
 	//gpio_set_value(SABRESD_DISP_PWR_EN, 1);
 	//gpio_set_value(SABRESD_DISP_RST_B, 1);

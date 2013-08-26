@@ -63,6 +63,7 @@ void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 
 int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 {
+	return 0;
 	printk("com to %s--init--allenyao\n",__func__);
 	u32 buf[DSI_CMD_BUF_MAXSIZE];
 	int err;

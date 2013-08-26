@@ -61,8 +61,13 @@ static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
 #ifdef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
 	{
 	 "TRULY-WVGA",
+	 #ifdef CONFIG_NT35517_5INCH_PANEL
 	 {mipid_nt35517_get_lcd_videomode, mipid_nt35517_lcd_setup}
 	},
+	 #else
+	 {mipid_hx8369_get_lcd_videomode, mipid_hx8369_lcd_setup}
+	},	 
+	#endif
 #endif
 	{
 	"", {NULL, NULL}
@@ -831,9 +836,10 @@ static int mipi_dsi_disp_init(struct mxc_dispdrv_handle *disp,
 	/* ipu selected by platform data setting */
 	setting->dev_id = pdata->ipu_id;
 	setting->disp_id = pdata->disp_id;
+	//err = request_irq(mipi_dsi->irq, mipi_dsi_irq_handler,
+			 // IRQF_SHARED, "mipi_dsi", mipi_dsi);
+	err = 0;
 
-	err = request_irq(mipi_dsi->irq, mipi_dsi_irq_handler,
-			  0, "mipi_dsi", mipi_dsi);
 	if (err) {
 		dev_err(dev, "failed to request irq\n");
 		err = -EBUSY;
