@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011 Samsung Electronics
  * MyungJoo Ham <myungjoo.ham@samsung.com>
+ * Copyright 2013 Quester Technology,Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +35,7 @@ struct qpower_charger_data {
 	struct power_supply psy_dc;
 	struct power_supply psy_usb;
 
+	bool det;
 	bool chg;
 	bool fault;
 	bool usb_in;
@@ -53,8 +55,12 @@ static enum power_supply_property psy_dc_props[] = {
 
 //return battery is online or not
 static int psy_battery_online(void* drvdata){
-	struct qpower_charger_data *qcd = drvdata;
-	if(qcd){}
+	struct qpower_charger_data *qcd = drvdata;	
+	struct qpower_charger_pdata *pdata = qcd->pdata;
+	if(gpio_is_valid(pdata->det)){
+		qcd->det = !!((gpio_get_value(pdata->det)?1:0)^pdata->bat_det_active);
+		return qcd->det;
+	}
 	return 1;
 }
 
@@ -391,6 +397,21 @@ static __devinit int qpower_charger_probe(struct platform_device *pdev)
 		}
 	}
 
+	if(pdata->det&&gpio_is_valid(pdata->det)){		
+		error = gpio_request(pdata->det, "bat_detect");
+		if (error < 0) {
+			dev_err(dev, "failed to configure"
+				" request/direction for GPIO %d, error %d\n",
+				pdata->flt, error);
+			goto err;
+		}
+		gpio_direction_input(pdata->det);
+
+		data->det = !!((gpio_get_value(pdata->det)?1:0)^pdata->bat_det_active);
+
+		dev_info(dev,"data->det=%d\n",data->det);
+		
+	}
 	data->fault = false;
 	data->dc_in = dc_in;
 	data->usb_in = usb_in;
@@ -510,6 +531,9 @@ err:
 		gpio_free(pdata->flt);
 	if (pdata->chg)
 		gpio_free(pdata->chg);
+	if (pdata->det)
+		gpio_free(pdata->det);
+		
 	kfree(data);
 	return ret;
 }

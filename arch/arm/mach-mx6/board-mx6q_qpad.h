@@ -20,6 +20,10 @@
 #define _BOARD_MX6Q_QPAD_H
 #include <mach/iomux-mx6q.h>
 
+#define MX6Q_BATTERY_DET_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
+		PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED|	\
+		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+
 static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	/* AUDMUX */
 	MX6Q_PAD_CSI0_DAT4__AUDMUX_AUD3_TXC,
@@ -116,6 +120,7 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	MX6Q_PAD_EIM_D17__GPIO_3_17,  /* UOK_B */
 	MX6Q_PAD_EIM_CS1__GPIO_2_24,   /* DOK_B */
 	MX6Q_PAD_KEY_COL4__GPIO_4_14,	/*Battery Alert IRQ*/
+	NEW_PAD_CTRL(MX6Q_PAD_KEY_ROW2__GPIO_4_11,PAD_CTL_DSE_DISABLE),	/*Batter Detection*/
 
 	/* Audio Codec */
 	MX6Q_PAD_EIM_D21__GPIO_3_21,		/* MICROPHONE_DET */

@@ -1,4 +1,6 @@
 /*
+ * Copyright 2013 Quester Technology,Inc.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -122,6 +124,9 @@ struct qpower_charger_pdata{
 	int flt;	/* Fault output */
 	int dcm;	/* Current-Limit Mode input (1: DC, 2: USB) */
 	int usus;	/* USB Suspend Input (1: suspended) */
+	int det;	/* Battery Detection*/
+
+	int bat_det_active;	/*battery detection active polarity*/
 	
 	int feature_flag;
 

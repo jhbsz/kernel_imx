@@ -96,6 +96,7 @@
 #define QPAD_CHARGE_CHG_1_B	IMX_GPIO_NR(3, 23)
 #define QPAD_CHARGE_FLT_1_B	IMX_GPIO_NR(5, 2)
 #define QPAD_BATTERY_ALERT	IMX_GPIO_NR(4, 14)
+#define QPAD_BATTERY_DET	IMX_GPIO_NR(4, 11)
 
 #define QPAD_CAM_PWR		IMX_GPIO_NR(1, 16)
 #define QPAD_CAM_RST		IMX_GPIO_NR(5, 20)
@@ -539,11 +540,15 @@ static struct qpower_charger_pdata qcp = {
 	.dok = QPAD_CHARGE_DOK_B,
 	.uok = QPAD_CHARGE_UOK_B,
 	.chg = QPAD_CHARGE_CHG_1_B,
-	.flt = QPAD_CHARGE_FLT_1_B,
+	.flt = QPAD_CHARGE_FLT_1_B,	
 	.dcm_always_high = true,
 	.dc_valid = true,
 	.usb_valid = true,
 	.feature_flag = QPOWER_CHARGER_FEATURE_SHORT_MODE,
+	//for battery detection
+	.det = QPAD_BATTERY_DET,
+	.bat_det_active = 0,
+	
 };
 static struct qpower_pdata qp = {
 	.bp = &qbp,
