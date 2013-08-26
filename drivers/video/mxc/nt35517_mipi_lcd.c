@@ -62,9 +62,10 @@ void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 
 int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 {
-	return 0;
 	u32 buf[DSI_CMD_BUF_MAXSIZE];
 	int err;
+
+	return 0;
 
 	dev_dbg(&mipi_dsi->pdev->dev, "MIPI DSI LCD setup.\n");
 	//*************************************
@@ -561,7 +562,6 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	CHECK_RETCODE(err);
 
 	//err = mipid_init_backlight(mipi_dsi);//not use by allenyao
-	printk("end of %s\n",__func__);
 	return err;
 	
 }
