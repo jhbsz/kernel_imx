@@ -202,7 +202,8 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
-
+/*only for debug*/
+#ifdef ENABLE_INFRARED_ON_UART4
 static struct pwm_device	*pwm_uart_mod=NULL; ;
 static int pwm_uart_mod_enable=1;
 module_param_named(uart_modulation, pwm_uart_mod_enable, int, S_IRUGO | S_IWUSR | S_IWGRP);
@@ -210,7 +211,6 @@ void uart_modulation_enable(int en){
 	if(!pwm_uart_mod){
 		static iomux_v3_cfg_t pwm_uart_cfg[]={
 				/*infred pwm out*/
-				//MX6Q_PAD_DISP0_DAT9__PWM2_PWMO,		/*add by allenyao*/	
 				MX6Q_PAD_SD1_CMD__PWM4_PWMO,
 			};
 		mxc_iomux_v3_setup_multiple_pads(pwm_uart_cfg,
@@ -231,6 +231,13 @@ void uart_modulation_enable(int en){
 	
 }
 
+static const struct imxuart_platform_data mx6q_uart4_data __initconst = {
+	.flags      = IMXUART_MODULATION,
+	.modulation_enable = uart_modulation_enable,
+
+};
+#endif
+
 
 
 static const struct imxuart_platform_data mx6q_uart3_data __initconst = {
@@ -239,17 +246,16 @@ static const struct imxuart_platform_data mx6q_uart3_data __initconst = {
 	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
 };
 
-static const struct imxuart_platform_data mx6q_uart4_data __initconst = {
-	.flags      = IMXUART_MODULATION,
-	.modulation_enable = uart_modulation_enable,
-
-};
 static inline void mx6q_sparkauto_init_uart(void)
 {	
 	imx6q_add_imx_uart(0, NULL);	
 	imx6q_add_imx_uart(1, NULL);
 	imx6q_add_imx_uart(2, &mx6q_uart3_data);
+	#ifdef ENABLE_INFRARED_ON_UART4
 	imx6q_add_imx_uart(3, &mx6q_uart4_data);
+	#else
+	imx6q_add_imx_uart(3, NULL);
+	#endif
 	imx6q_add_imx_uart(4, NULL);	
 }
 
