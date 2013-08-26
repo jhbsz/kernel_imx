@@ -86,6 +86,7 @@
 
 
 #include "generic_devices.h"
+#include <linux/pwm.h>
 
 
 #define QPAD_PFUZE_INT		IMX_GPIO_NR(7, 13)
@@ -210,12 +211,38 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
+static struct pwm_device       *pwm_uart_mod=NULL; ;
+static int pwm_uart_mod_enable=1;
+module_param_named(uart_modulation, pwm_uart_mod_enable, int, S_IRUGO | S_IWUSR | S_IWGRP);
+void uart_modulation_enable(int en){
+       if(!pwm_uart_mod){
+               pwm_uart_mod = pwm_request(1, "IRC");
+       }
+       if(pwm_uart_mod&&pwm_uart_mod_enable){
+               if(en){
+                       pwm_config(pwm_uart_mod, 13158, 26315/*38kHz*/);
+                       pwm_enable(pwm_uart_mod);  
+               }else{
+                       pwm_config(pwm_uart_mod, 0, 26315);
+                       pwm_disable(pwm_uart_mod);              
+               }
+               
+       }
+       
+}
+
+static const struct imxuart_platform_data mx6q_uart4_data __initconst = {
+       .flags      = IMXUART_MODULATION,
+       .modulation_enable = uart_modulation_enable,
+
+};
+
 static inline void mx6q_qpad_init_uart(void)
 {
 	imx6q_add_imx_uart(0, NULL);	
 	imx6q_add_imx_uart(1, NULL);
 	imx6q_add_imx_uart(2, NULL);
-	imx6q_add_imx_uart(3, NULL);
+	imx6q_add_imx_uart(3, &mx6q_uart4_data);
 	imx6q_add_imx_uart(4, NULL);	
 }
 
