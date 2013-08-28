@@ -208,6 +208,12 @@
 #define OBSRV_MUX1_ENET_IRQ		0x9
 #endif
 
+
+/*enable below switch to turn on MIPI DSI based on NT35517*/
+//#define  MIPI_DSI_ON_SABRESD 1
+
+
+
 static struct clk *sata_clk;
 static struct clk *clko;
 static int mma8451_position;
@@ -808,16 +814,14 @@ static struct fsl_mxc_lightsensor_platform_data ls_data = {
 	.rext = 499,	/* calibration: 499K->700K */
 };
 
-//#define  FT5X0X_TS 1
 /*add by allenyao */
-#ifdef FT5X0X_TS
+#ifdef TOUCHSCREEN_FOCALTECH
 #include <linux/ft5x0x_ts.h>
 #define SABRESD_TP_IRQ		IMX_GPIO_NR(1, 7)
 #define SABRESD_TP_RST		IMX_GPIO_NR(3, 9)
 
 
 static int ft5x0x_plat_init(void){
-	printk("com to %s--%d--allenyao\n",__func__,__LINE__);
 	int ret;	
 	/*ret = gpio_request(QPAD_TP_PWR_EN, "tp-pwr");
 	if (ret) {
@@ -909,7 +913,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		I2C_BOARD_INFO("mxc_ldb_i2c", 0x50),
 		.platform_data = (void *)1,	/* lvds port1 */
 	},
-	#ifdef FT5X0X_TS
+	#ifdef TOUCHSCREEN_FOCALTECH
 	{//add by allenyao
 		.type			= "ft5x0x_ts",
 		.addr			= 0x38,
@@ -1333,7 +1337,6 @@ static void mx6_reset_mipi_dsi(void)
 	msleep(120);
 }
 
-//#define  MIPI_DSI_ON_SABRESD 1
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.ipu_id		= 0,
 	.disp_id	= 1,
