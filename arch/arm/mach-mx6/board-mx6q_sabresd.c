@@ -808,6 +808,48 @@ static struct fsl_mxc_lightsensor_platform_data ls_data = {
 	.rext = 499,	/* calibration: 499K->700K */
 };
 
+//#define  FT5X0X_TS 1
+/*add by allenyao */
+#ifdef FT5X0X_TS
+#include <linux/ft5x0x_ts.h>
+#define SABRESD_TP_IRQ		IMX_GPIO_NR(1, 7)
+#define SABRESD_TP_RST		IMX_GPIO_NR(3, 9)
+
+
+static int ft5x0x_plat_init(void){
+	printk("com to %s--%d--allenyao\n",__func__,__LINE__);
+	int ret;	
+	/*ret = gpio_request(QPAD_TP_PWR_EN, "tp-pwr");
+	if (ret) {
+		pr_err("failed to get GPIO otg-vbus: %d\n",
+			ret);
+		goto err;
+	}
+	gpio_direction_output(QPAD_TP_PWR_EN, 1);
+	gpio_free(QPAD_TP_PWR_EN);*/
+
+	ret = gpio_request(SABRESD_TP_RST, "tp-rst");
+	if (ret) {
+		pr_err("failed to get GPIO otg-vbus: %d\n",
+			ret);
+		goto err;
+	}
+	gpio_direction_output(SABRESD_TP_RST, 0);
+	msleep(50);
+	gpio_direction_output(SABRESD_TP_RST, 1);
+	gpio_free(SABRESD_TP_RST);
+
+err:
+	return ret;
+	
+}
+static struct ft5x0x_ts_platform_data ft5x0x_data=
+{
+	.plat_init	= ft5x0x_plat_init,
+};
+#endif
+/*add by allenyao  end*/
+
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("wm89**", 0x1a),
@@ -867,6 +909,14 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		I2C_BOARD_INFO("mxc_ldb_i2c", 0x50),
 		.platform_data = (void *)1,	/* lvds port1 */
 	},
+	#ifdef FT5X0X_TS
+	{//add by allenyao
+		.type			= "ft5x0x_ts",
+		.addr			= 0x38,
+		.irq			= gpio_to_irq(SABRESD_TP_IRQ),
+		.platform_data	= &ft5x0x_data,
+	},	
+	#endif
 };
 
 static int epdc_get_pins(void)
@@ -1283,6 +1333,7 @@ static void mx6_reset_mipi_dsi(void)
 	msleep(120);
 }
 
+//#define  MIPI_DSI_ON_SABRESD 1
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.ipu_id		= 0,
 	.disp_id	= 1,

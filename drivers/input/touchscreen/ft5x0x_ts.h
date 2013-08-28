@@ -9,11 +9,13 @@
 
 #define CFG_SUPPORT_SYS_WAKEUP 0
 
-#define CFG_MAX_TOUCH_POINTS  2
+#define CFG_MAX_TOUCH_POINTS  5
 #define CFG_NUMOFKEYS 4                
 #define CFG_FTS_CTP_DRIVER_VERSION "2.0"
-#define SCREEN_MAX_X    800
-#define SCREEN_MAX_Y    480
+//#define SCREEN_MAX_X    800
+//#define SCREEN_MAX_Y    480
+#define SCREEN_MAX_X    540
+#define SCREEN_MAX_Y    960
 #define PRESS_MAX       255
 
 #define CFG_POINT_READ_BUF  (3 + 6 * (CFG_MAX_TOUCH_POINTS))

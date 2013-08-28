@@ -625,6 +625,7 @@ function	:
 static void ft5x0x_ts_release(struct ft5x0x_ts_data* ft5x0x)
 {
 	input_report_abs(ft5x0x->input_dev, ABS_MT_TOUCH_MAJOR, 0);
+	input_report_key(ft5x0x->input_dev, BTN_TOUCH,  0);
 	input_sync(ft5x0x->input_dev);
 }
 
@@ -646,11 +647,14 @@ static int ft5x0x_read_data(struct ft5x0x_ts_data* ft5x0x)
 	}
 	memset(event, 0, sizeof(struct ts_event));
 	event->touch_point = buf[2] & 0x07; 
+	//printk("There are %d finger touch--allen\n",event->touch_point);
 
+	
 	if (event->touch_point > CFG_MAX_TOUCH_POINTS)
 	{
 	event->touch_point = CFG_MAX_TOUCH_POINTS;
 	}
+	
 
 	for (i = 0; i < event->touch_point; i++)
 	{
@@ -753,6 +757,7 @@ static void ft5x0x_report_value(struct ft5x0x_ts_data* ft5x0x)
 	    if (event->au16_x[i] < SCREEN_MAX_X && event->au16_y[i] < SCREEN_MAX_Y)
 	    // LCD view area
 	    {
+	     // printk("tp[%d,%d]\n",event->au16_x[i],event->au16_y[i]);
 	        input_report_abs(data->input_dev, ABS_MT_POSITION_X, event->au16_x[i]);
     		input_report_abs(data->input_dev, ABS_MT_POSITION_Y, event->au16_y[i]);
     		input_report_abs(data->input_dev, ABS_MT_WIDTH_MAJOR, 1);
@@ -785,9 +790,9 @@ static void ft5x0x_report_value(struct ft5x0x_ts_data* ft5x0x)
 			}
 		#endif
 	    }
-	    
-			
-		input_mt_sync(data->input_dev);
+	input_report_key(data->input_dev, BTN_TOUCH,  1);
+		
+	input_mt_sync(data->input_dev);
 	}
 	input_sync(data->input_dev);
 
@@ -1048,6 +1053,7 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	set_bit(ABS_MT_POSITION_Y, input_dev->absbit);
 	set_bit(ABS_MT_WIDTH_MAJOR, input_dev->absbit);
 
+	
 	input_set_abs_params(input_dev,
 			     ABS_MT_POSITION_X, 0, SCREEN_MAX_X, 0, 0);
 	input_set_abs_params(input_dev,
@@ -1064,6 +1070,8 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	set_bit(EV_KEY, input_dev->evbit);
 	set_bit(EV_ABS, input_dev->evbit);
+	set_bit(EV_SYN, input_dev->evbit);
+	set_bit(BTN_TOUCH, input_dev->keybit);
 
 #if CFG_SUPPORT_TOUCH_KEY
 	if(true == ft5x0x_ts->tpkey_enabled){
