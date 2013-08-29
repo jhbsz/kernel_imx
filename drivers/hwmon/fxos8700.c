@@ -501,10 +501,10 @@ static int __devinit fxos8700_probe(struct i2c_client *client,
 		goto err_out;
 
 	client_id = i2c_smbus_read_byte_data(client, FXOS8700_WHO_AM_I);
-	if (client_id !=  FXOS8700_DEVICE_ID ) {
+	if ((client_id !=  FXOS8700_DEVICE_ID) && (client_id !=  FXOS8700_DEVICE_ID2)) {
 		dev_err(&client->dev,
-			"read chip ID 0x%x is not equal to 0x%x \n",
-			result, FXOS8700_DEVICE_ID);
+			"read chip ID 0x%x is not equal to 0x%x or 0x%x\n",
+			result, FXOS8700_DEVICE_ID,FXOS8700_DEVICE_ID2);
 		result = -EINVAL;
 		goto err_out;
 	}

@@ -3,6 +3,7 @@
 
 #define FXOS8700_I2C_ADDR			0x1E
 #define FXOS8700_DEVICE_ID			0xC4
+#define FXOS8700_DEVICE_ID2			0xC7
 #define POLL_INTERVAL_MIN			1
 #define POLL_INTERVAL_MAX			500
 #define POLL_INTERVAL				100 	/* msecs */
