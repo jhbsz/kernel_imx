@@ -439,7 +439,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	},	
 	{
 		.type	= "fxos8700",
-		.addr	= 0x4c,
+		.addr	= 0x1E,
 	},
 };
 
@@ -980,9 +980,9 @@ static int __init board_misc_init(void){
 			ret);
 		return -EINVAL;
 	}
-	gpio_direction_output(QPAD_SENSOR_RST,0);
-	mdelay(5);
 	gpio_direction_output(QPAD_SENSOR_RST,1);
+	mdelay(5);
+	gpio_direction_output(QPAD_SENSOR_RST,0);
 	gpio_free(QPAD_SENSOR_RST);
 
 	
