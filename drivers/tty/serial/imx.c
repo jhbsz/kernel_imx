@@ -1666,6 +1666,34 @@ imx_console_get_options(struct imx_port *sport, int *baud,
 			baud_raw = (uartclk / div) * mul;
 			baud_raw += (rem * mul + div / 2) / div;
 			*baud = (baud_raw + 50) / 100 * 100;
+
+			//mapping to nearest baudrate to reduce bad output 
+			{
+				int i,count;
+				unsigned left,cur,compared;
+				unsigned baud_maps[]={
+					50, 75, 110,134,150,200,300,600,1200,1800,2400,
+					4800,9600,19200,38400,57600,115200,230400,460800,
+					500000,576000,921600,1000000,1152000,1500000,2000000,
+					2500000,3000000,3500000,4000000,
+				};
+				count = (sizeof(baud_maps)/sizeof(baud_maps[0]));
+				compared = *baud;
+				for(i=0;i<count;i++){
+					if(baud_maps[i]>compared)
+						break;
+				}
+				//only cover we wanted baudrate
+				if(i<count){
+					unsigned delta1,delta2;
+					left = baud_maps[i-1];
+					cur = baud_maps[i];
+					delta1 = compared-left;
+					delta2 = cur-compared;
+					compared = (delta1>delta2)?cur:left;
+					*baud=compared;
+				}
+			}
 		}
 
 		if(*baud != baud_raw)
