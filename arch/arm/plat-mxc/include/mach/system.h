@@ -41,10 +41,12 @@ void mxc_clear_mfgmode(void);
 void do_switch_recovery(void);
 void do_switch_fastboot(void);
 void do_switch_autoupdate(void);
+void do_switch_charger(void);
 #else
 #define do_switch_recovery() do {} while (0)
 #define do_switch_fastboot() do {} while (0)
 #define do_switch_autoupdate() do{} while (0)
+#define do_switch_charger() do{} while (0)
 #endif
 
 #endif /* __ASM_ARCH_MXC_SYSTEM_H__ */

@@ -48,6 +48,8 @@ static void arch_reset_special_mode(char mode, const char *cmd)
 		do_switch_fastboot();
 	else if(strcmp(cmd, "autoupdate") == 0){
 		do_switch_autoupdate();
+	}else if(strcmp(cmd, "charger") == 0){
+		do_switch_charger();
 	}
 }
 
