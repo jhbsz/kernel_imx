@@ -106,7 +106,7 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	u32 dai_format;
 
 	dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
-		SND_SOC_DAIFMT_CBM_CFM;
+		SND_SOC_DAIFMT_CBS_CFS;
 
 	/* set codec DAI configuration */
 	ret = snd_soc_dai_set_fmt(codec_dai, dai_format);
@@ -124,13 +124,16 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		return ret;
 
+	/*
 	pll_out = params_rate(params) * 256;
 	ret =
-	    snd_soc_dai_set_pll(codec_dai, 0, 0, card_priv.sysclk, pll_out);
+	    snd_soc_dai_set_pll(codec_dai, RT5625_PLL1_FROM_MCLK, 0, card_priv.sysclk, pll_out);
+	*/
+	ret = snd_soc_dai_set_pll(codec_dai, RT5625_PLL1_FROM_MCLK, 0, card_priv.sysclk, 24576000);
 	if (ret < 0)
 		return ret;
 
-	ret = snd_soc_dai_set_sysclk(codec_dai, 0, pll_out, 0);
+	ret = snd_soc_dai_set_sysclk(codec_dai, 0, 24576000, 0);
 
 	return 0;
 }
@@ -353,6 +356,11 @@ static struct snd_soc_card snd_soc_card_imx = {
 	.num_links	= ARRAY_SIZE(imx_dai),
 };
 
+/*
+ * slave is internal port (1/2/7),master is external port(3/4/5/6)
+ * In our scenario ,rt5625 is slave device (SND_SOC_DAIFMT_CBS_CFS),
+ * We should set external port TFS and TCLK from internal port
+*/
 static int imx_audmux_config(int slave, int master)
 {
 	unsigned int ptcr, pdcr;
@@ -370,7 +378,6 @@ static int imx_audmux_config(int slave, int master)
 	ptcr = MXC_AUDMUX_V2_PTCR_SYN;
 	pdcr = MXC_AUDMUX_V2_PDCR_RXDSEL(slave) | MXC_AUDMUX_V2_PDCR_TXRXEN;
 	mxc_audmux_v2_configure_port(master, ptcr, pdcr);
-
 	return 0;
 }
 
@@ -391,7 +398,8 @@ static int __devinit imx_rt5625_probe(struct platform_device *pdev)
 		return PTR_ERR(card_priv.codec_mclk);
 	}
 
-	imx_audmux_config(plat->src_port, plat->ext_port);
+	//internal port as master
+	imx_audmux_config(plat->ext_port,plat->src_port);
 
 	if (plat->init && plat->init()) {
 		ret = -EINVAL;
