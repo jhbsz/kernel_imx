@@ -25,7 +25,7 @@
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
 #define MX6Q_KEYPAD_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
-		PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED|	\
+		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED|	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
 static iomux_v3_cfg_t mx6q_qpad_pads[] = {
