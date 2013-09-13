@@ -102,7 +102,7 @@ void mipid_hx8369_get_lcd_videomode(struct fb_videomode **mode, int *size,
 int mipid_hx8369_lcd_setup(struct mipi_dsi_info *);
 #endif
 
-#ifdef CONFIG_NT35517_5INCH_PANEL
+#ifdef CONFIG_FB_MXC_NT35517_5INCH_PANEL
 void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 		struct mipi_lcd_config **data);
 int mipid_nt35517_lcd_setup(struct mipi_dsi_info *);

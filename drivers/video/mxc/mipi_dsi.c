@@ -65,7 +65,7 @@ static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
 		 {mipid_hx8369_get_lcd_videomode, mipid_hx8369_lcd_setup},
     },
 	#endif
-	#ifdef CONFIG_NT35517_5INCH_PANEL
+	#ifdef CONFIG_FB_MXC_NT35517_5INCH_PANEL
 	{
 		"NT-QHD",
 		{mipid_nt35517_get_lcd_videomode, mipid_nt35517_lcd_setup},

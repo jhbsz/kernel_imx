@@ -151,6 +151,11 @@
 #define QPAD_SENSOR_INT1	IMX_GPIO_NR(3, 16)
 #define QPAD_SENSOR_INT2	IMX_GPIO_NR(3, 15)
 
+
+//SDHC
+#define QPAD_SD2_CD			IMX_GPIO_NR(2, 0)
+
+
 #define MX6Q_GENERIC_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_HIGH|	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
@@ -184,9 +189,10 @@ extern char *pu_reg_id;
 
 /*Micro SD*/
 static const struct esdhc_platform_data qpad_sd2_data __initconst = {
-	.always_present = 1,
+	.cd_gpio = QPAD_SD2_CD,
 	.keep_power_at_suspend = 1,
-	.cd_type = ESDHC_CD_PERMANENT,
+	.cd_type = ESDHC_CD_CONTROLLER,
+	.runtime_pm = 1,
 };
 
 /*WIFI SDIO*/
@@ -413,9 +419,11 @@ static struct imxi2c_platform_data mx6q_i2c_data = {
 
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
+	/*
 	{
 		I2C_BOARD_INFO("rt5625", 0x1f),
 	},
+	*/
 	{
 		I2C_BOARD_INFO("ov564x", 0x3c),
 		.platform_data = (void *)&camera_data,
@@ -788,9 +796,9 @@ static void __init imx6q_add_device_gpio_leds(void)
 }
 
 static struct gpio_keys_button qpad_buttons[] = {
-	GPIO_BUTTON(GPIO_KEY_MENU, KEY_MENU, 1, "menu", 0, 1),
-	GPIO_BUTTON(GPIO_KEY_HOME, KEY_HOME, 1, "home", 0, 1),
-	GPIO_BUTTON(GPIO_KEY_BACK, KEY_BACK, 1, "back", 0, 1),	
+	GPIO_BUTTON(GPIO_KEY_MENU, KEY_MENU, 1, "menu", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_HOME, KEY_HOME, 1, "home", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_BACK, KEY_BACK, 1, "back", 1, 1),	
 	GPIO_BUTTON(GPIO_KEY_F1, KEY_F1, 1, "F1", 0, 1),
 	GPIO_BUTTON(GPIO_KEY_F2, KEY_F2, 1, "F2", 0, 1),
 	GPIO_BUTTON(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1),	
@@ -1080,8 +1088,8 @@ static void __init mx6_qpad_board_init(void)
 	   mmc2 is wifi
 	*/
 	imx6q_add_sdhci_usdhc_imx(3, &qpad_sd4_data);
-	imx6q_add_sdhci_usdhc_imx(2, &qpad_sd2_data);
-	imx6q_add_sdhci_usdhc_imx(1, &qpad_sd3_data);
+	imx6q_add_sdhci_usdhc_imx(1, &qpad_sd2_data);
+	imx6q_add_sdhci_usdhc_imx(2, &qpad_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
 	imx6q_qpad_init_usb();
 
@@ -1151,7 +1159,7 @@ static void __init mx6_qpad_timer_init(void)
 #endif
 	mx6_clocks_init(32768, 24000000, 0, 0);
 
-	//early_console_setup(UART1_BASE_ADDR, clk_get_sys("imx-uart.0", NULL));
+	early_console_setup(UART1_BASE_ADDR, clk_get_sys("imx-uart.0", NULL));
 }
 
 static struct sys_timer mx6_qpad_timer = {
