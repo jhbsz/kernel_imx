@@ -54,6 +54,7 @@ static const char *rt5625_supply_names[RT5625_NUM_SUPPLIES] = {
 
 struct rt5625_priv {
 	enum snd_soc_control_type control_type;
+	void* control_data;
 	struct snd_soc_codec *codec;
 	unsigned int stereo_sysclk;
 	unsigned int voice_sysclk;
@@ -2310,6 +2311,8 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 
 	rt5625->codec = codec;
 
+	codec->control_data = rt5625->control_data;
+	
 	snd_soc_write(codec,RT5625_RESET,0);
 	msleep(10);
 
@@ -2436,6 +2439,7 @@ static int rt5625_i2c_probe(struct i2c_client *i2c,
 	if (rt5625 == NULL)	return -ENOMEM;
 
 	rt5625->control_type = SND_SOC_I2C;
+	rt5625->control_data = i2c;
 	i2c_set_clientdata(i2c, rt5625);
 
 	ret = snd_soc_register_codec(&i2c->dev, &soc_codec_dev_rt5625,
