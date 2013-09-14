@@ -158,6 +158,8 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	/*W1*/
 	MX6Q_PAD_EIM_D28__GPIO_3_28,		/*OneWire*/
 
+	/*WiFi*/
+	MX6Q_PAD_SD3_RST__GPIO_7_8,			/*WiFi Reset*/
 
 	/*Modem*/
 	MX6Q_PAD_NANDF_D2__GPIO_2_2,		/*3G_DIS_N :OnOff*/

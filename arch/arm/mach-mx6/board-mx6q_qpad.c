@@ -151,6 +151,9 @@
 #define QPAD_SENSOR_INT1	IMX_GPIO_NR(3, 16)
 #define QPAD_SENSOR_INT2	IMX_GPIO_NR(3, 15)
 
+//WiFi
+#define QPAD_WIFI_RST		IMX_GPIO_NR(7, 8)
+
 
 //SDHC
 #define QPAD_SD2_CD			IMX_GPIO_NR(2, 0)
@@ -200,7 +203,6 @@ static const struct esdhc_platform_data qpad_sd3_data __initconst = {
 	.always_present = 1,
 	.keep_power_at_suspend = 1,
 	.cd_type = ESDHC_CD_PERMANENT,
-	.runtime_pm = 1,
 };
 
 /*eMMC*/
@@ -1031,6 +1033,18 @@ static int __init board_misc_init(void){
 	gpio_direction_output(QPAD_SENSOR_RST,0);
 	gpio_free(QPAD_SENSOR_RST);
 
+
+	//reset WIFI chip
+	ret = gpio_request(QPAD_WIFI_RST, "wifi-rst");
+	if (ret) {
+		pr_err("failed to get GPIO wifi-rst: %d\n",
+			ret);
+		return -EINVAL;
+	}
+	gpio_direction_output(QPAD_WIFI_RST,0);
+	mdelay(5);
+	gpio_direction_output(QPAD_WIFI_RST,1);
+	gpio_free(QPAD_WIFI_RST);
 	
 	return 0;
 }
