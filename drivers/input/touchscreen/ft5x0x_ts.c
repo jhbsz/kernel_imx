@@ -981,6 +981,9 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	
+	if(pdata->plat_init)
+		pdata->plat_init();
+
 	// probe the device
 	if(i2c_smbus_read_byte_data(client,0)<0)
 	{
@@ -990,8 +993,6 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	printk("ft5x0x_ts_probe,%s detected\n", id->name);
 
-	if(pdata->plat_init)
-		pdata->plat_init();
 
 		
 		

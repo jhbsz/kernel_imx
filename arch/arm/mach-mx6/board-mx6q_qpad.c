@@ -103,7 +103,7 @@
 #define QPAD_CAM_RST		IMX_GPIO_NR(5, 20)
 
 
-#define QPAD_W1_IO		IMX_GPIO_NR(3, 28)
+#define QPAD_W1_IO			IMX_GPIO_NR(3, 28)
 
 
 #define GPIO_KEY_POWER		IMX_GPIO_NR(3,29)
@@ -142,7 +142,7 @@
 
 //Touch Panel
 #define QPAD_TP_PWR_EN		IMX_GPIO_NR(2, 28)
-#define QPAD_TP_RST			IMX_GPIO_NR(8, 8)
+#define QPAD_TP_RST			IMX_GPIO_NR(6, 8)
 #define QPAD_TP_IRQ			IMX_GPIO_NR(6, 7)
 
 //Sensor
@@ -381,10 +381,10 @@ static struct eup2471_platform_data eup2471_pdata =
 #include <linux/ft5x0x_ts.h>
 
 static int ft5x0x_plat_init(void){
-	int ret;	
+	int ret=0;	
 	ret = gpio_request(QPAD_TP_PWR_EN, "tp-pwr");
 	if (ret) {
-		pr_err("failed to get GPIO otg-vbus: %d\n",
+		pr_err("failed to get GPIO tp-pwr: %d\n",
 			ret);
 		goto err;
 	}
@@ -393,7 +393,7 @@ static int ft5x0x_plat_init(void){
 
 	ret = gpio_request(QPAD_TP_RST, "tp-rst");
 	if (ret) {
-		pr_err("failed to get GPIO otg-vbus: %d\n",
+		pr_err("failed to get GPIO tp-rst: %d\n",
 			ret);
 		goto err;
 	}
@@ -401,6 +401,7 @@ static int ft5x0x_plat_init(void){
 	msleep(50);
 	gpio_direction_output(QPAD_TP_RST, 1);
 	gpio_free(QPAD_TP_RST);
+	msleep(50);
 
 err:
 	return ret;
@@ -433,7 +434,7 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 		.type			= "ft5x0x_ts",
-		.addr			= 0x3a,
+		.addr			= 0x38,
 		.irq			= gpio_to_irq(QPAD_TP_IRQ),
 		.platform_data	= &ft5x0x_data,
 	},	
@@ -505,25 +506,60 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 
 static void mx6_reset_mipi_dsi(void)
 {
-	gpio_set_value(QPAD_DISP_PWR_EN, 1);
-	return;
-	gpio_set_value(QPAD_DISP_RST_B, 1);
+	#if 0
+	int ret;
+	//return if bootloader already enable LCD???	
+	ret = gpio_request(QPAD_DISP_RST_B, "disp_reset");	
+	if (ret) {
+		pr_err("failed to request gpio: %d\n",QPAD_DISP_RST_B);
+		return;
+	}
+	gpio_direction_output(QPAD_DISP_RST_B,1);
 	udelay(10);
-	gpio_set_value(QPAD_DISP_RST_B, 0);
+	gpio_direction_output(QPAD_DISP_RST_B, 0);
 	udelay(50);
-	gpio_set_value(QPAD_DISP_RST_B, 1);
+	gpio_direction_output(QPAD_DISP_RST_B, 1);
+	
+	gpio_free(QPAD_DISP_RST_B);
 
 	/*
 	 * it needs to delay 120ms minimum for reset complete
 	 */
 	msleep(120);
+	#endif
 }
 
+static void mipi_dsi_power(int en){	
+	/*
+	int ret;
+	ret = gpio_request(QPAD_DISP_PWR_EN, "disp_pwren");	
+	if (ret) {
+		pr_err("failed to request gpio: %d\n",QPAD_DISP_PWR_EN);
+		return;
+	}
+	gpio_direction_output(QPAD_DISP_PWR_EN,en?0:1);
+	gpio_free(QPAD_DISP_PWR_EN);
+	*/
+}
+static void mipi_dsi_baclight_power(int en){
+	/*
+	int ret;
+	ret = gpio_request(QPAD_DISP_BL_PWR_EN, "disp_bl_pwren");	
+	if (ret) {
+		pr_err("failed to request gpio: %d\n",QPAD_DISP_BL_PWR_EN);
+		return;
+	}
+	gpio_direction_output(QPAD_DISP_BL_PWR_EN,en?1:0);
+	gpio_free(QPAD_DISP_BL_PWR_EN);
+	*/
+}
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.ipu_id		= 0,
 	.disp_id	= 1,
 	.lcd_panel	= "NT-QHD",
 	.reset		= mx6_reset_mipi_dsi,
+	.lcd_power	= mipi_dsi_power,
+	.backlight_power	= mipi_dsi_baclight_power,
 };
 
 static struct ipuv3_fb_platform_data qpad_fb_data[] = {
@@ -694,8 +730,10 @@ static struct mxc_audio_platform_data rt5625_data = {
 	.ssi_num = 1,
 	.src_port = 2,
 	.ext_port = 3,
+	#if 0
 	.hp_gpio = QPAD_AUDIO_HEADPHONE_DET,
 	.hp_active_low = 1,
+	#endif
 };
 
 static int __init imx6q_init_audio(void)
