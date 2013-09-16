@@ -140,7 +140,7 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 
 	/*QR Engine*/
 	MX6Q_PAD_EIM_D30__GPIO_3_30,		/*QR_TRIG*/
-	MX6Q_PAD_EIM_DA8__GPIO_3_8,			/*QR_RESET*/
+	MX6Q_PAD_EIM_BCLK__GPIO_6_31,		/*MX6Q_PAD_EIM_DA8__GPIO_3_8,	change to BCLK because of confliction of BOOT_CFG*/		/*QR_RESET*/
 
 	/*Touch Panel*/
 	MX6Q_PAD_EIM_EB0__GPIO_2_28,		/*TP_PWR_EN*/
