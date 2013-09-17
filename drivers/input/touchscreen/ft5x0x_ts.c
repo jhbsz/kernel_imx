@@ -1192,12 +1192,12 @@ static struct i2c_driver ft5x0x_ts_driver = {
 		.name	= FT5X0X_NAME,
 		.owner	= THIS_MODULE,
 	},
-#ifdef CONFIG_PM
-#ifndef CONFIG_HAS_EARLYSUSPEND
-	.suspend  = so340010_suspend,
-	.resume   = so340010_resume,
-#endif
-#endif
+	#ifdef CONFIG_PM
+	ifndef CONFIG_HAS_EARLYSUSPEND
+	.suspend	= ft5x0x_ts_suspend,
+	.resume 	= ft5x0x_ts_resume,
+	#endif
+	#endif
 	
 };
 
@@ -1215,9 +1215,9 @@ function	:
 static int __init ft5x0x_ts_init(void)
 {
 	int ret;
-	printk("==ft5x0x_ts_init==\n");
+	//printk("==ft5x0x_ts_init==\n");
 	ret = i2c_add_driver(&ft5x0x_ts_driver);
-	printk("ret=%d\n",ret);
+	//printk("ret=%d\n",ret);
 	return ret;
 //	return i2c_add_driver(&ft5x0x_ts_driver);
 }
@@ -1235,7 +1235,7 @@ function	:
 ***********************************************************************************************/
 static void __exit ft5x0x_ts_exit(void)
 {
-	printk("==ft5x0x_ts_exit==\n");
+	//printk("==ft5x0x_ts_exit==\n");
 	i2c_del_driver(&ft5x0x_ts_driver);
 }
 
