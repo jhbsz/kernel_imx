@@ -1193,7 +1193,7 @@ static struct i2c_driver ft5x0x_ts_driver = {
 		.owner	= THIS_MODULE,
 	},
 	#ifdef CONFIG_PM
-	ifndef CONFIG_HAS_EARLYSUSPEND
+	#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend	= ft5x0x_ts_suspend,
 	.resume 	= ft5x0x_ts_resume,
 	#endif
