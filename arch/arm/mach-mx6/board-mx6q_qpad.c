@@ -422,11 +422,9 @@ static struct imxi2c_platform_data mx6q_i2c_data = {
 
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
-	/*
 	{
 		I2C_BOARD_INFO("rt5625", 0x1f),
 	},
-	*/
 	{
 		I2C_BOARD_INFO("ov564x", 0x3c),
 		.platform_data = (void *)&camera_data,
@@ -753,7 +751,7 @@ static int __init imx6q_init_audio(void)
 		clk_set_parent(clko2, parent);
 		clk_put(parent);
 	}
-	rate = clk_round_rate(clko2, 12000000);
+	rate = clk_round_rate(clko2, 12288000);
 	clk_set_rate(clko2, rate);
 
 	rt5625_data.sysclk = rate;
