@@ -133,7 +133,7 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	MX6Q_PAD_SD1_CLK__GPIO_1_20,		/*AUDIO_INT*/
 	
 	/*Hardware Monitor*/
-	MX6Q_PAD_EIM_EB3__GPIO_2_31,		/*SENSOR_POWER_EN*/
+	/*MX6Q_PAD_EIM_EB3__GPIO_2_31,	It's confict with BOOT_CFG2[7]*/	/*SENSOR_POWER_EN*/
 	MX6Q_PAD_EIM_CS0__GPIO_2_23,		/*SENSOR_RST*/
 	MX6Q_PAD_EIM_D16__GPIO_3_16,		/*SENSOR_INT1*/
 	MX6Q_PAD_EIM_DA15__GPIO_3_15,		/*SENSOR_INT2*/

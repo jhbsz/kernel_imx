@@ -352,8 +352,8 @@ static unsigned int rt5625_read(struct snd_soc_codec *codec,
 {
 	//always return cache
 	if(reg<=0x74)
-		return rt5625_read_reg_cache(codec,reg);
-	return rt5625_direct_read(codec,reg);
+		return rt5625_direct_read(codec,reg);
+	return rt5625_read_reg_cache(codec,reg);
 }
 
 
@@ -964,7 +964,6 @@ SOC_SINGLE("Voice DAC Power",RT5625_PWR_MANAG_ADD1,7,1,0),
 SOC_SINGLE("Voice DAC Mute",RT5625_VOICE_DAC_OUT_VOL,12,1,0),	  
 SOC_SINGLE("Voice DAC Playback Switch",RT5625_VOICE_DAC_OUT_VOL,14,1,0),	  
 SOC_SINGLE("Voice DAC Enable",RT5625_EXTEND_SDP_CTRL,15,1,0),	  
-SOC_DOUBLE("DAC CLK Power", RT5625_PWR_MANAG_ADD2, 7, 8, 1, 0),
 
 };
 
@@ -1618,7 +1617,7 @@ struct rt5625_pll_div {
 static const struct rt5625_pll_div pll1_div_from_mclk[] = {
 	{  2048000, 24576000, 0x2ea0 },
 	{  3686400, 24576000, 0xee27 },
-	{ 12000000, 24576000, 0x2915 },
+	{ 12000000, 24576000, 0x2915 },//48*512
 	{ 13000000, 24576000, 0x772e },
 	{ 13100000, 24576000, 0x0d20 },
 	{ 18432000, 24576000, 0x0290 },
@@ -1627,6 +1626,9 @@ static const struct rt5625_pll_div pll1_div_from_mclk[] = {
 	{  6144000, 24576000, 0x0a90 },
 	{  4096000, 24576000, 0x1090 },
 	{ 12300000, 24576000, 0x06a0 },
+	{ 12000000, 22579200, 0x7e2f },//44.1*512
+	{ 12000000, 11289600, 0x7d7d },//44.1*256
+	
 };
 
 static const struct rt5625_pll_div pll1_div_from_bclk[] = {
@@ -1658,11 +1660,20 @@ struct rt5625_coeff_div_voice {
  * input bclk should be 32*fs
  */
 static const struct rt5625_coeff_div_stereo coeff_div_stereo[] = {
-	{ 24576000, 48000, 0x3174, 0x1010 },
-	{ 12288000, 48000, 0x1174, 0x3030/*0x0000*/ },
+	{ 24576000, 48000, 0x3174, 0x1010 },/*512Fs*/
+	{ 12288000, 48000, 0x1174, 0x3030 }, /*256Fs*/
 	{ 18432000, 48000, 0x2174, 0x1111 },
 	{ 36864000, 48000, 0x2274, 0x2020 },
 	{ 49152000, 48000, 0xf074, 0x3030 },
+
+	//BCLK 2.8224
+	{ 22579200, 44100, 0x3075, 0x1010 },/*512Fs*/
+	//BCLK 1.4114
+	{ 22579200, 44100, 0x3174, 0x1010 },/*512Fs*/
+	
+	
+	{ 22579200, 44100, 0x3174, 0x1010 },/*512Fs*/
+	{ 11289600, 44100, 0x1174, 0x3030 }, /*256Fs*/
 	{        0,     0,      0,      0 },
 };
 
@@ -1697,7 +1708,7 @@ static int rt5625_get_coeff(unsigned int mclk, unsigned int rate, int mode)
 	}
 
 	printk(KERN_ERR "can't find a matched mclk and rate in %s\n",
-		(mode ? "coeff_div_voice[]" : "coeff_div_audio[]"));
+		(mode ? "coeff_div_voice[]" : "coeff_div_stereo[]"));
 
 	return -EINVAL;
 }
@@ -2154,7 +2165,7 @@ static int rt5625_set_bias_level(struct snd_soc_codec *codec,
 }
 
 
-#define RT5625_STEREO_RATES (SNDRV_PCM_RATE_48000)
+#define RT5625_STEREO_RATES (SNDRV_PCM_RATE_8000_48000)
 #define RT5626_VOICE_RATES (SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_8000)
 
 #define RT5625_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
@@ -2181,7 +2192,7 @@ static struct snd_soc_dai_ops rt5625_dai_ops_voice = {
 static struct snd_soc_dai_driver rt5625_dai[] = {
 	/* hifi codec dai */
 	{
-		.name = "rt5625",
+		.name = "rt5625_hifi",
 		.id = 0,
 		.playback = {
 			.stream_name  = "HiFi Playback",
@@ -2339,7 +2350,8 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 	
 	for (i = 0; i < ARRAY_SIZE(rt5625->supplies); i++)
 		rt5625->supplies[i].supply = rt5625_supply_names[i];
-	
+	#warning "FIXME: rt5625 regulator get and enable"
+	#if 0
 	ret = regulator_bulk_get(codec->dev, ARRAY_SIZE(rt5625->supplies),
 				 rt5625->supplies);
 	if (ret != 0) {
@@ -2354,6 +2366,7 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 		dev_err(codec->dev, "Failed to enable supplies: %d\n", ret);
 		goto err_get;
 	}
+	#endif
 
 	snd_soc_add_controls(codec, rt5625_snd_controls,
 			ARRAY_SIZE(rt5625_snd_controls));

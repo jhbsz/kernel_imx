@@ -77,6 +77,7 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 
+
 	if (!codec_dai->active)
 		clk_enable(card_priv.codec_mclk);
 
@@ -87,6 +88,7 @@ static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+
 
 	if (!codec_dai->active)
 		clk_disable(card_priv.codec_mclk);
@@ -107,11 +109,10 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 
 	dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 		SND_SOC_DAIFMT_CBS_CFS;
+	
+	pll_out = params_rate(params) * 512;
 
-	/* set codec DAI configuration */
-	ret = snd_soc_dai_set_fmt(codec_dai, dai_format);
-	if (ret < 0)
-		return ret;
+	/* set cpu DAI configuration */
 
 	/* set i.MX active slot mask */
 	snd_soc_dai_set_tdm_slot(cpu_dai,
@@ -119,21 +120,28 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 				 channels == 1 ? 0xfffffffe : 0xfffffffc,
 				 2, 32);
 
-	/* set cpu DAI configuration */
 	ret = snd_soc_dai_set_fmt(cpu_dai, dai_format);
+	if (ret < 0) return ret;
+
+
+	/* set the SSI system clock as input (unused) */
+	snd_soc_dai_set_sysclk(cpu_dai, IMX_SSP_SYS_CLK, 0, SND_SOC_CLOCK_IN);	
+
+	snd_soc_dai_set_clkdiv(cpu_dai, IMX_SSI_TX_DIV_2, 0);
+	snd_soc_dai_set_clkdiv(cpu_dai, IMX_SSI_TX_DIV_PSR, 0);
+	snd_soc_dai_set_clkdiv(cpu_dai, IMX_SSI_TX_DIV_PM, 3);
+
+
+	/* set codec DAI configuration */
+	ret = snd_soc_dai_set_fmt(codec_dai, dai_format);
+	if (ret < 0)
+		return ret;
+	
+	ret =  snd_soc_dai_set_pll(codec_dai, RT5625_PLL1_FROM_MCLK, 0, card_priv.sysclk, pll_out);
 	if (ret < 0)
 		return ret;
 
-	/*
-	pll_out = params_rate(params) * 256;
-	ret =
-	    snd_soc_dai_set_pll(codec_dai, RT5625_PLL1_FROM_MCLK, 0, card_priv.sysclk, pll_out);
-	*/
-	ret = snd_soc_dai_set_pll(codec_dai, RT5625_PLL1_FROM_MCLK, 0, card_priv.sysclk, 24576000);
-	if (ret < 0)
-		return ret;
-
-	ret = snd_soc_dai_set_sysclk(codec_dai, 0, 24576000, 0);
+	ret = snd_soc_dai_set_sysclk(codec_dai, 0, pll_out, 0);
 
 	return 0;
 }
@@ -143,31 +151,23 @@ static const struct snd_soc_dapm_widget imx_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("Main Mic", NULL),
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
-	SND_SOC_DAPM_SPK("Ext Spk", NULL),
+	SND_SOC_DAPM_SPK("Ext Speaker", NULL),
 };
 
 /* imx machine connections to the codec pins */
 static const struct snd_soc_dapm_route audio_map[] = {
+	/* headphone connected to HPL, HPR */
+	{"Headphone Jack", NULL, "HPL"},
+	{"Headphone Jack", NULL, "HPR"},
+
+	/* ext speaker connected to SPKL, SPKR */
+	{"Ext Speaker", NULL, "SPKL"},
+	{"Ext Speaker", NULL, "SPKR"},
+
 	/* ----input ------------------- */
 	/* Mic Jack --> MIC_IN (with automatic bias) */
-	{"MICBIAS2", NULL, "Headset Mic"},
-	{"IN1LP", NULL, "MICBIAS2"},
-	{"IN1LN", NULL, "Headset Mic"},
-
-	{"MICBIAS1", NULL, "Main Mic"},
-	{"IN1RP", NULL, "MICBIAS1"},
-	{"IN1RN", NULL, "Main Mic"},
-
-	/* ----output------------------- */
-	/* HP_OUT --> Headphone Jack */
-	{"Headphone Jack", NULL, "HPOUT1L"},
-	{"Headphone Jack", NULL, "HPOUT1R"},
-
-	/* LINE_OUT --> Ext Speaker */
-	{"Ext Spk", NULL, "SPKOUTLP"},
-	{"Ext Spk", NULL, "SPKOUTLN"},
-	{"Ext Spk", NULL, "SPKOUTRP"},
-	{"Ext Spk", NULL, "SPKOUTRN"},
+	{"Mic2", NULL, "Headset Mic"},
+	{"Mic1", NULL, "Main Mic"},
 
 };
 
@@ -233,9 +233,9 @@ static int hp_jack_status_check(void)
 
 		/* if headphone is inserted, disable speaker */
 		if (priv->hp_status != plat->hp_active_low)
-			snd_soc_dapm_nc_pin(&gcodec->dapm, "Ext Spk");
+			snd_soc_dapm_nc_pin(&gcodec->dapm, "Ext Speaker");
 		else
-			snd_soc_dapm_enable_pin(&gcodec->dapm, "Ext Spk");
+			snd_soc_dapm_enable_pin(&gcodec->dapm, "Ext Speaker");
 
 		snd_soc_dapm_sync(&gcodec->dapm);
 
@@ -271,6 +271,8 @@ static int imx_hifi_trigger(struct snd_pcm_substream *substream, int cmd)
 	struct platform_device *pdev = priv->pdev;
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
 
+	printk("%s\n",__func__);
+
 	if (SNDRV_PCM_TRIGGER_RESUME == cmd) {
 		if (gpio_is_valid(plat->hp_gpio) || gpio_is_valid(plat->mic_gpio))
 			schedule_delayed_work(&resume_hp_event,
@@ -288,15 +290,15 @@ static int imx_rt5625_init(struct snd_soc_pcm_runtime *rtd)
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
 	int ret;
 
-/* Add imx specific widgets */
+	/* Add imx specific widgets */
 	snd_soc_dapm_new_controls(&codec->dapm, imx_dapm_widgets,
 				  ARRAY_SIZE(imx_dapm_widgets));
 
 	/* Set up imx specific audio path audio_map */
 	snd_soc_dapm_add_routes(&codec->dapm, audio_map, ARRAY_SIZE(audio_map));
 
-	snd_soc_dapm_enable_pin(&codec->dapm, "Headphone Jack");
-
+	snd_soc_dapm_enable_pin(&codec->dapm, "PCM");
+	
 	snd_soc_dapm_sync(&codec->dapm);
 
 	if (gpio_is_valid(plat->hp_gpio)) {
@@ -322,9 +324,9 @@ static int imx_rt5625_init(struct snd_soc_pcm_runtime *rtd)
 
 		/* if headphone is inserted, disable speaker */
 		if (priv->hp_status != plat->hp_active_low)
-			snd_soc_dapm_nc_pin(&codec->dapm, "Ext Spk");
+			snd_soc_dapm_nc_pin(&codec->dapm, "Ext Speaker");
 		else
-			snd_soc_dapm_enable_pin(&codec->dapm, "Ext Spk");
+			snd_soc_dapm_enable_pin(&codec->dapm, "Ext Speaker");
 		
 	}
 	return 0;
@@ -341,7 +343,7 @@ static struct snd_soc_dai_link imx_dai[] = {
 	{
 		.name = "HiFi",
 		.stream_name = "HiFi",
-		.codec_dai_name	= "rt5625",
+		.codec_dai_name	= "rt5625_hifi",
 		.codec_name	= "rt5625.0-001f",
 		.cpu_dai_name	= "imx-ssi.1",
 		.platform_name	= "imx-pcm-audio.1",
@@ -360,24 +362,25 @@ static struct snd_soc_card snd_soc_card_imx = {
  * slave is internal port (1/2/7),master is external port(3/4/5/6)
  * In our scenario ,rt5625 is slave device (SND_SOC_DAIFMT_CBS_CFS),
  * We should set external port TFS and TCLK from internal port
+ * our mapping ssi.1<-->SSI2<-->SSI3
 */
 static int imx_audmux_config(int slave, int master)
 {
 	unsigned int ptcr, pdcr;
 	slave = slave - 1;
 	master = master - 1;
-
 	ptcr = MXC_AUDMUX_V2_PTCR_SYN |
 		MXC_AUDMUX_V2_PTCR_TFSDIR |
-		MXC_AUDMUX_V2_PTCR_TFSEL(master) |
+		MXC_AUDMUX_V2_PTCR_TFSEL(slave) |
 		MXC_AUDMUX_V2_PTCR_TCLKDIR |
-		MXC_AUDMUX_V2_PTCR_TCSEL(master);
+		MXC_AUDMUX_V2_PTCR_TCSEL(slave);
+	pdcr = MXC_AUDMUX_V2_PDCR_RXDSEL(slave)|MXC_AUDMUX_V2_PDCR_TXRXEN;
+	mxc_audmux_v2_configure_port(master, ptcr, pdcr);
+
+	ptcr = MXC_AUDMUX_V2_PTCR_SYN;
 	pdcr = MXC_AUDMUX_V2_PDCR_RXDSEL(master);
 	mxc_audmux_v2_configure_port(slave, ptcr, pdcr);
 
-	ptcr = MXC_AUDMUX_V2_PTCR_SYN;
-	pdcr = MXC_AUDMUX_V2_PDCR_RXDSEL(slave) | MXC_AUDMUX_V2_PDCR_TXRXEN;
-	mxc_audmux_v2_configure_port(master, ptcr, pdcr);
 	return 0;
 }
 
@@ -398,8 +401,7 @@ static int __devinit imx_rt5625_probe(struct platform_device *pdev)
 		return PTR_ERR(card_priv.codec_mclk);
 	}
 
-	//internal port as master
-	imx_audmux_config(plat->ext_port,plat->src_port);
+	imx_audmux_config(plat->src_port, plat->ext_port);
 
 	if (plat->init && plat->init()) {
 		ret = -EINVAL;

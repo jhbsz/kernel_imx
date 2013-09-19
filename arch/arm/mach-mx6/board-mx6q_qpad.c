@@ -146,7 +146,6 @@
 #define QPAD_TP_IRQ			IMX_GPIO_NR(6, 7)
 
 //Sensor
-#define QPAD_SENSOR_PWR		IMX_GPIO_NR(2, 31)
 #define QPAD_SENSOR_RST		IMX_GPIO_NR(2, 23)
 #define QPAD_SENSOR_INT1	IMX_GPIO_NR(3, 16)
 #define QPAD_SENSOR_INT2	IMX_GPIO_NR(3, 15)
@@ -615,7 +614,7 @@ static struct qpower_charger_pdata qcp = {
 	.flt = QPAD_CHARGE_FLT_1_B,	
 	.dcm_always_high = true,
 	.dc_valid = true,
-	.usb_valid = true,
+	.usb_valid = false,//true,
 	.feature_flag = QPOWER_CHARGER_FEATURE_SHORT_MODE,
 	//for battery detection
 	.det = QPAD_BATTERY_DET,
@@ -751,7 +750,7 @@ static int __init imx6q_init_audio(void)
 		clk_set_parent(clko2, parent);
 		clk_put(parent);
 	}
-	rate = clk_round_rate(clko2, 12288000);
+	rate = clk_round_rate(clko2, 12000000);
 	clk_set_rate(clko2, rate);
 
 	rt5625_data.sysclk = rate;
@@ -1012,14 +1011,7 @@ static int __init board_misc_init(void){
 	gpio_free(QPAD_QRE_TRIG);
 
 	//Sensor ,FXO8700 driver don't use interrupt but using polling
-	ret = gpio_request(QPAD_SENSOR_PWR, "sensor-pwr");
-	if (ret) {
-		pr_err("failed to get GPIO sensor-pwr: %d\n",
-			ret);
-		return -EINVAL;
-	}
-	gpio_direction_output(QPAD_SENSOR_PWR,1);
-	gpio_free(QPAD_SENSOR_PWR);
+	//default RST is high ,and no power control
 	ret = gpio_request(QPAD_SENSOR_RST, "sensor-rst");
 	if (ret) {
 		pr_err("failed to get GPIO sensor-pwr: %d\n",

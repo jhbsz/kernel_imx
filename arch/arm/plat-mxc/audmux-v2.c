@@ -154,7 +154,7 @@ static void audmux_debugfs_init(void)
 	for (i = 1; i < 8; i++) {
 		snprintf(buf, sizeof(buf), "ssi%d", i);
 		if (!debugfs_create_file(buf, 0444, audmux_debugfs_root,
-					 (void *)i, &audmux_debugfs_fops))
+					 (void *)(i-1), &audmux_debugfs_fops))
 			pr_warning("Failed to create AUDMUX port %d debugfs file\n",
 				   i);
 	}

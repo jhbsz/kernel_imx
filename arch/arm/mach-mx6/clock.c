@@ -5444,7 +5444,9 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	pcie_clk[0].disable(&pcie_clk[0]);
 
 	/* Initialize Audio and Video PLLs to valid frequency. */
-	clk_set_rate(&pll4_audio_main_clk, 176000000);
+	//clk_set_rate(&pll4_audio_main_clk, 176000000);
+	clk_set_rate(&pll4_audio_main_clk, 180633600);
+	
 	clk_set_rate(&pll5_video_main_clk, 650000000);
 
 	/*
@@ -5512,6 +5514,11 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	clk_set_rate(&clko2_clk, 2400000);
 
 	clk_set_parent(&clko_clk, &pll4_audio_main_clk);
+
+	clk_set_parent(&ssi2_clk, &pll4_audio_main_clk);
+	//for 44.1kHz
+	clk_set_rate(&ssi2_clk, 22579200);
+	
 	/*
 	 * FIXME: asrc needs to use asrc_serial(spdif1) clock to do sample
 	 * rate convertion and this clock frequency can not be too high, set

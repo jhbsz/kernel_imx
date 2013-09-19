@@ -28,7 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/power/qpower.h>
 
-#define QPOWER_CHARGER_POLLING_DELAY		(50 * HZ)
+#define QPOWER_CHARGER_POLLING_DELAY		(1 * HZ)
 struct qpower_charger_data {
 	struct qpower_charger_pdata *pdata;
 	struct device *dev;
@@ -167,7 +167,7 @@ static irqreturn_t qpower_charger_dcin(int irq, void *_data)
 		gpio_set_value(pdata->cen, dc_in ? 0 :
 				(data->usb_in ? 0 : 1));
 
-	dev_dbg(data->dev, "TA(DC-IN) Charger %s.\n", dc_in ?
+	dev_info(data->dev, "TA(DC-IN) Charger %s.\n", dc_in ?
 			"Connected" : "Disconnected");
 
 	power_supply_changed(&data->psy_dc);
@@ -197,7 +197,7 @@ static irqreturn_t qpower_charger_usbin(int irq, void *_data)
 		gpio_set_value(pdata->cen, usb_in ? 0 :
 				(data->dc_in ? 0 : 1));
 
-	dev_dbg(data->dev, "USB Charger %s.\n", usb_in ?
+	dev_info(data->dev, "USB Charger %s.\n", usb_in ?
 			"Connected" : "Disconnected");
 
 	if(pdata->dc_valid)
@@ -496,6 +496,8 @@ static __devinit int qpower_charger_probe(struct platform_device *pdev)
 	
 	
 	//enable our polling work? is this necessary?
+	//currently we use interrupt to check charge charge status,for desigin completeness, here only init 
+	//the delay work. If necessary,we can schedule it later.
 	INIT_DELAYED_WORK_DEFERRABLE(&data->work, qpower_charger_work);
 	//schedule_delayed_work(&data->work, QPOWER_CHARGER_POLLING_DELAY);
 
