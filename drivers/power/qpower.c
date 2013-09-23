@@ -16,7 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-
+#define DEBUG
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
@@ -59,16 +59,14 @@ static int register_qpower_charger(void *pdata)
 static int register_qpower_battery(void *pdata)
 {
 	struct qpower_battery_pdata* bp = pdata;
-	int ret;
 
 	qpower_battery_device.platform_data = pdata;
+	if (!i2c_new_device(i2c_get_adapter(bp->busid), &qpower_battery_device)){
+		pr_debug("Unable to register qpower battery '%s'\n",
+			 qpower_battery_device.type);
+	}
 
-	ret = i2c_register_board_info(bp->busid, &qpower_battery_device, 1);
-	if (ret)
-		pr_debug("Unable to register qpower batter '%s': %d\n",
-			 qpower_battery_device.type, ret);
-
-	return ret;
+	return 0;
 }
 
 

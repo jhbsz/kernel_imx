@@ -628,7 +628,7 @@ static struct qpower_pdata qp = {
 	.flags = QPOWER_FEATURE_CHARGER|QPOWER_FEATURE_BATTERY,  
 };
 
-static int __init power_init(void){
+static int __init qpad_power_init(void){
 	
 	imx_add_platform_device("qpower", -1,
 			NULL, 0, &qp, sizeof(qp));
@@ -1186,7 +1186,7 @@ static void __init mx6_qpad_board_init(void)
 	imx6q_add_perfmon(2);
 
 
-	power_init();
+	qpad_power_init();
 
 	nfc_init();
 
