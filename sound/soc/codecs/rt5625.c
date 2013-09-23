@@ -2356,7 +2356,6 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 	
 	for (i = 0; i < ARRAY_SIZE(rt5625->supplies); i++)
 		rt5625->supplies[i].supply = rt5625_supply_names[i];
-	#warning "FIXME: rt5625 regulator get and enable"
 	ret = regulator_bulk_get(codec->dev, ARRAY_SIZE(rt5625->supplies),
 				 rt5625->supplies);
 	if (ret != 0) {
