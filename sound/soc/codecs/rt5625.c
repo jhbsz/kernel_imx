@@ -305,7 +305,7 @@ static int rt5625_direct_read(struct snd_soc_codec *codec, unsigned int reg)
 				}
 			}
 			
-			
+			pr_debug("rt5625 read reg %#x=%#x\n",reg,value);
 			return value;
 		}
 	}	
@@ -320,7 +320,6 @@ static int rt5625_direct_write(struct snd_soc_codec *codec, unsigned int reg,
 	if(reg<=0x74)
 	{
 		u8 data[3];
-		/*
 		//special case for RT5625_PWR_MANAG_ADD1
 		//for issue codec may be in short current status
 		if(RT5625_PWR_MANAG_ADD1==reg)
@@ -331,7 +330,8 @@ static int rt5625_direct_write(struct snd_soc_codec *codec, unsigned int reg,
 				value|=PWR_MAIN_BIAS;
 			}
 		}
-		*/
+		
+		pr_debug("rt5625 write reg %#x=%#x\n",reg,value);
 		data[0] = reg;
 		data[1] = (value & 0xff00) >> 8;
 		data[2] = (value & 0x00ff);
@@ -361,7 +361,7 @@ static unsigned int rt5625_read(struct snd_soc_codec *codec,
 static int rt5625_write(struct snd_soc_codec *codec, unsigned int reg,
 			unsigned int value)
 {
-	//printk("reg:%2.2x value:%4.4x\n",reg,value);
+	pr_debug("rt5625 write reg:%2.2x value:%4.4x\n",reg,value);
 	rt5625_write_reg_cache(codec, reg, value);
 	if(reg<=0x74)
 	{
@@ -636,8 +636,8 @@ static int init_vodsp_aec(struct snd_soc_codec *codec)
 
 	/* enable LDO power and set output voltage to 1.2V */
 	snd_soc_update_bits(codec, RT5625_LDO_CTRL,
-			  LDO_ENABLE | LDO_OUT_VOL_CTRL_1_20V,
-			  LDO_ENABLE | LDO_OUT_VOL_CTRL_MASK);
+			  LDO_ENABLE | LDO_OUT_VOL_CTRL_MASK,
+			  LDO_ENABLE | LDO_OUT_VOL_CTRL_1_20V);
 	mdelay(20);
 
 	/* enable power of VODSP I2C interface */
@@ -648,7 +648,7 @@ static int init_vodsp_aec(struct snd_soc_codec *codec)
 
 	/* reset VODSP */
 	snd_soc_update_bits(codec, RT5625_VODSP_CTL,
-			  0, VODSP_NO_RST_MODE_ENA);
+			   VODSP_NO_RST_MODE_ENA,0);
 	mdelay(1);
 
 	/* set VODSP to non-reset status */
@@ -669,7 +669,7 @@ static int init_vodsp_aec(struct snd_soc_codec *codec)
 	schedule_timeout_uninterruptible(msecs_to_jiffies(100));
 
 	/* set VODSP to pown down mode */
-	snd_soc_update_bits(codec, RT5625_VODSP_CTL, 0, VODSP_NO_PD_MODE_ENA);
+	snd_soc_update_bits(codec, RT5625_VODSP_CTL, VODSP_NO_PD_MODE_ENA,0);
 
 	//rt5625_dump_dsp_reg(codec);
 
@@ -687,11 +687,11 @@ static int rt5625_vodsp_set_pipo_mode(struct snd_soc_codec *codec)
 	 *     (b) voice pcm out from vodsp txdp
 	 *         vodsp txdp -> vodac pcm out -> far end devie pcm out
 	 */
-	snd_soc_update_bits(codec, RT5625_VODSP_PDM_CTL,
-			  VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_VOICE |
-			  VOICE_PCM_S_SEL_AEC_TXDP,
+	snd_soc_update_bits(codec, RT5625_VODSP_PDM_CTL,			  
 			  VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_MASK |
-			  VOICE_PCM_S_SEL_MASK);
+			  VOICE_PCM_S_SEL_MASK,
+			 VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_VOICE |
+			  VOICE_PCM_S_SEL_AEC_TXDP );
 
 	/*
 	 * 2. near end setting
@@ -699,13 +699,14 @@ static int rt5625_vodsp_set_pipo_mode(struct snd_soc_codec *codec)
 	 *        mic-->adcr-->pdm interface
 	 *    (b) voice dac source select vodsp_txdc
 	 */
-	snd_soc_update_bits(codec, RT5625_DAC_ADC_VODAC_FUN_SEL,
-			  ADCR_FUNC_SEL_PDM | VODAC_SOUR_SEL_VODSP_TXDC,
-			  ADCR_FUNC_SEL_MASK|VODAC_SOUR_SEL_MASK);
+	snd_soc_update_bits(codec, RT5625_DAC_ADC_VODAC_FUN_SEL,			  
+			  ADCR_FUNC_SEL_MASK|VODAC_SOUR_SEL_MASK,
+			 ADCR_FUNC_SEL_PDM | VODAC_SOUR_SEL_VODSP_TXDC);
 
 	/* 3. setting vodsp lrck to 8k */
 	snd_soc_update_bits(codec, RT5625_VODSP_CTL,
-			  VODSP_LRCK_SEL_8K, VODSP_LRCK_SEL_MASK);
+			  VODSP_LRCK_SEL_MASK,
+			  VODSP_LRCK_SEL_8K);
 
 	return 0;
 }
@@ -721,8 +722,8 @@ static int rt5625_vodsp_set_aiao_mode(struct snd_soc_codec *codec)
 	rt5625_write(codec,0x26,0x0300);
 	
 	snd_soc_update_bits(codec, RT5625_VODSP_PDM_CTL,
-			  VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_ADCL | VOICE_PCM_S_SEL_AEC_TXDP | REC_S_SEL_MASK,
-			  VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_MASK | VOICE_PCM_S_SEL_MASK | REC_S_SEL_MASK);
+			  VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_MASK | VOICE_PCM_S_SEL_MASK | REC_S_SEL_MASK,
+			  VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_ADCL | VOICE_PCM_S_SEL_AEC_TXDP | REC_S_SEL_MASK);
 
 	/*
 	 * near end setting:
@@ -731,14 +732,14 @@ static int rt5625_vodsp_set_aiao_mode(struct snd_soc_codec *codec)
 	 * (mic-->adcr-->pdm interface)
 	 */
 	snd_soc_update_bits(codec, RT5625_DAC_ADC_VODAC_FUN_SEL,
-			  DAC_FUNC_SEL_VODSP_TXDP | VODAC_SOUR_SEL_VODSP_TXDC | ADCR_FUNC_SEL_PDM | ADCL_FUNC_SEL_VODSP,
-			  DAC_FUNC_SEL_MASK | VODAC_SOUR_SEL_MASK | ADCR_FUNC_SEL_MASK | ADCL_FUNC_SEL_MASK);
+			  DAC_FUNC_SEL_MASK | VODAC_SOUR_SEL_MASK | ADCR_FUNC_SEL_MASK | ADCL_FUNC_SEL_MASK,
+			  DAC_FUNC_SEL_VODSP_TXDP | VODAC_SOUR_SEL_VODSP_TXDC | ADCR_FUNC_SEL_PDM | ADCL_FUNC_SEL_VODSP);
 
 	rt5625_write(codec,0x26,0x0);
 
 	/* 3.setting VODSP LRCK to 16k */
 	snd_soc_update_bits(codec, RT5625_VODSP_CTL,
-			  VODSP_LRCK_SEL_16K, VODSP_LRCK_SEL_MASK);
+			  VODSP_LRCK_SEL_MASK,VODSP_LRCK_SEL_16K);
 
 
 
@@ -759,24 +760,26 @@ static int rt5625_vodsp_set_diao_mode(struct snd_soc_codec *codec)
 	 * mic -> adcr -> pdm interface
 	 */
 	snd_soc_update_bits(codec, RT5625_DAC_ADC_VODAC_FUN_SEL,
-			  DAC_FUNC_SEL_VODSP_TXDC, DAC_FUNC_SEL_MASK);
+			  DAC_FUNC_SEL_MASK,
+			  DAC_FUNC_SEL_VODSP_TXDC);
 	
 	snd_soc_update_bits(codec, RT5625_DAC_ADC_VODAC_FUN_SEL,
-			  ADCR_FUNC_SEL_PDM, ADCR_FUNC_SEL_MASK);
+			  ADCR_FUNC_SEL_MASK,
+			  ADCR_FUNC_SEL_PDM);
 
 	/* enable src2 and select record source from src2 */
 	snd_soc_update_bits(codec, RT5625_VODSP_PDM_CTL,
 			  VODSP_SRC1_PWR | VODSP_SRC2_PWR |
-			  VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_SRC1 |
-			  REC_S_SEL_SRC2,
-			  VODSP_SRC1_PWR | VODSP_SRC2_PWR |
 			  VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_MASK |
-			  REC_S_SEL_MASK);
+			  REC_S_SEL_MASK,
+ 			  VODSP_SRC1_PWR | VODSP_SRC2_PWR |
+			  VODSP_RXDP_PWR | VODSP_RXDP_S_SEL_SRC1 |
+			  REC_S_SEL_SRC2	  );
 
 	/* setting vodsp lrck to 16k */
 	snd_soc_update_bits(codec, RT5625_VODSP_CTL,
-			  VODSP_LRCK_SEL_16K,
-			  VODSP_LRCK_SEL_MASK);
+			  VODSP_LRCK_SEL_MASK,
+ 			  VODSP_LRCK_SEL_16K );
 
 	return 0;
 }
@@ -881,10 +884,11 @@ static int rt5625_enable_vodsp_aec(struct snd_soc_codec *codec,
 	} else {
 		/* set VODSP AEC to power down mode */
 		snd_soc_update_bits(codec, RT5625_VODSP_CTL,
-				  0, VODSP_NO_PD_MODE_ENA);
+				  VODSP_NO_PD_MODE_ENA,0);
 		/* disable power of VODSP I2C interface & VODSP interface */
 		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
-				  0, PWR_VODSP_INTERFACE | PWR_I2C_FOR_VODSP);
+				  PWR_VODSP_INTERFACE | PWR_I2C_FOR_VODSP,
+				  0);
 
 		/* disable VODSP AEC path */
 		rt5625_set_vodsp_aec_path(codec, RT5625_VODSP_AEC_DISABLE);
@@ -969,7 +973,6 @@ SOC_SINGLE("Voice DAC Enable",RT5625_EXTEND_SDP_CTRL,15,1,0),
 
 static void hp_depop_mode2(struct snd_soc_codec *codec)
 {
-		printk("hp_depop_mode2\n");
 //        snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
 //			  PWR_MAIN_BIAS, PWR_MAIN_BIAS);
         snd_soc_update_bits(codec, RT5625_HP_OUT_VOL,
@@ -1070,8 +1073,8 @@ static int mixer_event(struct snd_soc_dapm_widget *w,
 
 	if ((l & 0x1) || (r & 0x1))
 		snd_soc_update_bits(codec, RT5625_LINE_IN_VOL,
-				  0,
-				  M_LINEIN_TO_HP_MIXER);
+				  M_LINEIN_TO_HP_MIXER,
+				  0);
 	else
 		snd_soc_update_bits(codec, RT5625_LINE_IN_VOL,
 				  M_LINEIN_TO_HP_MIXER,
@@ -1088,8 +1091,8 @@ static int mixer_event(struct snd_soc_dapm_widget *w,
 	*/
 	if ((l & 0x4) || (r & 0x4))
 		snd_soc_update_bits(codec, RT5625_DAC_AND_MIC_CTRL,
-				  0,
-				  M_MIC1_TO_HP_MIXER);
+				  M_MIC1_TO_HP_MIXER,
+				  0);
 	else
 		snd_soc_update_bits(codec, RT5625_DAC_AND_MIC_CTRL,
 				  M_MIC1_TO_HP_MIXER,
@@ -1097,8 +1100,7 @@ static int mixer_event(struct snd_soc_dapm_widget *w,
 
 	if ((l & 0x8) || (r & 0x8))
 		snd_soc_update_bits(codec, RT5625_DAC_AND_MIC_CTRL,
-				  0,
-				  M_MIC2_TO_HP_MIXER);
+				  M_MIC2_TO_HP_MIXER,0);
 	else
 		snd_soc_update_bits(codec, RT5625_DAC_AND_MIC_CTRL,
 				  M_MIC2_TO_HP_MIXER,
@@ -1147,7 +1149,8 @@ static int spk_pga_event(struct snd_soc_dapm_widget *w,
 				  PWR_SPK_L_OUT_VOL |
 				  PWR_SPK_R_OUT_VOL);
 		snd_soc_update_bits(codec, RT5625_SPK_OUT_VOL,
-				  0, M_SPK_L | M_SPK_R);
+				  M_SPK_L | M_SPK_R,
+				  0);
 		/* power on spk amp */
 		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
 				  PWR_AMP_POWER, PWR_AMP_POWER);
@@ -1158,14 +1161,13 @@ static int spk_pga_event(struct snd_soc_dapm_widget *w,
 
 		/* power off spk amp */
 		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
-				  0, PWR_AMP_POWER);
+				  PWR_AMP_POWER,0);
 		snd_soc_update_bits(codec, RT5625_SPK_OUT_VOL,
 				  M_SPK_L | M_SPK_R,
 				  M_SPK_L | M_SPK_R);
 		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
-				  0,
 				  PWR_SPK_L_OUT_VOL |
-				  PWR_SPK_R_OUT_VOL);
+				  PWR_SPK_R_OUT_VOL,0);
 		break;
 
 	default:
@@ -1198,17 +1200,15 @@ static int hp_pga_event(struct snd_soc_dapm_widget *w,
 			if(misc&0x01)
 			{
 				hp_depop_mode2(codec);
-				snd_soc_update_bits(codec,RT5625_VIRTUAL_MISC2,0x00,0x01);				
+				snd_soc_update_bits(codec,RT5625_VIRTUAL_MISC2,0x01,0x00);				
 			}				
 		}
 		break;
 
 	case SND_SOC_DAPM_POST_PMD:
 		{
-			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
-				          0,
-					  PWR_HP_L_OUT_VOL|
-					  PWR_HP_R_OUT_VOL);
+			//snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
+			//		  M_HP_L|M_HP_R,0);
 		}
 		break;
 
@@ -1219,8 +1219,7 @@ static int hp_pga_event(struct snd_soc_dapm_widget *w,
 			if(0==(misc&0x01))
 			{
 				hp_depop_mode2(codec);
-				snd_soc_update_bits(codec,RT5625_VIRTUAL_MISC2,0x01,0x01);
-				
+				snd_soc_update_bits(codec,RT5625_VIRTUAL_MISC2,0x01,0x01);				
 			}
 				
 		}
@@ -1257,14 +1256,14 @@ static int mic_pga_event(struct snd_soc_dapm_widget *w,
 				if((MIC1_BOOST_CONTROL_BYPASS==(mic_reg&MIC1_BOOST_CONTROL_MASK))&&
 					(PWR_MIC1_BOOST&boost_power))
 				{
-					snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x00,0x02);
+					snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x02,0x00);
 				}
 			}else if(!strcmp(w->name,"Mic2 Boost"))
 			{
 				if((MIC2_BOOST_CONTROL_BYPASS==(mic_reg&MIC2_BOOST_CONTROL_MASK))&&
 					(PWR_MIC2_BOOST&boost_power))
 				{
-					snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x00,0x01);
+					snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x01,0x00);
 				}				
 			}
 			//schedule_timeout_uninterruptible(msecs_to_jiffies(300));
@@ -1453,8 +1452,8 @@ SND_SOC_DAPM_OUTPUT("SPKR"),
 SND_SOC_DAPM_OUTPUT("HPL"),
 SND_SOC_DAPM_OUTPUT("HPR"),
 SND_SOC_DAPM_OUTPUT("AUX"),
-
 SND_SOC_DAPM_INPUT("PCM"),
+
 
 
 SND_SOC_DAPM_MICBIAS_E("Mic1 Bias", RT5625_PWR_MANAG_ADD1, 3, 0,
@@ -1666,10 +1665,11 @@ static const struct rt5625_coeff_div_stereo coeff_div_stereo[] = {
 	{ 36864000, 48000, 0x2274, 0x2020 },
 	{ 49152000, 48000, 0xf074, 0x3030 },
 
-	//BCLK 2.8224
-	{ 22579200, 44100, 0x3075, 0x1010 },/*512Fs*/
 	//BCLK 1.4114
 	{ 22579200, 44100, 0x3174, 0x1010 },/*512Fs*/
+	
+	//BCLK 2.8224
+	{ 22579200, 44100, 0x3075, 0x1010 },/*512Fs*/
 	
 	
 	{ 22579200, 44100, 0x3174, 0x1010 },/*512Fs*/
@@ -1722,9 +1722,9 @@ static int rt5625_set_dai_pll(struct snd_soc_dai *codec_dai,
 	int i, found = 0;
 	struct snd_soc_codec *codec = codec_dai->codec;
 
-	printk(KERN_DEBUG "enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
-	printk(KERN_DEBUG "%s: pll_id = %d, freq_in = %d, freq_out = %d\n",
+	pr_debug("%s: pll_id = %d, freq_in = %d, freq_out = %d\n",
 	       __func__, pll_id, freq_in, freq_out);
 
 	if (pll_id < RT5625_PLL1_FROM_MCLK ||
@@ -1749,8 +1749,7 @@ static int rt5625_set_dai_pll(struct snd_soc_dai *codec_dai,
 		if (found) {
 			/* pll source from mclk */
 			snd_soc_update_bits(codec, RT5625_GEN_CTRL_REG2,
-					  GP2_PLL1_SOUR_SEL_MCLK,
-				          GP2_PLL1_SOUR_SEL_MASK);
+			          GP2_PLL1_SOUR_SEL_MASK,GP2_PLL1_SOUR_SEL_MCLK);
 			/* set pll code */
 			rt5625_write(codec, RT5625_PLL_CTRL,
 				     pll1_div_from_mclk[i].pll_ctrl);
@@ -1775,8 +1774,7 @@ static int rt5625_set_dai_pll(struct snd_soc_dai *codec_dai,
 		if (found) {
 			/* pll source from bclk */
 			snd_soc_update_bits(codec, RT5625_GEN_CTRL_REG2,
-					  GP2_PLL1_SOUR_SEL_BCLK,
-				          GP2_PLL1_SOUR_SEL_MASK);
+					  GP2_PLL1_SOUR_SEL_MASK,GP2_PLL1_SOUR_SEL_BCLK);
 			/* set pll1 code */
 			rt5625_write(codec, RT5625_PLL_CTRL,
 				     pll1_div_from_bclk[i].pll_ctrl);
@@ -1801,8 +1799,8 @@ static int rt5625_set_dai_pll(struct snd_soc_dai *codec_dai,
 		if (found) {
 			/* pll source from bclk */
 			snd_soc_update_bits(codec, RT5625_GEN_CTRL_REG2,
-					  GP2_PLL1_SOUR_SEL_VBCLK,
-					  GP2_PLL1_SOUR_SEL_MASK);
+					   GP2_PLL1_SOUR_SEL_MASK,
+					   GP2_PLL1_SOUR_SEL_VBCLK);
 			/* set pll1 code */
 			rt5625_write(codec, RT5625_PLL_CTRL,
 				     pll1_div_from_vbclk[i].pll_ctrl);
@@ -1873,7 +1871,7 @@ static int rt5625_hifi_pcm_hw_params(struct snd_pcm_substream *substream,
 	unsigned int iface = 0;
 	int rate, coeff;
 
-	pr_debug("enter %s\n", __func__);
+	pr_debug("enter %s rate=%d format=%d\n", __func__,params_rate(params),params_format(params));
 
 	rate  = params_rate(params);
 	coeff = rt5625_get_coeff(rt5625->stereo_sysclk, rate, 0);
@@ -1895,7 +1893,8 @@ static int rt5625_hifi_pcm_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	snd_soc_update_bits(codec, RT5625_MAIN_SDP_CTRL,
-			  iface, MAIN_I2S_DL_MASK);
+			  MAIN_I2S_DL_MASK,
+			  iface);
 	/* power i2s and dac ref*/
 	snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
 			  PWR_I2S_INTERFACE | PWR_DAC_REF,
@@ -1954,7 +1953,8 @@ static int rt5625_voice_pcm_hw_params(struct snd_pcm_substream *substream,
 			  PWR_I2S_INTERFACE | PWR_DAC_REF,
 			  PWR_I2S_INTERFACE | PWR_DAC_REF);
 	snd_soc_update_bits(codec, RT5625_EXTEND_SDP_CTRL,
-			  iface, EXT_I2S_DL_MASK);
+			  EXT_I2S_DL_MASK,
+			  iface);
 	if (coeff >= 0)
 		rt5625_write(codec, RT5625_VOICE_DAC_PCMCLK_CTRL1,
 			     coeff_div_voice[coeff].dac_pcmclk_ctrl1);
@@ -2107,13 +2107,12 @@ static int rt5625_hifi_mute(struct snd_soc_dai *dai, int mute)
 
 	if (mute)
 		snd_soc_update_bits(codec, RT5625_STEREO_DAC_VOL,
-	//			  M_MAIN_L_INPUT | M_MAIN_R_INPUT,
-					0,
-				  M_MAIN_L_INPUT | M_MAIN_R_INPUT);
+				  M_MAIN_L_INPUT | M_MAIN_R_INPUT,
+				  0);
 	else
 		snd_soc_update_bits(codec, RT5625_STEREO_DAC_VOL,
-				  0,
-				  M_MAIN_L_INPUT | M_MAIN_R_INPUT);
+				  M_MAIN_L_INPUT | M_MAIN_R_INPUT,
+				  0);
 
 	return 0;
 }
@@ -2127,7 +2126,7 @@ static int rt5625_voice_mute(struct snd_soc_dai *dai, int mute)
 				  M_V_DAC, M_V_DAC);
 	else
 		snd_soc_update_bits(codec, RT5625_VOICE_DAC_OUT_VOL,
-				  0, M_V_DAC);
+				  M_V_DAC,0);
 
 	return 0;
 }
@@ -2299,7 +2298,7 @@ static int init_voicepcm_clock(struct snd_soc_codec *codec,int frame_rate,int fr
 	iface |= EXT_I2S_BCLK_POLARITY;
 
 	snd_soc_update_bits(codec, RT5625_EXTEND_SDP_CTRL,
-			  iface, EXT_I2S_DL_MASK);
+			  EXT_I2S_DL_MASK,iface);
 	if (coeff >= 0)
 		snd_soc_write(codec, RT5625_VOICE_DAC_PCMCLK_CTRL1,
 				 coeff_div_voice[coeff].dac_pcmclk_ctrl1);
@@ -2317,16 +2316,22 @@ static int init_voicepcm_clock(struct snd_soc_codec *codec,int frame_rate,int fr
 static int rt5625_probe(struct snd_soc_codec *codec)
 {
 	struct rt5625_priv *rt5625 = (struct rt5625_priv *)snd_soc_codec_get_drvdata(codec);
-	int ret = 0;	
-	int i;
+	int i=0;
+	unsigned int val;
 
 	rt5625->codec = codec;
+
+	codec->control_type = SND_SOC_I2C;
 
 	codec->control_data = rt5625->control_data;
 	
 	snd_soc_write(codec,RT5625_RESET,0);
-	msleep(10);
-
+	do{
+		val=snd_soc_read(codec,RT5625_RESET);
+		if(0x59b4==val)
+			break;
+		msleep(5);	
+	}while(i++<100);
 
 	snd_soc_write(codec, RT5625_PD_CTRL_STAT, 0);
 	snd_soc_write(codec, RT5625_PWR_MANAG_ADD1, PWR_MAIN_BIAS);
@@ -2368,17 +2373,12 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 	}
 	#endif
 
-	snd_soc_add_controls(codec, rt5625_snd_controls,
-			ARRAY_SIZE(rt5625_snd_controls));
-	snd_soc_dapm_new_controls(&codec->dapm, rt5625_dapm_widgets,
-			ARRAY_SIZE(rt5625_dapm_widgets));
-	snd_soc_dapm_add_routes(&codec->dapm, rt5625_dapm_routes, 
-			ARRAY_SIZE(rt5625_dapm_routes));	
+	return 0;
 	
-err_get:
-	regulator_bulk_free(ARRAY_SIZE(rt5625->supplies), rt5625->supplies);
-err:
-	return ret;
+//err_get:
+	//regulator_bulk_free(ARRAY_SIZE(rt5625->supplies), rt5625->supplies);
+//err:
+//	return ret;
 
 
 }
@@ -2433,7 +2433,13 @@ static struct snd_soc_codec_driver soc_codec_dev_rt5625 = {
 	.remove = rt5625_remove,
 	.suspend = rt5625_suspend,
 	.resume = rt5625_resume,
-	.set_bias_level = rt5625_set_bias_level,
+	.set_bias_level = rt5625_set_bias_level,	
+	.controls = rt5625_snd_controls,
+	.num_controls = ARRAY_SIZE(rt5625_snd_controls),
+	.dapm_widgets = rt5625_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(rt5625_dapm_widgets),
+	.dapm_routes = rt5625_dapm_routes,
+	.num_dapm_routes = ARRAY_SIZE(rt5625_dapm_routes),
 	.reg_cache_size = sizeof(rt5625_reg),
 	.reg_word_size = sizeof(u16),
 	.reg_cache_default = rt5625_reg,

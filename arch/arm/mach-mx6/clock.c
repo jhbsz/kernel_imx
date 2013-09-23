@@ -5517,6 +5517,7 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 
 	clk_set_parent(&ssi2_clk, &pll4_audio_main_clk);
 	//for 44.1kHz
+	//clk_set_rate(&ssi2_clk, 11289600);
 	clk_set_rate(&ssi2_clk, 22579200);
 	
 	/*

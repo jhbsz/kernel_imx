@@ -537,7 +537,8 @@ static int __init i2c_imx_probe(struct platform_device *pdev)
 	i2c_imx->adapter.owner		= THIS_MODULE;
 	i2c_imx->adapter.algo		= &i2c_imx_algo;
 	i2c_imx->adapter.dev.parent	= &pdev->dev;
-	i2c_imx->adapter.nr 		= pdev->id;
+	i2c_imx->adapter.nr 		= pdev->id;	
+	i2c_imx->adapter.retries	= 5;
 	i2c_imx->irq			= irq;
 	i2c_imx->base			= base;
 	i2c_imx->res			= res;

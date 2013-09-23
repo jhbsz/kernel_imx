@@ -63,6 +63,11 @@ static struct snd_soc_jack_pin imx_hp_jack_pins[] = {
 	{
 		.pin = "Headphone Jack",
 		.mask = SND_JACK_HEADPHONE,
+	},	
+	{
+		.pin = "Ext Speaker",
+		.mask = SND_JACK_HEADPHONE,
+		.invert = 1,
 	},
 };
 static struct snd_soc_jack_gpio imx_hp_jack_gpio = {
@@ -107,6 +112,7 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	unsigned int pll_out;
 	u32 dai_format;
 
+
 	dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 		SND_SOC_DAIFMT_CBS_CFS;
 	
@@ -133,6 +139,8 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 
 
 	/* set codec DAI configuration */
+	dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+		SND_SOC_DAIFMT_CBS_CFS;
 	ret = snd_soc_dai_set_fmt(codec_dai, dai_format);
 	if (ret < 0)
 		return ret;
@@ -230,7 +238,7 @@ static int hp_jack_status_check(void)
 
 	if (gpio_is_valid(plat->hp_gpio)) {
 		priv->hp_status = gpio_get_value(plat->hp_gpio);
-
+		#if 0
 		/* if headphone is inserted, disable speaker */
 		if (priv->hp_status != plat->hp_active_low)
 			snd_soc_dapm_nc_pin(&gcodec->dapm, "Ext Speaker");
@@ -238,6 +246,7 @@ static int hp_jack_status_check(void)
 			snd_soc_dapm_enable_pin(&gcodec->dapm, "Ext Speaker");
 
 		snd_soc_dapm_sync(&gcodec->dapm);
+		#endif
 
 		buf = kmalloc(32, GFP_ATOMIC);
 		if (!buf) {
@@ -271,8 +280,6 @@ static int imx_hifi_trigger(struct snd_pcm_substream *substream, int cmd)
 	struct platform_device *pdev = priv->pdev;
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
 
-	printk("%s\n",__func__);
-
 	if (SNDRV_PCM_TRIGGER_RESUME == cmd) {
 		if (gpio_is_valid(plat->hp_gpio) || gpio_is_valid(plat->mic_gpio))
 			schedule_delayed_work(&resume_hp_event,
@@ -290,28 +297,33 @@ static int imx_rt5625_init(struct snd_soc_pcm_runtime *rtd)
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
 	int ret;
 
+
+	gcodec = codec;
+
 	/* Add imx specific widgets */
 	snd_soc_dapm_new_controls(&codec->dapm, imx_dapm_widgets,
 				  ARRAY_SIZE(imx_dapm_widgets));
 
 	/* Set up imx specific audio path audio_map */
 	snd_soc_dapm_add_routes(&codec->dapm, audio_map, ARRAY_SIZE(audio_map));
-
 	snd_soc_dapm_enable_pin(&codec->dapm, "PCM");
-	
+
 	snd_soc_dapm_sync(&codec->dapm);
 
 	if (gpio_is_valid(plat->hp_gpio)) {
 		imx_hp_jack_gpio.gpio = plat->hp_gpio;
 		imx_hp_jack_gpio.jack_status_check = hp_jack_status_check;
 
-		snd_soc_jack_new(codec, "Headphone Jack", SND_JACK_HEADPHONE,
+		ret = snd_soc_jack_new(codec, "Headphone Jack", SND_JACK_HEADPHONE,
 				&imx_hp_jack);
-		snd_soc_jack_add_pins(&imx_hp_jack,
+		if(ret) goto error;
+		ret = snd_soc_jack_add_pins(&imx_hp_jack,
 					ARRAY_SIZE(imx_hp_jack_pins),
 					imx_hp_jack_pins);
-		snd_soc_jack_add_gpios(&imx_hp_jack,
+		if(ret) goto error;
+		ret = snd_soc_jack_add_gpios(&imx_hp_jack,
 					1, &imx_hp_jack_gpio);
+		if(ret) goto error;
 
 		ret = driver_create_file(pdev->dev.driver,
 							&driver_attr_headphone);
@@ -322,13 +334,17 @@ static int imx_rt5625_init(struct snd_soc_pcm_runtime *rtd)
 
 		priv->hp_status = gpio_get_value(plat->hp_gpio);
 
+		#if 0
+
 		/* if headphone is inserted, disable speaker */
 		if (priv->hp_status != plat->hp_active_low)
 			snd_soc_dapm_nc_pin(&codec->dapm, "Ext Speaker");
 		else
 			snd_soc_dapm_enable_pin(&codec->dapm, "Ext Speaker");
+		#endif
 		
 	}
+error:	
 	return 0;
 }
 
@@ -387,6 +403,7 @@ static int imx_audmux_config(int slave, int master)
 /*
  * This function will register the snd_soc_pcm_link drivers.
  */
+#warning "FIXME to support microphone support of headphone"
 static int __devinit imx_rt5625_probe(struct platform_device *pdev)
 {
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;	

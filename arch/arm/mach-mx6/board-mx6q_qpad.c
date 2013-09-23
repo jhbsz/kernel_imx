@@ -411,6 +411,7 @@ err:
 static struct ft5x0x_ts_platform_data ft5x0x_data=
 {
 	.plat_init	= ft5x0x_plat_init,
+	.y_inverted	= 1,
 };
 
 
@@ -436,7 +437,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 		.addr			= 0x38,
 		.irq			= gpio_to_irq(QPAD_TP_IRQ),
 		.platform_data	= &ft5x0x_data,
-	},	
+	},
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
@@ -729,10 +730,8 @@ static struct mxc_audio_platform_data rt5625_data = {
 	.ssi_num = 1,
 	.src_port = 2,
 	.ext_port = 3,
-	#if 0
 	.hp_gpio = QPAD_AUDIO_HEADPHONE_DET,
-	.hp_active_low = 1,
-	#endif
+	.hp_active_low = 0,
 };
 
 static int __init imx6q_init_audio(void)
@@ -768,9 +767,16 @@ static int __init imx6q_init_audio(void)
 	gpio_direction_output(QPAD_AUDIO_RST, 0);
 	mdelay(5);
 	gpio_direction_output(QPAD_AUDIO_RST, 1);
-	
 
 	
+	ret = gpio_request(QPAD_AUDIO_HEADPHONE_DET, "hp_jack");
+	if (ret) {
+		pr_err("failed to get GPIO hp_jack: %d\n",
+			ret);
+		return -EINVAL;
+	}
+	gpio_direction_input(QPAD_AUDIO_HEADPHONE_DET);
+	gpio_free(QPAD_AUDIO_HEADPHONE_DET);
 
 	mxc_register_device(&mx6_qpad_audio_rt5625_device,
 			&rt5625_data);
