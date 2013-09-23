@@ -112,7 +112,7 @@ static struct regulator_consumer_supply vgen2_consumers[] = {
 };
 static struct regulator_consumer_supply vgen3_consumers[] = {
 	{
-	 .supply = "VGEN3_2V5",
+	 .supply = "VGEN3_2V8",
 	}
 };
 
@@ -132,12 +132,12 @@ static struct regulator_consumer_supply vgen4_consumers[] = {
 };
 static struct regulator_consumer_supply vgen5_consumers[] = {
     {
-	.supply = "VGEN5_2V8",
+	.supply = "VGEN5_3V",
 	}
 };
 static struct regulator_consumer_supply vgen6_consumers[] = {
     {
-	.supply = "VGEN6_3V3",
+	.supply = "VGEN6_2V8",
 	}
 };
 
@@ -504,7 +504,7 @@ err:
 	return -1;
 }
 
-static struct pfuze_regulator_init_data mx6q_sabreauto_pfuze100_regulators[] = {
+static struct pfuze_regulator_init_data mx6q_qpad_pfuze100_regulators[] = {
 	{.id = PFUZE100_SW1A,	.init_data = &sw1a_init},
 	{.id = PFUZE100_SW1B,	.init_data = &sw1b_init},
 	{.id = PFUZE100_SW1C,	.init_data = &sw1c_init},
@@ -525,8 +525,8 @@ static struct pfuze_regulator_init_data mx6q_sabreauto_pfuze100_regulators[] = {
 
 static struct pfuze_platform_data pfuze100_plat = {
 	.flags = PFUZE_USE_REGULATOR,
-	.num_regulators = ARRAY_SIZE(mx6q_sabreauto_pfuze100_regulators),
-	.regulators = mx6q_sabreauto_pfuze100_regulators,
+	.num_regulators = ARRAY_SIZE(mx6q_qpad_pfuze100_regulators),
+	.regulators = mx6q_qpad_pfuze100_regulators,
 	.pfuze_init = pfuze100_init,
 };
 

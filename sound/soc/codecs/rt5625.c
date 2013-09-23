@@ -2316,6 +2316,7 @@ static int init_voicepcm_clock(struct snd_soc_codec *codec,int frame_rate,int fr
 static int rt5625_probe(struct snd_soc_codec *codec)
 {
 	struct rt5625_priv *rt5625 = (struct rt5625_priv *)snd_soc_codec_get_drvdata(codec);
+	int ret=0;
 	int i=0;
 	unsigned int val;
 
@@ -2356,7 +2357,6 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 	for (i = 0; i < ARRAY_SIZE(rt5625->supplies); i++)
 		rt5625->supplies[i].supply = rt5625_supply_names[i];
 	#warning "FIXME: rt5625 regulator get and enable"
-	#if 0
 	ret = regulator_bulk_get(codec->dev, ARRAY_SIZE(rt5625->supplies),
 				 rt5625->supplies);
 	if (ret != 0) {
@@ -2371,14 +2371,13 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 		dev_err(codec->dev, "Failed to enable supplies: %d\n", ret);
 		goto err_get;
 	}
-	#endif
 
 	return 0;
 	
-//err_get:
-	//regulator_bulk_free(ARRAY_SIZE(rt5625->supplies), rt5625->supplies);
-//err:
-//	return ret;
+err_get:
+	regulator_bulk_free(ARRAY_SIZE(rt5625->supplies), rt5625->supplies);
+err:
+	return 0;
 
 
 }
