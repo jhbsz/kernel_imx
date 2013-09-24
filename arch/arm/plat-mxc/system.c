@@ -70,6 +70,12 @@ void arch_reset(char mode, const char *cmd)
 		wcr_enable = 0x14;
 		__raw_writew(wcr_enable, IO_ADDRESS(MX6Q_WDOG2_BASE_ADDR));
 		__raw_writew(wcr_enable, IO_ADDRESS(MX6Q_WDOG2_BASE_ADDR));
+
+		/*On QPad board ,we use WDOG1 to reset external PMIC*/
+		wcr_enable = 0x14;
+		__raw_writew(wcr_enable, IO_ADDRESS(MX6Q_WDOG1_BASE_ADDR));
+		__raw_writew(wcr_enable, IO_ADDRESS(MX6Q_WDOG1_BASE_ADDR));
+		
 	} else
 		wcr_enable = (1 << 2);
 	__raw_writew(wcr_enable, wdog_base);

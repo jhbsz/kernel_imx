@@ -43,6 +43,7 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 
 	/* PMIC */
 	MX6Q_PAD_GPIO_18__GPIO_7_13,	/*PMIC INT*/
+	MX6Q_PAD_GPIO_9__WDOG1_WDOG_B,	/*Watchdog output to reset system*/
 
 	/* SW4 , SW5 & SW1 */
 	NEW_PAD_CTRL(MX6Q_PAD_EIM_DA9__GPIO_3_9,MX6Q_KEYPAD_PAD_CTRL),		/* KEY1*/
