@@ -411,7 +411,6 @@ err:
 static struct ft5x0x_ts_platform_data ft5x0x_data=
 {
 	.plat_init	= ft5x0x_plat_init,
-	.y_inverted	= 1,
 };
 
 

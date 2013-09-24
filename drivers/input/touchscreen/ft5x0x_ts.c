@@ -277,7 +277,8 @@ static E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(struct ft5x0x_ts_data* ft5x0x ,u8
         ret = ERR_READID;
          dev_err(dev, "[FTS] - ERROR: Invalid CPTM ID. Expected 0x%02X%02X, got 0x%02X%02X.\n",
 		 	0x79, 0x03, temp_buffer[0], temp_buffer[1]);
-		goto err;
+		 dev_err(dev,"[FTS]  Warning ,run firmware upgrade even CPTM ID mismatch\n");
+		//goto err;
     }
 
     temp_buffer[0] = 0xcd;
