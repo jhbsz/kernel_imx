@@ -28,6 +28,10 @@
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED|	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
+#define MX6Q_GENERIC_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
+		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_HIGH|	\
+		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+
 static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	/* AUDMUX */
 	MX6Q_PAD_CSI0_DAT4__AUDMUX_AUD3_TXC,
@@ -139,8 +143,8 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	MX6Q_PAD_EIM_DA15__GPIO_3_15,		/*SENSOR_INT2*/
 
 	/*QR Engine*/
-	MX6Q_PAD_EIM_D30__GPIO_3_30,		/*QR_TRIG*/
-	MX6Q_PAD_EIM_BCLK__GPIO_6_31,		/*MX6Q_PAD_EIM_DA8__GPIO_3_8,	change to BCLK because of confliction of BOOT_CFG*/		/*QR_RESET*/
+	NEW_PAD_CTRL(MX6Q_PAD_EIM_D30__GPIO_3_30,MX6Q_GENERIC_PAD_CTRL),		/*QR_TRIG*/
+	NEW_PAD_CTRL(MX6Q_PAD_EIM_BCLK__GPIO_6_31,MX6Q_GENERIC_PAD_CTRL),		/*MX6Q_PAD_EIM_DA8__GPIO_3_8,	change to BCLK because of confliction of BOOT_CFG*/		/*QR_RESET*/
 
 	/*Touch Panel*/
 	MX6Q_PAD_EIM_EB0__GPIO_2_28,		/*TP_PWR_EN*/
