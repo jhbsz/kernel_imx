@@ -57,28 +57,48 @@ static enum power_supply_property psy_dc_props[] = {
 static int psy_battery_online(void* drvdata){
 	struct qpower_charger_data *qcd = drvdata;	
 	struct qpower_charger_pdata *pdata = qcd->pdata;
+	#if 0
 	if(gpio_is_valid(pdata->det)){
 		qcd->det = !!((gpio_get_value(pdata->det)?1:0)^pdata->bat_det_active);
 		return qcd->det;
 	}
+	#endif
 	return 1;
 }
 
 //return battery is faulty or not
 static int psy_charger_faulty(void* drvdata){
-	struct qpower_charger_data *qcd = drvdata;
+	struct qpower_charger_data *qcd = drvdata;	
+	struct qpower_charger_pdata *pdata = qcd->pdata;
+	if(gpio_is_valid(pdata->flt)){
+		qcd->fault= (gpio_get_value(pdata->flt)>0)?0:1;
+	}
 	return (qcd->fault);
 }
 
 //return charger is online or not
 static int psy_charger_online(void* drvdata){
-	struct qpower_charger_data *qcd = drvdata;
-	return (qcd->usb_in || qcd->dc_in);
+	struct qpower_charger_data *qcd = drvdata;	
+	struct qpower_charger_pdata *pdata = qcd->pdata;
+	int online=0;
+	if(gpio_is_valid(pdata->uok)){
+		qcd->usb_in = (gpio_get_value(pdata->uok)>0)?0:1;		
+	}
+	if(gpio_is_valid(pdata->dok)){
+		qcd->dc_in = (gpio_get_value(pdata->dok)>0)?0:1;		
+	}
+	if(qcd->usb_in)	online++;
+	if(qcd->dc_in) online++;
+	return online;
 }
 
 //return charger is enabled
 static int psy_charger_enable(void* drvdata){
-	struct qpower_charger_data *qcd = drvdata;
+	struct qpower_charger_data *qcd = drvdata;	
+	struct qpower_charger_pdata *pdata = qcd->pdata;
+	if(gpio_is_valid(pdata->chg)){
+		qcd->chg= (gpio_get_value(pdata->chg)>0)?0:1;		
+	}
 	return qcd->chg;
 }
 

@@ -128,7 +128,7 @@ static int chip_get_property(struct power_supply *psy,
 			    enum power_supply_property psp,
 			    union power_supply_propval *val)
 {
-	struct battery_chip *chip = i2c_get_clientdata(to_i2c_client(psy->dev));
+	struct battery_chip *chip = container_of(psy,struct battery_chip,battery);
 	if(chip->prev_soc==0)
 		chip->prev_soc = chip->soc;//init prev_soc
 
@@ -136,6 +136,7 @@ static int chip_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = chip->status;
 		break;
+	case POWER_SUPPLY_PROP_PRESENT:
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = chip->online;
 		break;
@@ -247,7 +248,11 @@ static void chip_get_status(struct i2c_client *client)
 {
 	struct battery_chip *chip = i2c_get_clientdata(client);
 	struct qpower_ops* ops = chip->pdata->ops;
-	if(!ops) return;
+	if(!ops) {
+		dev_warn(&client->dev,"no battery ops found\n");
+		return;
+	}
+
 	chip_update(chip);
 
 
@@ -256,7 +261,7 @@ static void chip_get_status(struct i2c_client *client)
 		if (charger_enable(ops))
 			chip->status = POWER_SUPPLY_STATUS_CHARGING;
 		else
-			chip->status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+			chip->status = POWER_SUPPLY_STATUS_FULL;
 	} else {
 		chip->status = POWER_SUPPLY_STATUS_DISCHARGING;
 	}
@@ -271,7 +276,7 @@ static void chip_get_status(struct i2c_client *client)
 
 	//online
 	chip->online = battery_online(ops);
-	
+
 	
 }
 		
@@ -282,8 +287,6 @@ static void chip_work(struct work_struct *work)
 
 	chip_get_status(chip->client);
 	
-	chip->health = POWER_SUPPLY_HEALTH_GOOD;
-
 	power_supply_changed(&chip->battery);
 
 	schedule_delayed_work(&chip->pollwork, msecs_to_jiffies(MAX17058_POLLING_DELAY));
@@ -400,6 +403,7 @@ static DEVICE_ATTR(table, S_IRUGO|S_IWUSR,table_show, table_store);
 
 static enum power_supply_property battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_CAPACITY,
@@ -451,7 +455,8 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 					  IRQF_TRIGGER_FALLING , client->name, chip);  
 		device_init_wakeup(&client->dev, 1);
 	}
-	
+
+	chip->health = POWER_SUPPLY_HEALTH_GOOD;
 
 	chip->battery.name		= "battery";
 	chip->battery.type		= POWER_SUPPLY_TYPE_BATTERY;
