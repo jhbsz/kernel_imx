@@ -47,6 +47,7 @@ struct dp_csc_param_t {
 #define DC_DISP_ID_SERIAL	2
 #define DC_DISP_ID_ASYNC	3
 
+int check = 0;
 static inline struct ipu_soc *pixelclk2ipu(struct clk *clk)
 {
 	struct ipu_soc *ipu;
@@ -805,7 +806,15 @@ void _ipu_dc_init(struct ipu_soc *ipu, int dc_chan, int di, bool interlaced, uin
 			} else {
 				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, 5, 3);
 				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, 6, 2);
-				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 12, 1);
+				//_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 12, 1);
+				/*add by allenyao*/
+				if(check == 0) {
+					check = 1;
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 7, 1);
+				}
+				else
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 12, 1);
+				/*add by allenyao*/
 				if ((pixel_fmt == IPU_PIX_FMT_YUYV) ||
 				(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 				(pixel_fmt == IPU_PIX_FMT_YVYU) ||
