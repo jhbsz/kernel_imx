@@ -71,13 +71,13 @@
 #define REG_TABLE_UNLOCK_PATTERN	0x0000
 #define REG_TABLE_SIZE				32
 
-#define MAX17058_POLLING_DELAY		(50*1000)   
+#define MAX17058_POLLING_DELAY		(1000)   
 #define MAX17058_BATTERY_FULL		100
 
 
 struct battery_chip {
 	struct i2c_client		*client;
-	struct delayed_work		work;
+	struct delayed_work		pollwork;
 	struct power_supply		battery;
 	struct qpower_battery_pdata	*pdata;
 
@@ -128,8 +128,7 @@ static int chip_get_property(struct power_supply *psy,
 			    enum power_supply_property psp,
 			    union power_supply_propval *val)
 {
-	struct battery_chip *chip = container_of(psy,
-				struct battery_chip, battery);
+	struct battery_chip *chip = i2c_get_clientdata(to_i2c_client(psy->dev));
 	if(chip->prev_soc==0)
 		chip->prev_soc = chip->soc;//init prev_soc
 
@@ -144,7 +143,10 @@ static int chip_get_property(struct power_supply *psy,
 		val->intval = chip->vcell*1000;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		if(charger_online(chip->pdata->ops)){ //charger is online
+		if(chip->pdata&&
+			chip->pdata->ops&&
+			chip->pdata->ops->qco&&
+			charger_online(chip->pdata->ops)){ //charger is online
 			chip->prev_soc = chip->soc;		
 		}
 		else{
@@ -245,7 +247,7 @@ static void chip_get_status(struct i2c_client *client)
 {
 	struct battery_chip *chip = i2c_get_clientdata(client);
 	struct qpower_ops* ops = chip->pdata->ops;
-
+	if(!ops) return;
 	chip_update(chip);
 
 
@@ -276,7 +278,7 @@ static void chip_get_status(struct i2c_client *client)
 
 static void chip_work(struct work_struct *work)
 {
-	struct battery_chip *chip = container_of(work, struct battery_chip, work.work);
+	struct battery_chip *chip = container_of(work, struct battery_chip, pollwork.work);
 
 	chip_get_status(chip->client);
 	
@@ -284,7 +286,7 @@ static void chip_work(struct work_struct *work)
 
 	power_supply_changed(&chip->battery);
 
-	schedule_delayed_work(&chip->work, msecs_to_jiffies(MAX17058_POLLING_DELAY));
+	schedule_delayed_work(&chip->pollwork, msecs_to_jiffies(MAX17058_POLLING_DELAY));
 }
 
 static irqreturn_t chip_irq_handler(int irq, void *data)
@@ -292,8 +294,8 @@ static irqreturn_t chip_irq_handler(int irq, void *data)
 	struct battery_chip *chip = (struct battery_chip *)data;
 	wake_lock_timeout(&chip->wl, 5*HZ);
 	//max17058_get_soc(chip->client);
-	cancel_delayed_work(&chip->work);
-	schedule_delayed_work(&chip->work,2*HZ);
+	cancel_delayed_work(&chip->pollwork);
+	schedule_delayed_work(&chip->pollwork,2*HZ);
 	return IRQ_HANDLED;
 }
 
@@ -409,17 +411,7 @@ static enum power_supply_property battery_props[] = {
 static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 	int ret;
 	int alert_threshold = 2;
-	chip->battery.name		= "battery";
-	chip->battery.type		= POWER_SUPPLY_TYPE_BATTERY;
-	chip->battery.get_property	= chip_get_property;
-	chip->battery.properties	= battery_props;
-	chip->battery.num_properties	= ARRAY_SIZE(battery_props);
 
-	ret = power_supply_register(&client->dev, &chip->battery);
-	if (ret) {
-		dev_err(&client->dev, "failed: power supply register\n");
-		return ret;
-	}
 	wake_lock_init(&chip->wl, WAKE_LOCK_SUSPEND, "low_bat");
 
 
@@ -442,8 +434,7 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 
 	chip_load_table(chip,default_table,ARRAY_SIZE(default_table));
 	
-	INIT_DELAYED_WORK(&chip->work, chip_work);
-	schedule_delayed_work(&chip->work, msecs_to_jiffies(0));
+	INIT_DELAYED_WORK(&chip->pollwork, chip_work);
 
 	if(chip->pdata->alert&&gpio_is_valid(chip->pdata->alert)){		
 		
@@ -460,18 +451,32 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 					  IRQF_TRIGGER_FALLING , client->name, chip);  
 		device_init_wakeup(&client->dev, 1);
 	}
+	
+
+	chip->battery.name		= "battery";
+	chip->battery.type		= POWER_SUPPLY_TYPE_BATTERY;
+	chip->battery.get_property	= chip_get_property;
+	chip->battery.properties	= battery_props;
+	chip->battery.num_properties	= ARRAY_SIZE(battery_props);
+
+	ret = power_supply_register(&client->dev, &chip->battery);
+	if (ret) {
+		dev_err(&client->dev, "failed: power supply register\n");
+		return ret;
+	}
+	schedule_delayed_work(&chip->pollwork, msecs_to_jiffies(HZ));
 err:
 	return ret;
 }
 
-static int __devinit max17058_probe(struct i2c_client *client,
+static int max17058_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	struct battery_chip *chip;
 	int ret;
 
-	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE))
+	if (!i2c_check_functionality(adapter, I2C_FUNC_I2C))
 		return -EIO;
 
 	ret = chip_get_version(client);
@@ -498,7 +503,7 @@ static int __devexit max17058_remove(struct i2c_client *client)
 	struct battery_chip *chip = i2c_get_clientdata(client);
 
 	power_supply_unregister(&chip->battery);	
-	cancel_delayed_work(&chip->work);
+	cancel_delayed_work(&chip->pollwork);
 	device_remove_file(&client->dev,&dev_attr_regs);
 	device_remove_file(&client->dev,&dev_attr_table);
 	kfree(chip);
@@ -511,14 +516,14 @@ static int max17058_suspend(struct i2c_client *client,
 		pm_message_t state)
 {
 	struct battery_chip *chip = i2c_get_clientdata(client);
-	cancel_delayed_work(&chip->work);
+	cancel_delayed_work(&chip->pollwork);
 	return 0;
 }
 
 static int max17058_resume(struct i2c_client *client)
 {
 	struct battery_chip *chip = i2c_get_clientdata(client);
-	schedule_delayed_work(&chip->work, 0);
+	schedule_delayed_work(&chip->pollwork, 0);
 	return 0;
 }
 
@@ -538,6 +543,7 @@ MODULE_DEVICE_TABLE(i2c, max17058_id);
 static struct i2c_driver max17058_i2c_driver = {
 	.driver	= {
 		.name	= "max17058",
+		.owner	= THIS_MODULE,			
 	},
 	.probe		= max17058_probe,
 	.remove		= __devexit_p(max17058_remove),
