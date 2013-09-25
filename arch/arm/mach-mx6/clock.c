@@ -5348,7 +5348,7 @@ static void clk_tree_init(void)
 
 int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	unsigned long ckih1, unsigned long ckih2)
-{
+{		
 	__iomem void *base;
 	int i, reg;
 	u32 parent_rate, rate;
@@ -5405,6 +5405,8 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	/* Disable un-necessary PFDs & PLLs */
 	if (pll2_pfd_400M.usecount == 0 && cpu_is_mx6q())
 		pll2_pfd_400M.disable(&pll2_pfd_400M);
+	
+
 #ifndef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
 	/*
 	 * Bootloader may use pll2_pfd_352M to drive ldb_di1_clk
@@ -5420,8 +5422,8 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	pll3_pfd_508M.disable(&pll3_pfd_508M);
 	pll3_pfd_720M.disable(&pll3_pfd_720M);
 	if (cpu_is_mx6q()) {
-		pll3_pfd_540M.disable(&pll3_pfd_540M);
-		pll3_usb_otg_main_clk.disable(&pll3_usb_otg_main_clk);
+		//pll3_pfd_540M.disable(&pll3_pfd_540M);/*Add by allen:This clk is use by mipi in bootloader,so do not disable*/
+		//pll3_usb_otg_main_clk.disable(&pll3_usb_otg_main_clk);
 	} else if (cpu_is_mx6dl()) {
 #ifndef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
 		/*
@@ -5455,12 +5457,13 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	 * the parent to be ldb_di1_clk to support LVDS
 	 * panel splashimage.
 	 */
-	clk_set_parent(&ipu1_di_clk[0], &pll5_video_main_clk);
 #ifndef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
+	clk_set_parent(&ipu1_di_clk[0], &pll5_video_main_clk);
 	clk_set_parent(&ipu1_di_clk[1], &pll5_video_main_clk);
-#endif
 	clk_set_parent(&ipu2_di_clk[0], &pll5_video_main_clk);
 	clk_set_parent(&ipu2_di_clk[1], &pll5_video_main_clk);
+#endif
+
 
 	clk_set_parent(&emi_clk, &pll2_pfd_400M);
 	clk_set_rate(&emi_clk, 200000000);
@@ -5557,6 +5560,7 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		     3 << MXC_CCM_CCGRx_CG10_OFFSET |
 		     3 << MXC_CCM_CCGRx_CG9_OFFSET |
 		     3 << MXC_CCM_CCGRx_CG8_OFFSET, MXC_CCM_CCGR2);
+
 	__raw_writel(1 << MXC_CCM_CCGRx_CG14_OFFSET |
 		     1 << MXC_CCM_CCGRx_CG13_OFFSET |
 		     3 << MXC_CCM_CCGRx_CG12_OFFSET |
@@ -5567,9 +5571,20 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		      * default, so we need to enable the clocks to
 		      * keep the display running.
 		      */
-		     3 << MXC_CCM_CCGRx_CG7_OFFSET |	/* ldb_di1_clk */
-		     3 << MXC_CCM_CCGRx_CG2_OFFSET |	/* ipu1_di1_clk */
-		     3 << MXC_CCM_CCGRx_CG0_OFFSET |	/* ipu1_clk */
+		      #if 1
+			3 << 16 |							/* mipi_core_cfg_clk,mipi is use in bootloader ,so we should enable that,add by allenyao */  
+			3 << MXC_CCM_CCGRx_CG7_OFFSET |	/* ldb_di1_clk */
+			3 << MXC_CCM_CCGRx_CG2_OFFSET |	/* ipu1_di1_clk */
+			3 << MXC_CCM_CCGRx_CG0_OFFSET |	/* ipu1_clk */
+		     #endif
+			#if 0
+			/*add by allenyao*/
+			3 << 16 |
+			3 << MXC_CCM_CCGRx_CG6_OFFSET |	/* ldb_di1_clk */
+			3 << MXC_CCM_CCGRx_CG4_OFFSET |	/* ipu1_di1_clk */
+			3 << MXC_CCM_CCGRx_CG3_OFFSET |	/* ipu1_clk */
+			/*add by allenyao*/
+			#endif
 #endif
 		     3 << MXC_CCM_CCGRx_CG10_OFFSET, MXC_CCM_CCGR3);
 	__raw_writel(3 << MXC_CCM_CCGRx_CG7_OFFSET |
@@ -5582,6 +5597,8 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 			 */
 			(machine_is_mx6q_sabresd() ?
 			(3 << MXC_CCM_CCGRx_CG8_OFFSET) : 0) | /* pwm1_clk */
+			(machine_is_mx6q_qpad() ?
+			(3 << MXC_CCM_CCGRx_CG8_OFFSET) : 0) | /* pwm1_clk ,we also use pwm 1 to drive mipi lcd ,so we shoule enable ;add by allenyao*/
 #endif
 			1 << MXC_CCM_CCGRx_CG6_OFFSET |
 			1 << MXC_CCM_CCGRx_CG4_OFFSET, MXC_CCM_CCGR4);
@@ -5663,6 +5680,7 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	reg |= (1 << 18);
 	__raw_writel(reg, base + 0x04);
 	iounmap(base);
+
 
 	return 0;
 

@@ -34,10 +34,10 @@ static int mipid_init_backlight(struct mipi_dsi_info *mipi_dsi);
 
 static struct fb_videomode truly_lcd_modedb[] = {
 	{
-	 "NT-QHD", 60, 540, 960, 32150/*ps*/,
+	 "NT-QHD", 60, 540, 945, 30500/*ps*/,
 	 3, 3,
-	 5, 5,
-	 8, 3,
+	 5, 20,
+	 8,18,
 	 FB_SYNC_OE_LOW_ACT,//ori is  FB_SYNC_OE_LOW_ACT
 	 FB_VMODE_NONINTERLACED,//ori is  FB_VMODE_NONINTERLACED
 	 0,
