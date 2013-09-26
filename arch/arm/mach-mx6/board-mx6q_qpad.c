@@ -556,6 +556,9 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.reset		= mx6_reset_mipi_dsi,
 	.lcd_power	= mipi_dsi_power,
 	.backlight_power	= mipi_dsi_baclight_power,
+
+	.core_regulator	= "MIPI_DSI",
+	.core_volt	= 2800000,
 };
 
 static struct ipuv3_fb_platform_data qpad_fb_data[] = {
@@ -1037,9 +1040,41 @@ static int __init board_misc_init(void){
 	mdelay(5);
 	gpio_direction_output(QPAD_WIFI_RST,1);
 	gpio_free(QPAD_WIFI_RST);
+
+	return 0;
+}
+
+/*
+* Disable unused regulator
+*/
+static int __init qpad_regulator_late_init(void){
+		struct reg_map {
+		  struct regulator* regulator;
+		  char* supply;
+		};
+		struct reg_map maps[] = {
+			{.regulator=NULL,.supply="VGEN1_1V5"},
+			{.regulator=NULL,.supply="VGEN2_1V5"},
+			{.regulator=NULL,.supply="VGEN3_2V8"},
+		};
+		int i=0;
+		int count = ARRAY_SIZE(maps);
+		do{
+			maps[i].regulator = regulator_get(NULL,maps[i].supply);
+			if(IS_ERR(maps[i].regulator)){
+				printk("failed to get regulator[%s]\n",maps[i].supply);
+			}else {
+				regulator_enable(maps[i].regulator);
+				regulator_disable(maps[i].regulator);
+				regulator_put(maps[i].regulator);
+			}
+			i++;
+		}while(i<count);
 	
 	return 0;
 }
+
+late_initcall(qpad_regulator_late_init);
 
 /*!
  * Board specific initialization.

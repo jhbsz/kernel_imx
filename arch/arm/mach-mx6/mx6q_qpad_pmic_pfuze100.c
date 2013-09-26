@@ -137,8 +137,11 @@ static struct regulator_consumer_supply vgen5_consumers[] = {
 };
 static struct regulator_consumer_supply vgen6_consumers[] = {
     {
-	.supply = "VGEN6_2V8",
-	}
+		.supply = "VGEN6_2V8",
+	},
+	{
+		.supply = "MIPI_DSI",
+	},
 };
 
 static struct regulator_init_data sw1a_init = {
