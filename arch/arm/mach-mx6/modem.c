@@ -637,13 +637,13 @@ static int __init board_modem_init(void)
 	  return -EBUSY;
 	}	
 #ifdef MODEM_WAKEUP_ENABLED
-	else if (gpio_request(modem->gpio_wakeap, "wakeap")) 
+	else if (gpio_request(modem->gpio_wakeap, "modem wakeap")) 
 	{
 	  pr_warning("request modem hostwake GPIO failed\n");
 	  kfree(modem);
 	  return -EBUSY;
 	}	
-	else if (gpio_request(modem->gpio_wakemodem, "wakemodem")) 
+	else if (gpio_request(modem->gpio_wakemodem, "modem wakemodem")) 
 	{
 	  pr_warning("request modem wake GPIO failed\n");
 	  kfree(modem);

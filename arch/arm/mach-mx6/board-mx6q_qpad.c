@@ -838,8 +838,8 @@ static struct gpio_keys_button qpad_buttons[] = {
 	GPIO_BUTTON(GPIO_KEY_MENU, KEY_MENU, 1, "menu", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_HOME, KEY_HOME, 1, "home", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_BACK, KEY_BACK, 1, "back", 1, 1),	
-	GPIO_BUTTON(GPIO_KEY_F1, KEY_F1, 1, "F1", 0, 1),
-	GPIO_BUTTON(GPIO_KEY_F2, KEY_F2, 1, "F2", 0, 1),
+	GPIO_BUTTON(GPIO_KEY_F1, KEY_F1, 1, "F1", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_F2, KEY_F2, 1, "F2", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1),	
 };
 
