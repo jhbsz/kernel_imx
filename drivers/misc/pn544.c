@@ -206,7 +206,7 @@ static long pn544_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 		if (arg == 2) {
 			/* power on with firmware download (requires hw reset)
 			 */
-			dev_info(&pn544_dev->client->dev,"%s power on with firmware\n", __func__);
+			dev_dbg(&pn544_dev->client->dev,"%s power on with firmware\n", __func__);
 			gpio_set_value(pn544_dev->ven_gpio, 1);
 			gpio_set_value(pn544_dev->firm_gpio, 1);
 			msleep(10);
@@ -216,13 +216,13 @@ static long pn544_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			msleep(10);
 		} else if (arg == 1) {
 			/* power on */
-			dev_info(&pn544_dev->client->dev,"%s power on\n", __func__);
+			dev_dbg(&pn544_dev->client->dev,"%s power on\n", __func__);
 			gpio_set_value(pn544_dev->firm_gpio, 0);
 			gpio_set_value(pn544_dev->ven_gpio, 1);
 			msleep(10);
 		} else  if (arg == 0) {
 			/* power off */
-			dev_info(&pn544_dev->client->dev,"%s power off\n", __func__);
+			dev_dbg(&pn544_dev->client->dev,"%s power off\n", __func__);
 			gpio_set_value(pn544_dev->firm_gpio, 0);
 			gpio_set_value(pn544_dev->ven_gpio, 0);
 			msleep(10);
@@ -263,14 +263,14 @@ static int pn544_probe(struct i2c_client *client,
 		return  -ENODEV;
 	}
 
-	dev_info(&client->dev,"nfc probe step01 is ok\n");
+	dev_dbg(&client->dev,"nfc probe step01 is ok\n");
 	
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		pr_err("%s : need I2C_FUNC_I2C\n", __func__);
 		return  -ENODEV;
 	}
 
-	dev_info(&client->dev,"nfc probe step02 is ok\n");
+	dev_dbg(&client->dev,"nfc probe step02 is ok\n");
 	
 	ret = gpio_request(platform_data->irq_gpio, "nfc_int");
 	if (ret)
@@ -282,7 +282,7 @@ static int pn544_probe(struct i2c_client *client,
 	if (ret)
 		goto err_firm;
 
-	dev_info(&client->dev,"nfc probe step03 is ok\n");
+	dev_dbg(&client->dev,"nfc probe step03 is ok\n");
 
 	pn544_dev = kzalloc(sizeof(*pn544_dev), GFP_KERNEL);
 	if (pn544_dev == NULL) {
@@ -292,7 +292,7 @@ static int pn544_probe(struct i2c_client *client,
 		goto err_exit;
 	}
 
-	dev_info(&client->dev,"nfc probe step04 is ok\n");
+	dev_dbg(&client->dev,"nfc probe step04 is ok\n");
 	
 	pn544_dev->irq_gpio = platform_data->irq_gpio;
 	pn544_dev->ven_gpio  = platform_data->ven_gpio;
@@ -313,7 +313,7 @@ static int pn544_probe(struct i2c_client *client,
 		pr_err("%s : misc_register failed\n", __FILE__);
 		goto err_misc_register;
 	}
-	dev_info(&client->dev,"nfc probe step05 is ok\n");
+	dev_dbg(&client->dev,"nfc probe step05 is ok\n");
 
 	//set output for ven,firm pin
 	gpio_direction_output(platform_data->ven_gpio,0);
@@ -333,7 +333,7 @@ static int pn544_probe(struct i2c_client *client,
 	s3c_gpio_setpull(platform_data->irq_gpio, S3C_GPIO_PULL_UP);
 
 	#endif
-	dev_info(&client->dev,"%s : requesting IRQ %d\n", __func__, client->irq);
+	dev_dbg(&client->dev,"%s : requesting IRQ %d\n", __func__, client->irq);
 	pn544_dev->irq_enabled = true;
 
 	ret = request_irq(client->irq, pn544_dev_irq_handler,
@@ -342,12 +342,12 @@ static int pn544_probe(struct i2c_client *client,
 		dev_err(&client->dev, "request_irq failed\n");
 		goto err_request_irq_failed;
 	}
-	dev_info(&client->dev,"nfc probe step06 is ok\n");
+	dev_dbg(&client->dev,"nfc probe step06 is ok\n");
 	
 	pn544_disable_irq(pn544_dev);
 	i2c_set_clientdata(client, pn544_dev);
 	
-	dev_info(&client->dev,"nfc probe step07 is ok\n");
+	dev_dbg(&client->dev,"nfc probe step07 is ok\n");
 
 	return 0;
 
