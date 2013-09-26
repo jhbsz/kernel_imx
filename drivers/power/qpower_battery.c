@@ -261,7 +261,7 @@ static void chip_get_status(struct i2c_client *client)
 		if (charger_enable(ops))
 			chip->status = POWER_SUPPLY_STATUS_CHARGING;
 		else
-			chip->status = POWER_SUPPLY_STATUS_FULL;
+			chip->status = POWER_SUPPLY_STATUS_NOT_CHARGING;
 	} else {
 		chip->status = POWER_SUPPLY_STATUS_DISCHARGING;
 	}
