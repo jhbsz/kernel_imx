@@ -69,6 +69,7 @@
 #include <mach/mxc_hdmi.h>
 #include <mach/mxc_asrc.h>
 #include <mach/mipi_dsi.h>
+#include <mach/system.h>
 
 #include <asm/irq.h>
 #include <asm/setup.h>
@@ -235,6 +236,10 @@ void uart_modulation_enable(int en){
        
 }
 
+/*
+ * IMX-78,For Infrared modulation communication,we need using half duplex,Never enable DMA mode since 
+ * IMX serial driver does not support half duplex mode in DMA mode.
+ */
 static const struct imxuart_platform_data mx6q_uart4_data __initconst = {
        .flags      = IMXUART_MODULATION,
        .modulation_enable = uart_modulation_enable,
@@ -557,8 +562,6 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.lcd_power	= mipi_dsi_power,
 	.backlight_power	= mipi_dsi_baclight_power,
 
-	.core_regulator	= "MIPI_DSI",
-	.core_volt	= 2800000,
 };
 
 static struct ipuv3_fb_platform_data qpad_fb_data[] = {
@@ -1076,6 +1079,18 @@ static int __init qpad_regulator_late_init(void){
 
 late_initcall(qpad_regulator_late_init);
 
+extern u32 enable_ldo_mode;
+
+static int __init qpad_mipi_regulator_init(void){
+	if(LDO_MODE_BYPASSED==enable_ldo_mode){
+		mipi_dsi_pdata.core_regulator = "MIPI_DSI";
+		mipi_dsi_pdata.core_volt	= 2800000;
+	}	
+	imx6q_add_mipi_dsi(&mipi_dsi_pdata);
+	return 0;
+}
+device_initcall(qpad_mipi_regulator_init);
+
 /*!
  * Board specific initialization.
  */
@@ -1125,7 +1140,6 @@ static void __init mx6_qpad_board_init(void)
 			imx6q_add_ipuv3fb(i, &qpad_fb_data[i]);
 
 	imx6q_add_vdoa();
-	imx6q_add_mipi_dsi(&mipi_dsi_pdata);
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
 	imx6q_add_v4l2_output(0);
