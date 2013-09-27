@@ -34,10 +34,10 @@ static int mipid_init_backlight(struct mipi_dsi_info *mipi_dsi);
 
 static struct fb_videomode truly_lcd_modedb[] = {
 	{
-	 "NT-QHD", 60, 540, 945, 30500/*ps*/,
+	 "NT-QHD", 60, 540, 960, 30500/*ps*/,  //945,30500
 	 3, 3,
-	 5, 20,
-	 8,18,
+	 60, 35,//5,20
+	 8,20,//18
 	 FB_SYNC_OE_LOW_ACT,//ori is  FB_SYNC_OE_LOW_ACT
 	 FB_VMODE_NONINTERLACED,//ori is  FB_VMODE_NONINTERLACED
 	 0,
@@ -63,8 +63,7 @@ void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 {
 	u32 buf[DSI_CMD_BUF_MAXSIZE];
-	int err;
-
+	int err;	
 	return 0;
 
 	dev_dbg(&mipi_dsi->pdev->dev, "MIPI DSI LCD setup.\n");
