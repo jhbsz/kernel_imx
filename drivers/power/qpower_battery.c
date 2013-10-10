@@ -33,7 +33,9 @@
 #define REG_OFFSET_SOC		0x04
 #define REG_OFFSET_MODE		0x06
 #define REG_OFFSET_VER		0x08
+#define REG_OFFSET_HIBERNATE 0x0A
 #define REG_OFFSET_CONFIG	0x0C
+#define REG_OFFSET_OCV		0x0E
 #define REG_OFFSET_VRESET	0x18
 #define REG_OFFSET_STATUS	0x1A
 #define REG_OFFSET_CMD		0xFE
@@ -67,9 +69,9 @@
 
 
 //REG TABLE LOCK/UNLOCK
-#define REG_TABLE_LOCK_PATTERN		0x4A57
-#define REG_TABLE_UNLOCK_PATTERN	0x0000
-#define REG_TABLE_SIZE				32
+#define REG_TABLE_UNLOCK_PATTERN		0x4A57
+#define REG_TABLE_LOCK_PATTERN			0x0000
+#define REG_TABLE_SIZE				64
 
 #define MAX17058_POLLING_DELAY		(1000)   
 #define MAX17058_BATTERY_FULL		100
@@ -105,24 +107,25 @@ struct battery_chip {
 	
 };
 
-static uint16_t default_table[] = {
-	0xAA00, 0xB1F0, 
-	0xB7E0, 0xB960, 
-	0xBB80, 0xBC40,
-	0xBD30, 0xBD50,
-	0xBDF0, 0xBE40,
-	0xBFD0, 0xC090,
-	0xC430, 0xC7C0,
-	0xCA60, 0xCF30, 
-	0x0120, 0x09C0,
-	0x1FC0, 0x2BE0,
-	0x4FC0, 0x3000,
-	0x4780, 0x4FE0,
-	0x7700, 0x1560,
-	0x4620, 0x1380, 
-	0x1A60, 0x1220,
-	0x14A0, 0x14A0
+static uint8_t default_table[] = {
+	0xAA, 0x00, 0xB1, 0xF0, 0xB7, 0xE0, 0xB9, 0x60, 0xBB, 0x80,
+	0xBC, 0x40, 0xBD, 0x30, 0xBD, 0x50, 0xBD, 0xF0, 0xBE, 0x40,
+	0xBF, 0xD0, 0xC0, 0x90, 0xC4, 0x30, 0xC7, 0xC0, 0xCA, 0x60,
+	0xCF, 0x30, 0x01, 0x20, 0x09, 0xC0, 0x1F, 0xC0, 0x2B, 0xE0,
+	0x4F, 0xC0, 0x30, 0x00, 0x47, 0x80, 0x4F, 0xE0, 0x77, 0x00,
+	0x15, 0x60, 0x46, 0x20, 0x13, 0x80, 0x1A, 0x60, 0x12, 0x20,
+	0x14, 0xA0, 0x14, 0xA0,
 }; 
+static uint8_t vmodel_table_1[] = {
+	0x82, 0x20, 0xAA, 0xB0, 0xB4, 0x70, 0xBB, 0x40, 0xBC, 0x10, 
+	0xBC, 0x70, 0xBC, 0xF0, 0xBD, 0x70, 0xBE, 0x30, 0xBF, 0x00, 
+	0xC1, 0x00, 0xC3, 0x00,	0xC6, 0x60, 0xC8, 0x50, 0xCC, 0x30,
+	0xD0, 0x90, 0x00, 0x40, 0x08, 0x00,	0x0E, 0x60, 0x34, 0xE0,
+	0x48, 0x20, 0x7A, 0x60, 0x70, 0x40, 0x40, 0x20,	0x3B, 0xE0, 
+	0x13, 0xE0, 0x19, 0x60, 0x16, 0x00, 0x19, 0x20, 0x0F, 0xE0,
+	0x0E ,0x20, 0x0E, 0x20, 
+}; 
+
 
 static int chip_get_property(struct power_supply *psy,
 			    enum power_supply_property psp,
@@ -171,41 +174,162 @@ static int chip_get_property(struct power_supply *psy,
 
 static int chip_write_word(struct i2c_client *client, int reg, u16 value)
 {
-    return i2c_smbus_write_word_data(client,reg,value);
+    return i2c_smbus_write_word_data(client,reg,swab16(value));
 }
 
 static int chip_read_word(struct i2c_client *client, int reg)
 {
-	return i2c_smbus_read_word_data(client, reg);
-//    return swab16((uint16_t)(i2c_smbus_read_word_data(client, reg)&0xffff);
+    return swab16((uint16_t)(i2c_smbus_read_word_data(client, reg)&0xffff));
 }
 
 
+/*
 
 static void chip_reset(struct i2c_client *client)
 {
 	 chip_write_word(client, REG_OFFSET_CMD, 0x5400); //compeletly reset	 
 }
-
-static void chip_table_lock(struct i2c_client *client,int lock)
+static int chip_write_rcomp_seg(struct i2c_client *client,
+                                                uint16_t rcomp_seg)
 {
-	if(!lock)
-		chip_write_word(client, REG_OFFSET_TABLE_ACCESS, REG_TABLE_UNLOCK_PATTERN);//unlock
-	else
-		chip_write_word(client, REG_OFFSET_TABLE_ACCESS, REG_TABLE_LOCK_PATTERN);//lock
-}
+	uint8_t rs1, rs2;
+	int ret;
 
 
-static int chip_load_table(struct battery_chip *chip ,uint16_t *table,int tsize){
-	int i;
-	if(tsize<REG_TABLE_SIZE)
-		return -EINVAL;
-	chip_table_lock(chip->client,1);
-	for(i=0;i<REG_TABLE_SIZE;i++){
-		chip_write_word(chip->client,REG_OFFSET_TABLE_START+i*2,table[i]);
+	rs2 = rcomp_seg | 0x00FF;
+	rs1 = rcomp_seg >> 8;
+
+	uint8_t rcomp_seg_table[16] = { rs1, rs2, rs1, rs2,
+	                                rs1, rs2, rs1, rs2,
+	                                rs1, rs2, rs1, rs2,
+	                                rs1, rs2, rs1, rs2};
+
+
+	ret = i2c_smbus_write_i2c_block_data(client, MAX17048_RCOMPSEG1,
+	                        16, (uint8_t *)rcomp_seg_table);
+	if (ret < 0) {
+	        dev_err(&client->dev, "%s: err %d\n", __func__, ret);
+	        return ret;
 	}
-	chip_table_lock(chip->client,0);
 
+	ret = i2c_smbus_write_i2c_block_data(client, MAX17048_RCOMPSEG2,
+	                        16, (uint8_t *)rcomp_seg_table);
+	if (ret < 0) {
+	        dev_err(&client->dev, "%s: err %d\n", __func__, ret);
+	        return ret;
+	}
+
+	return 0;
+}
+*/
+static int chip_load_table(struct battery_chip *chip ,uint8_t *table,int tsize){
+	struct i2c_client		*client=chip->client;
+	int i;	
+	uint16_t soc_tst, ocv;
+	int ret;
+	if(tsize<REG_TABLE_SIZE){
+		dev_err(&chip->client->dev, "%s: error of table size:\n",
+												__func__);		
+		return -EINVAL;
+	}
+unlock_retry:	
+	//step 1
+	chip_write_word(client, REG_OFFSET_TABLE_ACCESS, REG_TABLE_UNLOCK_PATTERN);
+	
+	//step 2
+	ret = chip_read_word(client, REG_OFFSET_OCV);
+	if (ret < 0) {
+			dev_err(&client->dev, "%s: err %d\n", __func__, ret);
+			return ret;
+	}
+	ocv = (uint16_t)ret;
+	//step 2.5
+	if (ocv == 0xffff) {
+			dev_err(&client->dev, "%s: Failed in unlocking"
+									"max17058 err: %d\n", __func__, ocv);
+			msleep(10);
+			goto unlock_retry;
+	}
+	//step 3
+	//step 4 17040/1/3/4 only
+	/*
+	ret = chip_write_rcomp_seg(client, 0xffff);
+	if (ret < 0)
+			return ret;
+	*/
+	//step 5:load model table data
+	for (i = 0; i < 4; i++) {
+		if (i2c_smbus_write_i2c_block_data(chip->client,
+				(REG_OFFSET_TABLE_START+i*16), 16,
+						&table[i*0x10]) < 0) {
+				dev_err(&chip->client->dev, "%s: error writing model data:\n",
+														__func__);
+				break;
+		}
+	}
+	
+	/* Delay between 150ms to 600ms */
+	msleep(200);
+
+	#if 0
+
+	//step 7:  Write OCV Test value
+	ret = chip_write_word(client, REG_OFFSET_OCV, 0xa1ff);
+	if (ret < 0)
+			return ret;
+	
+	
+	/*step 7.1: Disable hibernate */
+	ret = chip_write_word(client, REG_OFFSET_HIBERNATE, 0x0000);
+	if (ret < 0)
+			return ret;
+	#endif
+	/*step 7.2: Lock model access */
+	ret = chip_write_word(client, REG_OFFSET_TABLE_ACCESS, REG_TABLE_LOCK_PATTERN);
+	if (ret < 0)
+			return ret;
+		
+	/*step 8 delay at least 150ms*/
+	msleep(200);
+
+	#if 0
+	/*step 9 Read SOC Register and compare to expected result */
+	ret = chip_read_word(client, REG_OFFSET_SOC);
+	if (ret < 0) {
+			dev_err(&client->dev, "%s: err %d\n", __func__, ret);
+			return ret;
+	}
+	soc_tst = (uint16_t)ret;
+	/*
+	if (!((soc_tst >> 8) >= mdata->soccheck_A &&
+							(soc_tst >> 8) <=  mdata->soccheck_B)) {
+			dev_err(&client->dev, "%s: soc comparison failed %d\n",
+									__func__, ret);
+			return ret;
+	} else {
+			dev_info(&client->dev, "MAX17058 Custom data"
+											" loading successfull\n");
+	}*/
+	
+	/* step 9.1 unlock model access */
+	ret = chip_write_word(client, REG_OFFSET_TABLE_ACCESS,
+									REG_TABLE_UNLOCK_PATTERN);
+	if (ret < 0)
+			return ret;
+	
+	/*step 10 Restore config and OCV */
+	ret = chip_write_word(client, REG_OFFSET_OCV, ocv);
+	if (ret < 0)
+			return ret;
+
+	//step 10.1 restore hibernate
+
+	//step 11 lock model access
+	chip_write_word(client, REG_OFFSET_TABLE_ACCESS, REG_TABLE_LOCK_PATTERN);
+
+	//step 12 delay at least 150ms
+	msleep(200);	
+	#endif
 	return 0;
 	
 }
@@ -225,18 +349,13 @@ static void chip_update(struct battery_chip *chip){
 
  	ret = chip_read_word(chip->client, REG_OFFSET_SOC);//16bit  read
  	if(ret>=0){
-		int alrt;
 		int soc;
-		if(((ret>>8)&0xff) == 1){
-			alrt = chip_read_word(chip->client, REG_OFFSET_CONFIG);
-			if(alrt&REG_CONFIG_ALERT)
-				chip_write_word(chip->client,REG_OFFSET_CONFIG,alrt&(~REG_CONFIG_ALERT));//clear alrt bit
-		}
-	    soc = min(((ret>>8)&0xff)/2, 100); //mc,uboot-load custom model,1%/512cell,
+		int alrt = chip_read_word(chip->client, REG_OFFSET_CONFIG);
+		if(alrt&REG_CONFIG_ALERT)
+			chip_write_word(chip->client,REG_OFFSET_CONFIG,alrt&(~REG_CONFIG_ALERT));//clear alrt bit
+		soc = ret >> 9;
 		chip->soc=min(soc,100);
 	}
-
-	
 
 }
 
@@ -306,23 +425,23 @@ static ssize_t chip_regs_show(struct device *dev,
                           struct device_attribute *attr, char *buf)
 {
 	struct battery_chip *chip = dev_get_drvdata(dev);
-	int i,length=0;
+	int length=0;
 	int value;
 	int ret=0;
 
 	ret = chip_read_word(chip->client,REG_OFFSET_VCELL);
 	if(ret>=0){
 		value = ((ret>>8)&0xff)* 20+(ret&0xff)*10/128;//78.125uV/vcell
-		length+= sprintf(buf+length,"vcell[%04x,%duV]\n",ret,value);
+		length+= sprintf(buf+length,"vcell[%04x,%dmV]\n",ret,value);
 	}
 	ret = chip_read_word(chip->client,REG_OFFSET_SOC);
 	if(ret>=0){
-		value = ret/REG_SOC_SCALE;
+		value = ret>>9;
 		length+= sprintf(buf+length,"soc[%04x,%d]\n",ret,value);
 	}
 	ret = chip_read_word(chip->client,REG_OFFSET_MODE);
 	if(ret>=0){
-		length+= sprintf(buf+length,"soc[%04x]\n",ret);
+		length+= sprintf(buf+length,"mode[%04x]\n",ret);
 	}
 	ret = chip_read_word(chip->client,REG_OFFSET_VER);
 	if(ret>=0){
@@ -344,13 +463,6 @@ static ssize_t chip_regs_show(struct device *dev,
 	if(ret>=0){
 		length+= sprintf(buf+length,"cmd[%04x]\n",ret);
 	}
-	for(i=0;i<REG_TABLE_SIZE;i++){
-		ret = chip_read_word(chip->client,REG_OFFSET_TABLE_START+i*2);
-		if(ret>=0){
-			length+= sprintf(buf+length,"tables[%02x:%04x]\n",i,ret);
-		}
-		
-	}
 	if(!length)
 		length+= sprintf(buf+length,"invalid access\n");
 
@@ -387,10 +499,10 @@ static ssize_t table_store(struct device *dev,
 	}
 
 	//retrieve table data
-	if((fw->size/2) < REG_TABLE_SIZE){
+	if((fw->size) < REG_TABLE_SIZE){
 		dev_err(dev, "invalid firmware %s fail,binary size too small\n", firmware_name);	
 	}else {
-		chip_load_table(chip,(uint16_t*)fw->data,fw->size);
+		chip_load_table(chip,(uint8_t*)fw->data,fw->size);
 	}
 
 	dev_info(dev,"table store okay\n");
@@ -428,6 +540,9 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 	ret = device_create_file(&client->dev,&dev_attr_table);
 
 
+	chip_load_table(chip,default_table,ARRAY_SIZE(default_table));
+
+
 	//clear alert/sleep flags,2% alert warning
 	//alert is 1%~32%
 	if((chip->pdata->alert_threshold<=32)&&(chip->pdata->alert_threshold>0)){
@@ -436,7 +551,6 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 	alert_threshold = 32 - alert_threshold;
 	chip_write_word(client,REG_OFFSET_CONFIG,((alert_threshold&0x1F) |(chip_read_word(client,0x0C) & 0xFF00)));
 
-	chip_load_table(chip,default_table,ARRAY_SIZE(default_table));
 	
 	INIT_DELAYED_WORK(&chip->pollwork, chip_work);
 
