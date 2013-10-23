@@ -107,6 +107,10 @@ struct battery_chip {
 	
 };
 
+static int debug = 0;
+module_param_named(debug, debug, int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+
 static uint8_t default_table[] = {
 	0xAA, 0x00, 0xB1, 0xF0, 0xB7, 0xE0, 0xB9, 0x60, 0xBB, 0x80,
 	0xBC, 0x40, 0xBD, 0x30, 0xBD, 0x50, 0xBD, 0xF0, 0xBE, 0x40,
@@ -132,8 +136,6 @@ static int chip_get_property(struct power_supply *psy,
 			    union power_supply_propval *val)
 {
 	struct battery_chip *chip = container_of(psy,struct battery_chip,battery);
-	if(chip->prev_soc==0)
-		chip->prev_soc = chip->soc;//init prev_soc
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -147,17 +149,7 @@ static int chip_get_property(struct power_supply *psy,
 		val->intval = chip->vcell*1000;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		if(chip->pdata&&
-			chip->pdata->ops&&
-			chip->pdata->ops->qco&&
-			charger_online(chip->pdata->ops)){ //charger is online
-			chip->prev_soc = chip->soc;		
-		}
-		else{
-			if(chip->soc < chip->prev_soc) 
-				chip->prev_soc = chip->soc;
-		}
-		val->intval = chip->prev_soc;
+		val->intval = chip->soc;
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
 		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
@@ -179,7 +171,11 @@ static int chip_write_word(struct i2c_client *client, int reg, u16 value)
 
 static int chip_read_word(struct i2c_client *client, int reg)
 {
-    return swab16((uint16_t)(i2c_smbus_read_word_data(client, reg)&0xffff));
+	int ret = i2c_smbus_read_word_data(client, reg);
+	if(ret>=0)
+	    return swab16((uint16_t)(ret&0xffff));
+	dev_warn(&client->dev,"read reg failed[%d]\n",ret);
+	return ret;
 }
 
 
@@ -292,6 +288,7 @@ unlock_retry:
 	/*step 8 delay at least 150ms*/
 	msleep(200);
 
+	soc_tst=0;
 	#if 0
 	/*step 9 Read SOC Register and compare to expected result */
 	ret = chip_read_word(client, REG_OFFSET_SOC);
@@ -396,6 +393,9 @@ static void chip_get_status(struct i2c_client *client)
 	//online
 	chip->online = battery_online(ops);
 
+	if(debug){
+		pr_info("status=%d,online=%d,soc=%d,vcell=%d\n",chip->status,chip->online,chip->soc,chip->vcell);
+	}
 	
 }
 		
@@ -540,6 +540,7 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 	ret = device_create_file(&client->dev,&dev_attr_table);
 
 
+	if(vmodel_table_1[0]){};
 	chip_load_table(chip,default_table,ARRAY_SIZE(default_table));
 
 
@@ -569,6 +570,7 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 					  IRQF_TRIGGER_FALLING , client->name, chip);  
 		device_init_wakeup(&client->dev, 1);
 	}
+	
 
 	chip->health = POWER_SUPPLY_HEALTH_GOOD;
 
@@ -583,7 +585,7 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 		dev_err(&client->dev, "failed: power supply register\n");
 		return ret;
 	}
-	schedule_delayed_work(&chip->pollwork, msecs_to_jiffies(HZ));
+	schedule_delayed_work(&chip->pollwork, msecs_to_jiffies(50));
 err:
 	return ret;
 }
@@ -610,9 +612,9 @@ static int max17058_probe(struct i2c_client *client,
 
 	ret = chip_init(chip,client);
 	if(ret<0){
+		dev_err(&client->dev, "QPower Fuel-Gauge init failed [%d]\n", ret);
 		kfree(chip);
 	}
-
 
 	return ret;
 }
