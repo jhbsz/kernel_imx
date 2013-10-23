@@ -51,6 +51,9 @@ static void arch_reset_special_mode(char mode, const char *cmd)
 	}else if(strcmp(cmd, "charger") == 0){
 		do_switch_charger();
 	}
+
+	//always set linux boot flag
+	do_switch_linux();
 }
 
 /*

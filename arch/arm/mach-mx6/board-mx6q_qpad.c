@@ -176,6 +176,27 @@ static int __init nfc_init(void)
 	return generic_add_device_pn544(0,NFC_IRQ,NFC_VEN,NFC_UPE);
 }
 
+enum {
+ eBootModeNormal=0,
+ eBootModeRecovery,
+ eBootModeCharger,
+ eBootModeFastboot,
+ eBootModeAutoupdate,
+ eBootModeFactory,
+ eBootModeMax,
+};
+
+static int android_bootmode;
+static int __init  detect_bootmode(char *arg)
+{
+	//if(arg&&!strcmp(arg,"charger"))
+	//	android_bootmode = eBootModeCharger;
+
+    return 0;
+}
+
+__setup("androidboot.mode=", detect_bootmode);
+
 
 //
 //
@@ -951,11 +972,24 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 
 
 
+static void __set_switch_linux_flag(void __iomem * snvs_base)
+{
+#define ANDROID_LINUX_BOOT    (1 << 11)
+	u32 reg;
+	reg = readl(snvs_base + SNVS_LPGPR);
+	reg |= ANDROID_LINUX_BOOT;
+	writel(reg, snvs_base + SNVS_LPGPR);
+}
+
+
 static void mx6_snvs_poweroff(void)
 {
 #define SNVS_LPCR 0x38
 	void __iomem *mx6_snvs_base =  MX6_IO_ADDRESS(MX6Q_SNVS_BASE_ADDR);
 	u32 value;
+	//set linux boot flag before power off
+	__set_switch_linux_flag(mx6_snvs_base);
+	
 	value = readl(mx6_snvs_base + SNVS_LPCR);
 	/*set TOP and DP_EN bit*/
 	writel(value | 0x60, mx6_snvs_base + SNVS_LPCR);
@@ -989,6 +1023,7 @@ static int __init imx6x_add_ram_console(void)
 #include "modem.c"
 static int __init modem_init(void){
 	//dummy init for modem
+	board_modem_init();
 	return 0;
 	
 }
@@ -1154,13 +1189,17 @@ static void __init mx6_qpad_board_init(void)
 	imx6q_add_imx_i2c(0, &mx6q_i2c_data);
 	imx6q_add_imx_i2c(1, &mx6q_i2c_data);
 	imx6q_add_imx_i2c(2, &mx6q_i2c_data);
-	i2c_register_board_info(0, mxc_i2c0_board_info,
-			ARRAY_SIZE(mxc_i2c0_board_info));
-	i2c_register_board_info(1, mxc_i2c1_board_info,
-			ARRAY_SIZE(mxc_i2c1_board_info));
-	i2c_register_board_info(2, mxc_i2c2_board_info,
-			ARRAY_SIZE(mxc_i2c2_board_info));
+
 	
+	if(eBootModeCharger!=android_bootmode){
+		i2c_register_board_info(0, mxc_i2c0_board_info,
+				ARRAY_SIZE(mxc_i2c0_board_info));
+		i2c_register_board_info(1, mxc_i2c1_board_info,
+				ARRAY_SIZE(mxc_i2c1_board_info));
+		i2c_register_board_info(2, mxc_i2c2_board_info,
+				ARRAY_SIZE(mxc_i2c2_board_info));
+	}	
+
 	ret = gpio_request(QPAD_PFUZE_INT, "pFUZE-int");
 	if (ret) {
 		printk(KERN_ERR"request pFUZE-int error!!\n");
@@ -1169,7 +1208,7 @@ static void __init mx6_qpad_board_init(void)
 		gpio_direction_input(QPAD_PFUZE_INT);
 		mx6q_qpad_init_pfuze100(QPAD_PFUZE_INT);
 	}
-
+	
 	imx6q_add_anatop_thermal_imx(1, &qpad_anatop_thermal_data);
 	
 	imx6q_add_pm_imx(0, &qpad_pm_data);
@@ -1181,13 +1220,18 @@ static void __init mx6_qpad_board_init(void)
 	   mmc2 is wifi
 	*/
 	imx6q_add_sdhci_usdhc_imx(3, &qpad_sd4_data);
-	imx6q_add_sdhci_usdhc_imx(1, &qpad_sd2_data);
-	imx6q_add_sdhci_usdhc_imx(2, &qpad_sd3_data);
-	imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
+	
 	imx6q_qpad_init_usb();
+	
+	if(eBootModeCharger!=android_bootmode){
+		imx6q_add_sdhci_usdhc_imx(1, &qpad_sd2_data);
+		imx6q_add_sdhci_usdhc_imx(2, &qpad_sd3_data);
 
-	imx6q_add_vpu();
-	imx6q_init_audio();
+		imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
+
+		imx6q_add_vpu();
+		imx6q_init_audio();
+	}
 	platform_device_register(&qpad_vmmc_reg_devices);
 	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
@@ -1201,7 +1245,7 @@ static void __init mx6_qpad_board_init(void)
 
 	imx6q_add_otp();
 	imx6q_add_viim();
-	imx6q_add_imx2_wdt(0, NULL);
+	imx6q_add_imx2_wdt(1, NULL);
 	imx6q_add_dma();
 
 	imx6q_add_dvfs_core(&qpad_dvfscore_data);
@@ -1226,18 +1270,20 @@ static void __init mx6_qpad_board_init(void)
 	imx6q_add_busfreq();
 
 	imx6_add_armpmu();
-	imx6q_add_perfmon(0);
-	imx6q_add_perfmon(1);
-	imx6q_add_perfmon(2);
-
-
+	
 	qpad_power_init();
+	
+	if(eBootModeCharger!=android_bootmode){
+		imx6q_add_perfmon(0);
+		imx6q_add_perfmon(1);
+		imx6q_add_perfmon(2);
+		
+		nfc_init();
 
-	nfc_init();
+		modem_init();
 
-	modem_init();
-
-	generic_add_w1(QPAD_W1_IO);
+		generic_add_w1(QPAD_W1_IO);
+	}
 
 	board_misc_init();
 	
@@ -1258,6 +1304,8 @@ static void __init mx6_qpad_timer_init(void)
 static struct sys_timer mx6_qpad_timer = {
 	.init   = mx6_qpad_timer_init,
 };
+
+
 
 static void __init mx6q_qpad_reserve(void)
 {
