@@ -1184,48 +1184,30 @@ static int hp_pga_event(struct snd_soc_dapm_widget *w,
 	struct snd_soc_codec *codec = w->codec;
 	int val,misc;
 
-	pr_debug("enter %s\n", __func__);
 
 	val = rt5625_read(codec, RT5625_VIRTUAL_MISC_FUNC);
 	val = (val & (0x3 << 6)) >> 6;
-	pr_debug("%s: val = %d, event = %d\n", __func__, val, event);
-	//if (val != 0x3 && !val)
-	//	return 0;
-
 	misc = rt5625_read(codec, RT5625_VIRTUAL_MISC2);
 
 	switch (event) {
-	case SND_SOC_DAPM_PRE_PMD:
+		default:
+		case SND_SOC_DAPM_POST_PMD:
 		{
-			if(misc&0x01)
-			{
-				hp_depop_mode2(codec);
-				snd_soc_update_bits(codec,RT5625_VIRTUAL_MISC2,0x01,0x00);				
-			}				
+			snd_soc_update_bits(codec, RT5625_HP_OUT_VOL, 0x8080, 0x8080);
+			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3, 0x0600, 0);
+			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1, 0x0030, 0);			
+		}
+		break;
+	
+		case SND_SOC_DAPM_POST_PMU:	
+		{
+			hp_depop_mode2(codec);
+			snd_soc_update_bits(codec, RT5625_HP_OUT_VOL,
+				  M_HP_L|M_HP_R, 0|0);
+			
 		}
 		break;
 
-	case SND_SOC_DAPM_POST_PMD:
-		{
-			//snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
-			//		  M_HP_L|M_HP_R,0);
-		}
-		break;
-
-	case SND_SOC_DAPM_POST_PMU:	break;
-
-	case SND_SOC_DAPM_PRE_PMU:
-		{
-			if(0==(misc&0x01))
-			{
-				hp_depop_mode2(codec);
-				snd_soc_update_bits(codec,RT5625_VIRTUAL_MISC2,0x01,0x01);				
-			}
-				
-		}
-		break;
-
-	default:break;
 	}
 
 	return 0;
@@ -1234,97 +1216,6 @@ static int hp_pga_event(struct snd_soc_dapm_widget *w,
 static int aux_pga_event(struct snd_soc_dapm_widget *w,
 			 struct snd_kcontrol *k, int event)
 {
-	return 0;
-}
-static int mic_pga_event(struct snd_soc_dapm_widget *w,
-			 struct snd_kcontrol *k, int event)
-{
-	struct snd_soc_codec *codec = w->codec;
-
-	//because we bypass mic pga(boost) so power up/down pga 
-	switch (event) {
-	case SND_SOC_DAPM_POST_PMD:
-		{
-		}
-		break;
-	case SND_SOC_DAPM_POST_PMU:
-		{
-			unsigned int mic_reg = rt5625_read(codec,RT5625_MIC_CTRL);
-			unsigned int boost_power = rt5625_read(codec,RT5625_PWR_MANAG_ADD3);
-			if(!strcmp(w->name,"Mic1 Boost"))
-			{
-				if((MIC1_BOOST_CONTROL_BYPASS==(mic_reg&MIC1_BOOST_CONTROL_MASK))&&
-					(PWR_MIC1_BOOST&boost_power))
-				{
-					snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x02,0x00);
-				}
-			}else if(!strcmp(w->name,"Mic2 Boost"))
-			{
-				if((MIC2_BOOST_CONTROL_BYPASS==(mic_reg&MIC2_BOOST_CONTROL_MASK))&&
-					(PWR_MIC2_BOOST&boost_power))
-				{
-					snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x01,0x00);
-				}				
-			}
-			//schedule_timeout_uninterruptible(msecs_to_jiffies(300));
-			
-		}	
-		break;
-
-	case SND_SOC_DAPM_PRE_PMD:
-	case SND_SOC_DAPM_PRE_PMU:
-	default:break;
-	}
-
-
-	return 0;
-}
-
-static int mic_bias_event(struct snd_soc_dapm_widget *w,
-			 struct snd_kcontrol *k, int event)
-{
-	switch (event) {
-	case SND_SOC_DAPM_POST_PMD:
-		{
-			/*
-			if(!strcmp(w->name,"Mic1 Bias"))
-			{
-				printk("power down mic1 boost\n");
-				snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x02,0x00);
-			}
-			else if(!strcmp(w->name,"Mic2 Bias"))
-			{
-				printk("power down mic2 boost\n");
-				snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x01,0x00);
-			}*/			
-			//schedule_timeout_uninterruptible(msecs_to_jiffies(500));
-		}
-		break;
-	case SND_SOC_DAPM_PRE_PMU:
-		{
-			/*
-			if(!strcmp(w->name,"Mic1 Bias"))
-			{
-				printk("power up mic1 boost\n");
-				snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x02,0x02);
-			}
-			else if(!strcmp(w->name,"Mic2 Bias"))
-			{
-				printk("power up mic2 boost\n");
-				snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD3,0x01,0x01);
-			}			
-			schedule_timeout_uninterruptible(msecs_to_jiffies(300));
-			*/
-		}	
-		break;
-		case SND_SOC_DAPM_POST_PMU:
-			//schedule_timeout_uninterruptible(msecs_to_jiffies(300));
-			break;
-
-	case SND_SOC_DAPM_PRE_PMD:
-	default:break;
-	}
-
 	return 0;
 }
 
@@ -1351,14 +1242,8 @@ SND_SOC_DAPM_INPUT("Phone"),
 SND_SOC_DAPM_INPUT("Mic1"),
 SND_SOC_DAPM_INPUT("Mic2"),
 
-SND_SOC_DAPM_PGA_E("Mic1 Boost", RT5625_PWR_MANAG_ADD3, 1, 0, NULL, 0,
-	mic_pga_event,
-	SND_SOC_DAPM_POST_PMD | SND_SOC_DAPM_PRE_PMD|
-	SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMU),
-SND_SOC_DAPM_PGA_E("Mic2 Boost", RT5625_PWR_MANAG_ADD3, 0, 0, NULL, 0,
-	mic_pga_event,
-	SND_SOC_DAPM_POST_PMD | SND_SOC_DAPM_PRE_PMD|
-	SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMU),
+SND_SOC_DAPM_PGA("Mic1 Boost", RT5625_PWR_MANAG_ADD3, 1, 0, NULL, 0),
+SND_SOC_DAPM_PGA("Mic2 Boost", RT5625_PWR_MANAG_ADD3, 0, 0, NULL, 0),
 
 SND_SOC_DAPM_DAC("Left DAC", "Left HiFi Playback DAC",
 		 RT5625_PWR_MANAG_ADD2, 9, 0),
@@ -1452,18 +1337,8 @@ SND_SOC_DAPM_OUTPUT("SPKR"),
 SND_SOC_DAPM_OUTPUT("HPL"),
 SND_SOC_DAPM_OUTPUT("HPR"),
 SND_SOC_DAPM_OUTPUT("AUX"),
-SND_SOC_DAPM_INPUT("PCM"),
-
-
-
-SND_SOC_DAPM_MICBIAS_E("Mic1 Bias", RT5625_PWR_MANAG_ADD1, 3, 0,
-	mic_bias_event,
-	SND_SOC_DAPM_POST_PMD | SND_SOC_DAPM_PRE_PMD|
-	SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMU),
-SND_SOC_DAPM_MICBIAS_E("Mic2 Bias", RT5625_PWR_MANAG_ADD1, 2, 0,
-	mic_bias_event,
-	SND_SOC_DAPM_POST_PMD | SND_SOC_DAPM_PRE_PMD|
-	SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMU),
+SND_SOC_DAPM_MICBIAS("Mic1 Bias", RT5625_PWR_MANAG_ADD1, 3, 0),
+SND_SOC_DAPM_MICBIAS("Mic2 Bias", RT5625_PWR_MANAG_ADD1, 2, 0),
 };
 
 
@@ -1474,15 +1349,11 @@ static const struct snd_soc_dapm_route rt5625_dapm_routes[] = {
 	{"Left LineIn PGA", NULL, "Left LineIn"},
 	{"Right LineIn PGA", NULL, "Right LineIn"},
 	{"Phone PGA", NULL, "Phone"},
-	//pga<--boost<--bias<--mic
-	{"Mic1 Bias", NULL, "Mic1"},
-	{"Mic2 Bias", NULL, "Mic2"},
-	{"Mic1 Boost", NULL, "Mic1 Bias"},
-	{"Mic2 Boost", NULL, "Mic2 Bias"},	
+	{"Mic1 Boost", NULL, "Mic1"},
+	{"Mic2 Boost", NULL, "Mic2"},
 	{"Mic1 PGA", NULL, "Mic1 Boost"},
 	{"Mic2 PGA", NULL, "Mic2 Boost"},
 	{"VoDAC PGA", NULL, "Voice DAC"},
-	{"VoDAC PGA",NULL,"PCM"},
 	/* left ADC mixer */
 	{"Left Rec Mixer", "LineIn Capture Switch", "Left LineIn"},
 	{"Left Rec Mixer", "Phone Capture Switch", "Phone"},
@@ -2135,33 +2006,65 @@ static int rt5625_voice_mute(struct snd_soc_dai *dai, int mute)
 static int rt5625_set_bias_level(struct snd_soc_codec *codec,
 			enum snd_soc_bias_level level)
 {
-	pr_debug("%s level=%s\n",__func__,
-		(SND_SOC_BIAS_ON==level)?"on":
-		(SND_SOC_BIAS_PREPARE==level)?"prepare":
-		(SND_SOC_BIAS_STANDBY==level)?"standby":
-		(SND_SOC_BIAS_OFF==level)?"off":"unknown"	);
-	/*
-	switch(level) {
+
+	if (level == codec->dapm.bias_level)
+		return 0;
+ 	switch(level) {
+	default:
 	case SND_SOC_BIAS_ON:
+	case SND_SOC_BIAS_STANDBY:
+	case SND_SOC_BIAS_PREPARE:
 		{
-			snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD1,
-			PWR_MIC_BIAS1|PWR_MIC_BIAS2,
-			PWR_MIC_BIAS1|PWR_MIC_BIAS2);			
+			snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD1,PWR_MIC_BIAS1|PWR_MIC_BIAS2,PWR_MIC_BIAS1|PWR_MIC_BIAS2);		
 		}
 		break;
 	case SND_SOC_BIAS_OFF:
+		
+		snd_soc_update_bits(codec, RT5625_HP_OUT_VOL, M_HP_L|M_HP_R, M_HP_L|M_HP_R);        /*mute hp*/
+		snd_soc_update_bits(codec, RT5625_SPK_OUT_VOL, M_SPK_L|M_SPK_R, M_SPK_L|M_SPK_R);        /*mute spk*/
 		snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD1,
-			0,
-			PWR_MIC_BIAS2|PWR_MIC_BIAS1);
-		break;
-	case SND_SOC_BIAS_STANDBY:
-	case SND_SOC_BIAS_PREPARE:
-	default:
+			PWR_MIC_BIAS2|PWR_MIC_BIAS1,0);
 		break;
 	}
-	*/
+	codec->dapm.bias_level = level;
 	return 0;
 }
+
+int rt5625_headset_detect(struct snd_soc_codec *codec)
+{
+#define MIC2_OVER_SHORTCURRENT_STATUS_MASK 0x100
+        unsigned int value;
+		unsigned int old_value;
+        int ret=0;
+
+        /*short current detection*/
+		old_value = rt5625_read(codec,RT5625_PWR_MANAG_ADD1);
+        snd_soc_update_bits(codec,RT5625_PWR_MANAG_ADD1,PWR_MAIN_BIAS|PWR_MIC_BIAS2_DET|PWR_MIC_BIAS2,
+        PWR_MAIN_BIAS|PWR_MIC_BIAS2_DET|PWR_MIC_BIAS2);//bias2 power on
+
+        //short-current threshold,00:600uA,01:1500uA,02:2000uA ,using 600uA 
+        snd_soc_update_bits(codec,RT5625_MIC_CTRL,0x3,0x0);        
+        snd_soc_update_bits(codec,RT5625_GPIO_PIN_POLARITY,0x200,0x200);//polarity detect high
+        snd_soc_update_bits(codec,RT5625_GPIO_PIN_STICKY,0x200,0x200);//sticky bit enable
+        snd_soc_update_bits(codec,RT5625_GPIO_PIN_WAKEUP,0x200,0x200);//wakeup bit enable
+
+        msleep(100);
+        value = rt5625_read(codec,RT5625_OVER_TEMP_CURR_STATUS);
+        printk("over current status=x%x\n",value);      
+        if(value<0)
+        {
+                printk("fail to access rt5625 register\n");
+        }
+        else if(MIC2_OVER_SHORTCURRENT_STATUS_MASK&value)
+        {
+                ret=1;
+        }
+        
+        rt5625_write(codec,RT5625_PWR_MANAG_ADD1,old_value);
+        return ret;
+}
+
+EXPORT_SYMBOL_GPL(rt5625_headset_detect);
 
 
 #define RT5625_STEREO_RATES (SNDRV_PCM_RATE_8000_48000)

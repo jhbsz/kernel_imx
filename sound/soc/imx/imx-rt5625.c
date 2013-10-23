@@ -77,6 +77,8 @@ static struct snd_soc_jack_gpio imx_hp_jack_gpio = {
 	.invert = 0,
 };
 
+extern int rt5625_headset_detect(struct snd_soc_codec *codec);
+
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -255,8 +257,17 @@ static int hp_jack_status_check(void)
 		}
 
 		if (priv->hp_status != plat->hp_active_low) {
-			switch_set_state(&priv->sdev, 2);
-			snprintf(buf, 32, "STATE=%d", 2);
+			int state=1;
+			/*
+			 *	state meaning
+			 *	0: no headset plug in
+			 *	1: headset with microphone plugged
+			 *	2: headset without microphone plugged
+			*/
+			if(rt5625_headset_detect(gcodec))
+				state=2;
+			switch_set_state(&priv->sdev, state);
+			snprintf(buf, 32, "STATE=%d", state);
 			ret = imx_hp_jack_gpio.report;
 		} else {
 			switch_set_state(&priv->sdev, 0);
@@ -306,7 +317,6 @@ static int imx_rt5625_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* Set up imx specific audio path audio_map */
 	snd_soc_dapm_add_routes(&codec->dapm, audio_map, ARRAY_SIZE(audio_map));
-	snd_soc_dapm_enable_pin(&codec->dapm, "PCM");
 
 	snd_soc_dapm_sync(&codec->dapm);
 
@@ -403,7 +413,6 @@ static int imx_audmux_config(int slave, int master)
 /*
  * This function will register the snd_soc_pcm_link drivers.
  */
-#warning "FIXME to support microphone support of headphone"
 static int __devinit imx_rt5625_probe(struct platform_device *pdev)
 {
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;	
