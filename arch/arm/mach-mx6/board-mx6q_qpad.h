@@ -43,6 +43,7 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	/* CCM  */
 	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* Clock output 1: Camera MCLK */
 	MX6Q_PAD_NANDF_CS2__CCM_CLKO2,	/* Clock output 2: Audio Codec MCLK*/
+	MX6Q_PAD_GPIO_8__ANATOP_ANATOP_32K_OUT,/*32K Reference clock output*/
 
 
 	/* PMIC */

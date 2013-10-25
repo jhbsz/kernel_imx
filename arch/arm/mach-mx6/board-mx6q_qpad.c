@@ -1075,7 +1075,7 @@ static int __init board_misc_init(void){
 		return -EINVAL;
 	}
 	gpio_direction_output(QPAD_WIFI_RST,0);
-	mdelay(5);
+	mdelay(10);
 	gpio_direction_output(QPAD_WIFI_RST,1);
 	gpio_free(QPAD_WIFI_RST);
 
