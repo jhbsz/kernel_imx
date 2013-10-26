@@ -308,7 +308,7 @@ static void imx_stop_tx(struct uart_port *port)
 	struct imx_port *sport = (struct imx_port *)port;
 	unsigned long temp;
 
-	if (USE_IRDA(sport)) {
+	if (USE_IRDA(sport)||sport->enable_mod) {
 		/* half duplex - wait for end of transmission */
 		int n = 256;
 		while ((--n > 0) &&
@@ -484,7 +484,7 @@ static void imx_start_tx(struct uart_port *port)
 	struct imx_port *sport = (struct imx_port *)port;
 	unsigned long temp;
 
-	if (USE_IRDA(sport)) {
+	if (USE_IRDA(sport)||sport->enable_mod) {
 		/* half duplex in IrDA mode; have to disable receive mode */
 		temp = readl(sport->port.membase + UCR4);
 		temp &= ~(UCR4_DREN);
@@ -500,7 +500,7 @@ static void imx_start_tx(struct uart_port *port)
 		writel(temp | UCR1_TXMPTYEN, sport->port.membase + UCR1);
 	}
 
-	if (USE_IRDA(sport)) {
+	if (USE_IRDA(sport)||sport->enable_mod) {
 		temp = readl(sport->port.membase + UCR1);
 		temp |= UCR1_TRDYEN;
 		writel(temp, sport->port.membase + UCR1);
@@ -1085,7 +1085,7 @@ static int imx_startup(struct uart_port *port)
 	temp |= (UCR2_RXEN | UCR2_TXEN);
 	writel(temp, sport->port.membase + UCR2);
 
-	if (USE_IRDA(sport)) {
+	if (USE_IRDA(sport)||sport->enable_mod) {
 		/* clear RX-FIFO */
 		int i = 64;
 		while ((--i > 0) &&
@@ -1100,7 +1100,7 @@ static int imx_startup(struct uart_port *port)
 		writel(temp, sport->port.membase + UCR3);
 	}
 
-	if (USE_IRDA(sport)) {
+	if (USE_IRDA(sport)||sport->enable_mod) {
 		temp = readl(sport->port.membase + UCR4);
 		if (sport->irda_inv_rx)
 			temp |= UCR4_INVR;
@@ -1857,6 +1857,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 	if (pdata && (pdata->flags & IMXUART_MODULATION)){
 		sport->enable_mod= 1;
 		sport->modulation_enable = pdata->modulation_enable;
+		sport->trcv_delay = pdata->transceiver_delay;
 	}
 	
 #ifdef CONFIG_IRDA

@@ -264,6 +264,7 @@ void uart_modulation_enable(int en){
 static const struct imxuart_platform_data mx6q_uart4_data __initconst = {
        .flags      = IMXUART_MODULATION,
        .modulation_enable = uart_modulation_enable,
+       .transceiver_delay = 100,
 
 };
 
