@@ -78,6 +78,7 @@ static struct snd_soc_jack_gpio imx_hp_jack_gpio = {
 };
 
 extern int rt5625_headset_detect(struct snd_soc_codec *codec);
+static int hp_jack_status_check(void);
 
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
 {
@@ -198,6 +199,8 @@ static ssize_t show_headphone(struct device_driver *dev, char *buf)
 	else
 		strcpy(buf, "speaker\n");
 
+	hp_jack_status_check();
+
 	return strlen(buf);
 }
 
@@ -257,15 +260,16 @@ static int hp_jack_status_check(void)
 		}
 
 		if (priv->hp_status != plat->hp_active_low) {
-			int state=1;
+			int state=2;
 			/*
 			 *	state meaning
 			 *	0: no headset plug in
 			 *	1: headset with microphone plugged
 			 *	2: headset without microphone plugged
+			 *    if
 			*/
 			if(rt5625_headset_detect(gcodec))
-				state=2;
+				state=1;
 			switch_set_state(&priv->sdev, state);
 			snprintf(buf, 32, "STATE=%d", state);
 			ret = imx_hp_jack_gpio.report;

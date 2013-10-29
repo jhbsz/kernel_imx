@@ -2044,19 +2044,17 @@ int rt5625_headset_detect(struct snd_soc_codec *codec)
 
         //short-current threshold,00:600uA,01:1500uA,02:2000uA ,using 600uA 
         snd_soc_update_bits(codec,RT5625_MIC_CTRL,0x3,0x0);        
-        snd_soc_update_bits(codec,RT5625_GPIO_PIN_POLARITY,0x200,0x200);//polarity detect high
+        snd_soc_update_bits(codec,RT5625_GPIO_PIN_STATUS,0x200,0x0);//clear mic2 short detect status
+        snd_soc_update_bits(codec,RT5625_GPIO_PIN_POLARITY,0x0,0x200);//polarity detect high
         snd_soc_update_bits(codec,RT5625_GPIO_PIN_STICKY,0x200,0x200);//sticky bit enable
         snd_soc_update_bits(codec,RT5625_GPIO_PIN_WAKEUP,0x200,0x200);//wakeup bit enable
 
-        msleep(100);
-        value = rt5625_read(codec,RT5625_OVER_TEMP_CURR_STATUS);
-        printk("over current status=x%x\n",value);      
-        if(value<0)
+
+        msleep(100);		
+		value = rt5625_read(codec,RT5625_OVER_TEMP_CURR_STATUS);
+        if(0==(MIC2_OVER_SHORTCURRENT_STATUS_MASK&value))
         {
-                printk("fail to access rt5625 register\n");
-        }
-        else if(MIC2_OVER_SHORTCURRENT_STATUS_MASK&value)
-        {
+        		//return 1 if no over short current 
                 ret=1;
         }
         
