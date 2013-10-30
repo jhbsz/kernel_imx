@@ -199,6 +199,7 @@ struct imx_port {
 	unsigned int		use_irda:1;
 	unsigned int		irda_inv_rx:1;
 	unsigned int		irda_inv_tx:1;
+	unsigned int 		recv_enabled:1;
 	unsigned short		trcv_delay; /* transceiver delay */
 	struct clk		*clk;
 
@@ -338,7 +339,6 @@ static void imx_stop_tx(struct uart_port *port)
 			while (readl(sport->port.membase + URXD0) &
 			       URXD_CHARRDY)
 				barrier();
-
 			temp = readl(sport->port.membase + UCR1);
 			temp |= UCR1_RRDYEN;
 			writel(temp, sport->port.membase + UCR1);
@@ -346,6 +346,7 @@ static void imx_stop_tx(struct uart_port *port)
 			temp = readl(sport->port.membase + UCR4);
 			temp |= UCR4_DREN;
 			writel(temp, sport->port.membase + UCR4);
+			sport->recv_enabled=1;
 		}
 		return;
 	}
@@ -493,6 +494,8 @@ static void imx_start_tx(struct uart_port *port)
 		temp = readl(sport->port.membase + UCR1);
 		temp &= ~(UCR1_RRDYEN);
 		writel(temp, sport->port.membase + UCR1);
+
+		sport->recv_enabled=0;
 	}
 
 	if (!sport->enable_dma) {
@@ -660,7 +663,7 @@ static irqreturn_t imx_int(int irq, void *dev_id)
 
 	sts = readl(sport->port.membase + USR1);
 
-	if (sts & USR1_RRDY) {
+	if (sts & USR1_RRDY&&sport->recv_enabled) {
 		if (sport->enable_dma)
 			imx_dma_rxint(sport);
 		else
@@ -1073,6 +1076,7 @@ static int imx_startup(struct uart_port *port)
 		/* ICD,await 4 idle frames also enable AGING Timer */
 		temp |= UCR1_ICD_REG(0)|UCR1_ATDMAEN;
 	}
+	sport->recv_enabled=1;
 
 	if (USE_IRDA(sport)) {
 		temp |= UCR1_IREN;
@@ -1100,7 +1104,7 @@ static int imx_startup(struct uart_port *port)
 		writel(temp, sport->port.membase + UCR3);
 	}
 
-	if (USE_IRDA(sport)||sport->enable_mod) {
+	if (USE_IRDA(sport)) {
 		temp = readl(sport->port.membase + UCR4);
 		if (sport->irda_inv_rx)
 			temp |= UCR4_INVR;
