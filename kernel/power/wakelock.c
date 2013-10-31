@@ -120,6 +120,18 @@ static int print_lock_stat(struct seq_file *m, struct wake_lock *lock)
 		     ktime_to_ns(lock->stat.last_time));
 }
 
+static const char* wake_lock_typename(int type)
+{
+	static const char* name[]=
+	{
+		"suspend(prevent suspend)",
+		"idle (prevent low power idle)",
+		"unknown",
+	};
+	if(type<WAKE_LOCK_TYPE_COUNT)
+		return name[type];
+	return name[WAKE_LOCK_TYPE_COUNT];
+}
 static int wakelock_stats_show(struct seq_file *m, void *unused)
 {
 	unsigned long irqflags;
@@ -131,9 +143,11 @@ static int wakelock_stats_show(struct seq_file *m, void *unused)
 
 	ret = seq_puts(m, "name\tcount\texpire_count\twake_count\tactive_since"
 			"\ttotal_time\tsleep_time\tmax_time\tlast_change\n");
+	seq_puts(m,"-------------------------------inactive locks---------------\n");
 	list_for_each_entry(lock, &inactive_locks, link)
 		ret = print_lock_stat(m, lock);
 	for (type = 0; type < WAKE_LOCK_TYPE_COUNT; type++) {
+		seq_printf(m,"\n--------------------------%s locks---------------\n",wake_lock_typename(type));
 		list_for_each_entry(lock, &active_wake_locks[type], link)
 			ret = print_lock_stat(m, lock);
 	}
