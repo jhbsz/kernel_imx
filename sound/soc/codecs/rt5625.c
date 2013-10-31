@@ -320,6 +320,7 @@ static int rt5625_direct_write(struct snd_soc_codec *codec, unsigned int reg,
 	if(reg<=0x74)
 	{
 		u8 data[3];
+		#if 0
 		//special case for RT5625_PWR_MANAG_ADD1
 		//for issue codec may be in short current status
 		if(RT5625_PWR_MANAG_ADD1==reg)
@@ -330,7 +331,7 @@ static int rt5625_direct_write(struct snd_soc_codec *codec, unsigned int reg,
 				value|=PWR_MAIN_BIAS;
 			}
 		}
-		
+		#endif
 		pr_debug("rt5625 write reg %#x=%#x\n",reg,value);
 		data[0] = reg;
 		data[1] = (value & 0xff00) >> 8;
