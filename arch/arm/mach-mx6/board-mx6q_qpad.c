@@ -138,8 +138,8 @@
 #define QPAD_QRE_TRIG		IMX_GPIO_NR(3, 30)
 
 //FLASHLIGHT
-#define QPAD_FL_PWR_EN		IMX_GPIO_NR(3, 31)
-#define QPAD_FL_EN			IMX_GPIO_NR(4, 5)
+#define QPAD_FL_PWR_EN		IMX_GPIO_NR(4, 5)
+#define QPAD_FL_EN			IMX_GPIO_NR(3, 31)
 
 //Touch Panel
 #define QPAD_TP_PWR_EN		IMX_GPIO_NR(2, 28)

@@ -158,8 +158,8 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	MX6Q_PAD_EIM_DA0__GPIO_3_0,			/*GPS_PWR_EN*/
 
 	/*FlashLight*/
-	MX6Q_PAD_EIM_D31__GPIO_3_31,		/*FL_PWR_EN*/
-	MX6Q_PAD_GPIO_19__GPIO_4_5,			/*FLASHLIGHT_EN*/
+	MX6Q_PAD_EIM_D31__GPIO_3_31,		/*FLASHLIGHT_EN*/
+	MX6Q_PAD_GPIO_19__GPIO_4_5,			/*FL_PWR_EN*/
 	
 	/*W1*/
 	MX6Q_PAD_EIM_D28__GPIO_3_28,		/*OneWire*/
