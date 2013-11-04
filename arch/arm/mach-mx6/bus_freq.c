@@ -39,6 +39,7 @@
 #include <mach/clock.h>
 #include <mach/mxc_dvfs.h>
 #include <mach/sdram_autogating.h>
+#include <mach/system.h>
 #include <asm/mach/map.h>
 #include <asm/mach-types.h>
 #include <asm/cacheflush.h>
@@ -416,7 +417,11 @@ void bus_freq_update(struct clk *clk, bool flag)
 			  */
 			high_cpu_freq = 1;
 			if (low_bus_freq_mode || audio_bus_freq_mode)
+				#ifdef DDR_POWER_SAVING_PATCH
+				set_high_bus_freq(0);
+				#else
 				set_high_bus_freq(1);
+				#endif
 		} else {
 			/* Update count */
 			if (clk->flags & AHB_HIGH_SET_POINT)
@@ -475,7 +480,11 @@ void bus_freq_update(struct clk *clk, bool flag)
 					/* Set to either high or
 					  * medium setpoint.
 					  */
+					#ifdef DDR_POWER_SAVING_PATCH
+					set_high_bus_freq(0);
+					#else
 					set_high_bus_freq(1);
+					#endif
 				}
 			}
 		}
@@ -510,7 +519,11 @@ static ssize_t bus_freq_scaling_enable_store(struct device *dev,
 #else
 		bus_freq_scaling_is_active = 1;
 #endif
+		#ifdef DDR_POWER_SAVING_PATCH
+		set_high_bus_freq(0);
+		#else
 		set_high_bus_freq(1);
+		#endif
 		/* Make sure system can enter low bus mode if it should be in
 		low bus mode */
 		if (low_freq_bus_used() && !low_bus_freq_mode)

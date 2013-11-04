@@ -32,13 +32,13 @@
 #include <linux/smp.h>
 #include <mach/hardware.h>
 #include <mach/clock.h>
+#include <mach/system.h>
 #include <asm/mach/map.h>
 #include <asm/mach-types.h>
 #include <asm/cacheflush.h>
 #include <asm/tlb.h>
 #include <asm/hardware/gic.h>
 #include "crm_regs.h"
-
 
 /* DDR settings */
 unsigned long (*iram_ddr_settings)[2];
@@ -134,6 +134,20 @@ unsigned long ddr3_400[][2] = {
 	{0x4850, 0x472D4833}
 };
 
+#ifdef DDR_POWER_SAVING_PATCH
+unsigned long ddr3_400_qpad[][2] = {
+	{0x83c, 0x4229024B},
+	{0x840, 0x02230223},
+	{0x483c, 0x42230245},
+	{0x4840, 0x02230201},
+	{0x848, 0x46414144},
+	{0x4848, 0x43433E4A},
+	{0x850, 0x40434541},
+	{0x4850, 0x453F473B}
+};
+#endif
+
+
 unsigned long *irq_used;
 
 unsigned long irqs_used_mx6q[] = {
@@ -187,7 +201,6 @@ int update_ddr_freq(int ddr_rate)
 
 	if (ddr_rate == curr_ddr_rate)
 		return 0;
-
 	if (low_bus_freq_mode || audio_bus_freq_mode)
 		dll_off = true;
 
@@ -201,10 +214,24 @@ int update_ddr_freq(int ddr_rate)
 					normal_mmdc_settings[i][1];
 		}
 		for (j = 0, i = ARRAY_SIZE(ddr3_dll_mx6q); i < iram_ddr_settings[0][0]; j++, i++) {
+			#ifdef DDR_POWER_SAVING_PATCH
+			if(machine_is_mx6q_qpad()){
+				iram_ddr_settings[i + 1][0] =
+						ddr3_400_qpad[j][0];
+				iram_ddr_settings[i + 1][1] =
+						ddr3_400_qpad[j][1];
+			}else {
+				iram_ddr_settings[i + 1][0] =
+						ddr3_400[j][0];
+				iram_ddr_settings[i + 1][1] =
+						ddr3_400[j][1];
+			}
+			#else
 			iram_ddr_settings[i + 1][0] =
 					ddr3_400[j][0];
 			iram_ddr_settings[i + 1][1] =
 					ddr3_400[j][1];
+			#endif
 		}
 	} else if (ddr_rate == ddr_normal_rate) {
 		for (i = 0; i < iram_ddr_settings[0][0]; i++) {

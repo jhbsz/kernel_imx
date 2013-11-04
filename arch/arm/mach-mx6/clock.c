@@ -32,9 +32,11 @@
 #include <mach/mxc_dvfs.h>
 #include <mach/ahci_sata.h>
 #include <mach/mxc_hdmi.h>
+#include <mach/system.h>
 #include "crm_regs.h"
 #include "cpu_op-mx6.h"
 #include "regs-anadig.h"
+
 
 #ifdef CONFIG_CLK_DEBUG
 #define __INIT_CLK_DEBUG(n)	.name = #n,
@@ -4876,7 +4878,11 @@ static struct clk usboh3_clk[] = {
 	.enable_shift = MXC_CCM_CCGRx_CG0_OFFSET,
 	.disable = _clk_disable,
 	.secondary = &usboh3_clk[1],
+	#ifdef DDR_POWER_SAVING_PATCH
+	.flags = AHB_MED_SET_POINT | CPU_FREQ_TRIG_UPDATE,
+	#else
 	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
+	#endif
 	},
 	{
 	.parent = &mmdc_ch0_axi_clk[0],
@@ -5497,7 +5503,14 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		clk_set_parent(&axi_clk, &pll3_pfd_540M);
 	} else if (cpu_is_mx6q()) {
 		clk_set_parent(&gpu3d_core_clk[0], &mmdc_ch0_axi_clk[0]);
-		clk_set_rate(&gpu3d_core_clk[0], 528000000);
+		#ifdef GPU_POWER_SAVING_PATCH
+		if(machine_is_mx6q_qpad()){
+			clk_set_rate(&gpu3d_core_clk[0], 264000000);
+			clk_set_rate(&gpu3d_shader_clk, 297000000);
+		}
+		else
+		#endif
+			clk_set_rate(&gpu3d_core_clk[0], 528000000);
 		clk_set_parent(&ipu2_clk, &mmdc_ch0_axi_clk[0]);
 		clk_set_parent(&ipu1_clk, &mmdc_ch0_axi_clk[0]);
 		clk_set_parent(&axi_clk, &periph_clk);

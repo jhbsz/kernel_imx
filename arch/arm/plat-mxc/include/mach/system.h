@@ -51,4 +51,9 @@ void do_switch_linux(void);
 #define do_switch_linux() do{} while (0)
 #endif
 
+#define DDR_POWER_SAVING_PATCH
+#define GPU_POWER_SAVING_PATCH
+
+
+
 #endif /* __ASM_ARCH_MXC_SYSTEM_H__ */
