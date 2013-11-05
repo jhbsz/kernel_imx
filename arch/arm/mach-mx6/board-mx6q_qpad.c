@@ -529,18 +529,21 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 
 static void mx6_reset_mipi_dsi(void)
 {
-	#if 0
+	static int skip_first_reset=1;
 	int ret;
+
+	if(skip_first_reset){
+		skip_first_reset=0;
+		return;
+	}
 	//return if bootloader already enable LCD???	
 	ret = gpio_request(QPAD_DISP_RST_B, "disp_reset");	
 	if (ret) {
 		pr_err("failed to request gpio: %d\n",QPAD_DISP_RST_B);
 		return;
 	}
-	gpio_direction_output(QPAD_DISP_RST_B,1);
-	udelay(10);
 	gpio_direction_output(QPAD_DISP_RST_B, 0);
-	udelay(50);
+	msleep(10);
 	gpio_direction_output(QPAD_DISP_RST_B, 1);
 	
 	gpio_free(QPAD_DISP_RST_B);
@@ -548,12 +551,10 @@ static void mx6_reset_mipi_dsi(void)
 	/*
 	 * it needs to delay 120ms minimum for reset complete
 	 */
-	msleep(120);
-	#endif
+	msleep(10);
 }
 
 static void mipi_dsi_power(int en){	
-	/*
 	int ret;
 	ret = gpio_request(QPAD_DISP_PWR_EN, "disp_pwren");	
 	if (ret) {
@@ -562,10 +563,8 @@ static void mipi_dsi_power(int en){
 	}
 	gpio_direction_output(QPAD_DISP_PWR_EN,en?0:1);
 	gpio_free(QPAD_DISP_PWR_EN);
-	*/
 }
 static void mipi_dsi_baclight_power(int en){
-	/*
 	int ret;
 	ret = gpio_request(QPAD_DISP_BL_PWR_EN, "disp_bl_pwren");	
 	if (ret) {
@@ -574,7 +573,6 @@ static void mipi_dsi_baclight_power(int en){
 	}
 	gpio_direction_output(QPAD_DISP_BL_PWR_EN,en?1:0);
 	gpio_free(QPAD_DISP_BL_PWR_EN);
-	*/
 }
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.ipu_id		= 0,

@@ -51,8 +51,18 @@ void do_switch_linux(void);
 #define do_switch_linux() do{} while (0)
 #endif
 
-#define DDR_POWER_SAVING_PATCH
-#define GPU_POWER_SAVING_PATCH
+/*
+ * DDR clock run at 400MHz to saving power 
+*/
+//#define DDR_POWER_SAVING_PATCH
+
+/*
+ * Decrease down gpu clock to saving power
+ * Now we only chage gpu_3d_core clock and gpu_3d_shader clock
+ *
+*/
+//#define GPU_POWER_SAVING_PATCH
+
 
 
 

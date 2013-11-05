@@ -68,7 +68,12 @@ static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
 	#ifdef CONFIG_FB_MXC_NT35517_5INCH_PANEL
 	{
 		"NT-QHD",
-		{mipid_nt35517_get_lcd_videomode, mipid_nt35517_lcd_setup},
+		{
+			mipid_nt35517_get_lcd_videomode,
+			mipid_nt35517_lcd_setup,
+			mipid_nt35517_lcd_suspend,
+			mipid_nt35517_lcd_resume,
+		},
 	},
 	#endif
 	{
@@ -520,8 +525,12 @@ static int mipi_dsi_power_on(struct mxc_dispdrv_handle *disp)
 		/* host send pclk/hsync/vsync for two frames before sleep-out */
 		msleep((1000/mipi_dsi->mode->refresh + 1) << 1);
 		mipi_dsi_set_mode(mipi_dsi, true);
-		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_EXIT_SLEEP_MODE,
-			NULL, 0);
+		if(mipi_dsi->lcd_callback->mipi_lcd_resume){
+			err = mipi_dsi->lcd_callback->mipi_lcd_resume(mipi_dsi);
+		}else {
+			err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_EXIT_SLEEP_MODE,
+				NULL, 0);
+		}
 		if (err) {
 			dev_err(&mipi_dsi->pdev->dev,
 				"MIPI DSI DCS Command sleep-in error!\n");
@@ -541,8 +550,12 @@ void mipi_dsi_power_off(struct mxc_dispdrv_handle *disp)
 
 	if (mipi_dsi->dsi_power_on) {
 		mipi_dsi_set_mode(mipi_dsi, true);
-		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_ENTER_SLEEP_MODE,
-			NULL, 0);
+		if(mipi_dsi->lcd_callback->mipi_lcd_suspend){
+			err = mipi_dsi->lcd_callback->mipi_lcd_suspend(mipi_dsi);
+		}else {		
+			err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_ENTER_SLEEP_MODE,
+				NULL, 0);
+		}
 		if (err) {
 			dev_err(&mipi_dsi->pdev->dev,
 				"MIPI DSI DCS Command display on error!\n");

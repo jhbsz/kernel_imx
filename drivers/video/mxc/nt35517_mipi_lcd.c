@@ -30,9 +30,7 @@ do {								\
 	}							\
 } while (0)
 
-static int mipid_init_backlight(struct mipi_dsi_info *mipi_dsi);
-
-static struct fb_videomode truly_lcd_modedb[] = {
+static struct fb_videomode nt35517_lcd_modedb[] = {
 	{
 	 "NT-QHD", 60, 540, 960, 30500/*ps*/,  //945,30500
 	 3, 3,
@@ -47,25 +45,23 @@ static struct fb_videomode truly_lcd_modedb[] = {
 static struct mipi_lcd_config lcd_config = {
 	.virtual_ch		= 0x0,
 	.data_lane_num  = 0x2,
-	.max_phy_clk    = 450,
+	.max_phy_clk    = 550,
 	.dpi_fmt		= MIPI_RGB888,
 };
 void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 		struct mipi_lcd_config **data)
 {
 	if (cpu_is_mx6dl())
-		truly_lcd_modedb[0].pixclock = 37037; /* 27M clock*/
-	*mode = &truly_lcd_modedb[0];
-	*size = ARRAY_SIZE(truly_lcd_modedb);
+		nt35517_lcd_modedb[0].pixclock = 37037; /* 27M clock*/
+	*mode = &nt35517_lcd_modedb[0];
+	*size = ARRAY_SIZE(nt35517_lcd_modedb);
 	*data = &lcd_config;
 }
 
-int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
+static int mipid_nt35517_setup(struct mipi_dsi_info *mipi_dsi)
 {
 	u32 buf[DSI_CMD_BUF_MAXSIZE];
-	int err;	
-	return 0;
-
+	int err;
 	dev_dbg(&mipi_dsi->pdev->dev, "MIPI DSI LCD setup.\n");
 	//*************************************
 	// Select CMD2, Page 0
@@ -77,6 +73,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 					buf, 0x6);
 	CHECK_RETCODE(err);
 
+	#if 0
 	//read ID
 	buf[0] = MIPI_DSI_MAX_RET_PACK_SIZE;
 	err = mipi_dsi_pkt_write(mipi_dsi,
@@ -88,10 +85,6 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 			MIPI_DSI_GENERIC_READ_REQUEST_2_PARAM,
 			buf, 0x4);
 
-	if (!err ) {
-		printk("MIPI DSI LCD ID:0x%x.\n", buf[0]);
-	} 
-	
 	if (!err && ((buf[0] & 0xffff) == 0x8000)) {
 		dev_info(&mipi_dsi->pdev->dev,
 				"MIPI DSI LCD ID:0x%x.\n", buf[0]);
@@ -103,10 +96,10 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 				"MIPI DSI LCD not detected!\n");
 		return err;
 	}
-
+	#endif
 
 	/* 
-	 *Forward Scan      CTB=CRL=0
+	 *Forward Scan		CTB=CRL=0
 	 */
 	buf[0] = 0xB1 | (0x7C << 8) |(0x00 << 16) ;
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
@@ -152,7 +145,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 				0x6);
 	CHECK_RETCODE(err);
 
-	#if 0 //have fix in pannel
+#if 0 //have fix in pannel
 	/* Set MIPI: DPHYCMD & DSICMD, data lane number */
 	buf[0] = HX8369_CMD_SETMIPI | (HX8369_CMD_SETMIPI_PARAM_1 << 8);
 	buf[1] = HX8369_CMD_SETMIPI_PARAM_2;
@@ -165,9 +158,9 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE, buf,
 				HX8369_CMD_SETMIPI_LEN);
 	CHECK_RETCODE(err);
-	#endif
+#endif
 
-	#if 1
+#if 1
 	/* Set pixel format:24bpp ,add by allenyao*/
 	buf[0] = 0x3A;
 	switch (lcd_config.dpi_fmt) {
@@ -193,11 +186,11 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_SHORT_WRITE_2_PARAM,
 			buf, 0);
 	CHECK_RETCODE(err);
-	#endif
+#endif
 
 	// Display Timing: Dual 8-phase 4-overlap
 	//REGW 0xC9, 0x61, 0x06, 0x0D, 0x17, 0x17, 0x00
-	buf[0] = 0xC9 |(0x61 << 8) |(0x06 << 16) |(0x0D << 24)  ;
+	buf[0] = 0xC9 |(0x61 << 8) |(0x06 << 16) |(0x0D << 24)	;
 	buf[1] = 0x17 | (0x17 << 8)| (0x00 << 8);
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 				buf, 0x7);
@@ -239,35 +232,35 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	buf[0] = 0xB3 |(0x10 << 8) |(0x10 << 16)|(0x10 << 24);
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x4);
-	CHECK_RETCODE(err);	
+	CHECK_RETCODE(err); 
 
 	// VGLX: -10.0V
 	//REGW 0xB4, 0x06, 0x06, 0x06
 	buf[0] = 0xB4 |(0x06 << 8) |(0x06 << 16)|(0x06 << 24);
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x4);
-	CHECK_RETCODE(err);	
+	CHECK_RETCODE(err); 
 
 	// AVDD: 3xVDDB
 	//REGW 0xB6, 0x54, 0x54, 0x54
 	buf[0] = 0xB6 |(0x54 << 8) |(0x54 << 16)|(0x54 << 24);
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x4);
-	CHECK_RETCODE(err);	
+	CHECK_RETCODE(err); 
 
 	// AVEE: -2xVDDB
 	//REGW 0xB7, 0x24, 0x24, 0x24
 	buf[0] = 0xB7 |(0x24 << 8) |(0x24 << 16)|(0x24 << 24);
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x4);
-	CHECK_RETCODE(err);	
+	CHECK_RETCODE(err); 
 
 	// VCL: -2xVDDB   pump clock : Hsync
 	//REGW 0xB8, 0x34, 0x34, 0x34
 	buf[0] = 0xB8 |(0x34 << 8) |(0x34 << 16)|(0x34 << 24);
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x4);
-	CHECK_RETCODE(err);	
+	CHECK_RETCODE(err); 
 
 	// VGH: 2xAVDD-AVEE
 	//REGW 0xB9, 0x34, 0x34, 0x34
@@ -297,7 +290,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 		buf, 0x4);
 	CHECK_RETCODE(err);
 
-	// VMSEL 0: 0xBE00  ;  1 : 0xBF00 
+	// VMSEL 0: 0xBE00	;  1 : 0xBF00 
 	//REGW 0xC1, 0x00
 	buf[0] = 0xC1 |(0x00 << 8) ;
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
@@ -327,7 +320,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	CHECK_RETCODE(err);
 
 //R(+) MCR cmd
-	//REGW 0xD1,0x00,0x00,0x00,	0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
+	//REGW 0xD1,0x00,0x00,0x00, 0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
 	buf[0] = 0xD1 |(0x00 << 8) |(0x00 << 16)|(0x00 << 24);
 	buf[1] = 0x62 |(0x00 << 8) |(0x90 << 16)|(0x00 << 24);
 	buf[2] = 0xAE |(0x00 << 8) |(0xC5 << 16)|(0x00 << 24);
@@ -336,7 +329,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xD2,0x01,0x58,0x01,	0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
+	//REGW 0xD2,0x01,0x58,0x01, 0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
 	buf[0] = 0xD2 |(0x01 << 8) |(0x58 << 16)|(0x01 << 24);
 	buf[1] = 0x8F |(0x01 << 8) |(0xBB << 16)|(0x01 << 24);
 	buf[2] = 0xFF |(0x02 << 8) |(0x37 << 16)|(0x02 << 24);
@@ -345,7 +338,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xD3,0x02,0xD0,0x03,	0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03	,0xAC,0x03,0xC3,0x03,	0xDD
+	//REGW 0xD3,0x02,0xD0,0x03, 0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03 ,0xAC,0x03,0xC3,0x03,	0xDD
 	buf[0] = 0xD3 |(0x02 << 8) |(0xD0 << 16)|(0x03 << 24);
 	buf[1] = 0x07 |(0x03 << 8) |(0x2C << 16)|(0x03 << 24);
 	buf[2] = 0x5F |(0x03 << 8) |(0x81 << 16)|(0x03 << 24);
@@ -354,7 +347,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xD4,0x03,0xF6,0x03,	0xFB
+	//REGW 0xD4,0x03,0xF6,0x03, 0xFB
 	buf[0] = 0xD4 |(0x03 << 8) |(0xF6 << 16)|(0x03 << 24);
 	buf[1] = 0xFB ;
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
@@ -362,7 +355,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	CHECK_RETCODE(err);
 
 //G(+) MCR cmd
-	//REGW 0xD5,0x00,0x00,0x00,	0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
+	//REGW 0xD5,0x00,0x00,0x00, 0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
 	buf[0] = 0xD5 |(0x00 << 8) |(0x00 << 16)|(0x00 << 24);
 	buf[1] = 0x62 |(0x00 << 8) |(0x90 << 16)|(0x00 << 24);
 	buf[2] = 0xAE |(0x00 << 8) |(0xC5 << 16)|(0x00 << 24);
@@ -371,7 +364,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xD6,0x01,0x58,0x01,	0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
+	//REGW 0xD6,0x01,0x58,0x01, 0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
 	buf[0] = 0xD6 |(0x01 << 8) |(0x58 << 16)|(0x01 << 24);
 	buf[1] = 0x8F |(0x01 << 8) |(0xBB << 16)|(0x01 << 24);
 	buf[2] = 0xFF |(0x02 << 8) |(0x37 << 16)|(0x02 << 24);
@@ -380,7 +373,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xD7,0x02,0xD0,0x03,	0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
+	//REGW 0xD7,0x02,0xD0,0x03, 0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
 	buf[0] = 0xD7 |(0x02 << 8) |(0xD0 << 16)|(0x03 << 24);
 	buf[1] = 0x07 |(0x03 << 8) |(0x2C << 16)|(0x03 << 24);
 	buf[2] = 0x5F |(0x03 << 8) |(0x81 << 16)|(0x03 << 24);
@@ -389,7 +382,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xD8,0x03,0xF6,0x03,	0xFB
+	//REGW 0xD8,0x03,0xF6,0x03, 0xFB
 	buf[0] = 0xD8 |(0x03 << 8) |(0xF6 << 16)|(0x03 << 24);
 	buf[1] = 0xFB ;
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
@@ -397,7 +390,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	CHECK_RETCODE(err);
 
 //B(+) MCR cmd
-	//REGW 0xD9,0x00,0x00,0x00,	0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
+	//REGW 0xD9,0x00,0x00,0x00, 0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
 	buf[0] = 0xD9 |(0x00 << 8) |(0x00 << 16)|(0x00 << 24);
 	buf[1] = 0x62 |(0x00 << 8) |(0x90 << 16)|(0x00 << 24);
 	buf[2] = 0xAE |(0x00 << 8) |(0xC5 << 16)|(0x00 << 24);
@@ -406,7 +399,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xDD,0x01,0x58,0x01,	0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
+	//REGW 0xDD,0x01,0x58,0x01, 0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
 	buf[0] = 0xDD |(0x01 << 8) |(0x58 << 16)|(0x01 << 24);
 	buf[1] = 0x8F |(0x01 << 8) |(0xBB << 16)|(0x01 << 24);
 	buf[2] = 0xFF |(0x02 << 8) |(0x37 << 16)|(0x02 << 24);
@@ -415,7 +408,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xDE,0x02,0xD0,0x03,	0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
+	//REGW 0xDE,0x02,0xD0,0x03, 0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
 	buf[0] = 0xDE |(0x02 << 8) |(0xD0 << 16)|(0x03 << 24);
 	buf[1] = 0x07 |(0x03 << 8) |(0x2C << 16)|(0x03 << 24);
 	buf[2] = 0x5F |(0x03 << 8) |(0x81 << 16)|(0x03 << 24);
@@ -424,7 +417,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xDF,0x03,0xF6,0x03,	0xFB
+	//REGW 0xDF,0x03,0xF6,0x03, 0xFB
 	buf[0] = 0xDF |(0x03 << 8) |(0xF6 << 16)|(0x03 << 24);
 	buf[1] = 0xFB ;
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
@@ -432,7 +425,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	CHECK_RETCODE(err);
 
 //R(-) MCR cmd
-	//REGW 0xE0,0x00,0x00,0x00,	0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
+	//REGW 0xE0,0x00,0x00,0x00, 0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
 	buf[0] = 0xE0 |(0x00 << 8) |(0x00 << 16)|(0x00 << 24);
 	buf[1] = 0x62 |(0x00 << 8) |(0x90 << 16)|(0x00 << 24);
 	buf[2] = 0xAE |(0x00 << 8) |(0xC5 << 16)|(0x00 << 24);
@@ -441,7 +434,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xE1,0x01,0x58,0x01,	0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
+	//REGW 0xE1,0x01,0x58,0x01, 0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
 	buf[0] = 0xE1 |(0x01 << 8) |(0x58 << 16)|(0x01 << 24);
 	buf[1] = 0x8F |(0x01 << 8) |(0xBB << 16)|(0x01 << 24);
 	buf[2] = 0xFF |(0x02 << 8) |(0x37 << 16)|(0x02 << 24);
@@ -450,7 +443,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xE2,0x02,0xD0,0x03,	0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
+	//REGW 0xE2,0x02,0xD0,0x03, 0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
 	buf[0] = 0xE2 |(0x02 << 8) |(0xD0 << 16)|(0x03 << 24);
 	buf[1] = 0x07 |(0x03 << 8) |(0x2C << 16)|(0x03 << 24);
 	buf[2] = 0x5F |(0x03 << 8) |(0x81 << 16)|(0x03 << 24);
@@ -467,7 +460,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	CHECK_RETCODE(err);
 
 //G(-) MCR cmd
-	//REGW 0xE4,0x00,0x00,0x00,	0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
+	//REGW 0xE4,0x00,0x00,0x00, 0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
 	buf[0] = 0xE4 |(0x00 << 8) |(0x00 << 16)|(0x00 << 24);
 	buf[1] = 0x62 |(0x00 << 8) |(0x90 << 16)|(0x00 << 24);
 	buf[2] = 0xAE |(0x00 << 8) |(0xC5 << 16)|(0x00 << 24);
@@ -476,7 +469,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xE5,0x01,0x58,0x01,	0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
+	//REGW 0xE5,0x01,0x58,0x01, 0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
 	buf[0] = 0xE5 |(0x01 << 8) |(0x58 << 16)|(0x01 << 24);
 	buf[1] = 0x8F |(0x01 << 8) |(0xBB << 16)|(0x01 << 24);
 	buf[2] = 0xFF |(0x02 << 8) |(0x37 << 16)|(0x02 << 24);
@@ -485,7 +478,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xE6,0x02,0xD0,0x03,	0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
+	//REGW 0xE6,0x02,0xD0,0x03, 0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
 	buf[0] = 0xE6 |(0x02 << 8) |(0xD0 << 16)|(0x03 << 24);
 	buf[1] = 0x07 |(0x03 << 8) |(0x2C << 16)|(0x03 << 24);
 	buf[2] = 0x5F |(0x03 << 8) |(0x81 << 16)|(0x03 << 24);
@@ -502,7 +495,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	CHECK_RETCODE(err);
 
 //B(-) MCR cmd
-	//REGW 0xE8,0x00,0x00,0x00,	0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
+	//REGW 0xE8,0x00,0x00,0x00, 0x62,0x00,0x90,0x00,	0xAE,0x00,0xC5,0x00,	0xEA,0x01,0x07,0x01,	0x34
 	buf[0] = 0xE8 |(0x00 << 8) |(0x00 << 16)|(0x00 << 24);
 	buf[1] = 0x62 |(0x00 << 8) |(0x90 << 16)|(0x00 << 24);
 	buf[2] = 0xAE |(0x00 << 8) |(0xC5 << 16)|(0x00 << 24);
@@ -511,7 +504,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xE9,0x01,0x58,0x01,	0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
+	//REGW 0xE9,0x01,0x58,0x01, 0x8F,0x01,0xBB,0x01,	0xFF,0x02,0x37,0x02,	0x39,0x02,0x6E,0x02,	0xA9
 	buf[0] = 0xE9 |(0x01 << 8) |(0x58 << 16)|(0x01 << 24);
 	buf[1] = 0x8F |(0x01 << 8) |(0xBB << 16)|(0x01 << 24);
 	buf[2] = 0xFF |(0x02 << 8) |(0x37 << 16)|(0x02 << 24);
@@ -520,7 +513,7 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x11);
 	CHECK_RETCODE(err);
-	//REGW 0xEA,0x02,0xD0,0x03,	0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
+	//REGW 0xEA,0x02,0xD0,0x03, 0x07,0x03,0x2C,0x03,	0x5F,0x03,0x81,0x03,	0xAC,0x03,0xC3,0x03,	0xDD
 	buf[0] = 0xEA |(0x02 << 8) |(0xD0 << 16)|(0x03 << 24);
 	buf[1] = 0x07 |(0x03 << 8) |(0x2C << 16)|(0x03 << 24);
 	buf[2] = 0x5F |(0x03 << 8) |(0x81 << 16)|(0x03 << 24);
@@ -535,9 +528,8 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
 		buf, 0x5);
 	CHECK_RETCODE(err);
-
 	//*************************************
-	// TE On                               
+	// TE On							   
 	//*************************************
 	//REGW 0x35,0x00
 	buf[0] = 0x35 |(0x00 << 8) ;
@@ -553,84 +545,79 @@ int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	/* To allow time for the supply voltages
 	 * and clock circuits to stabilize.
 	 */
-	msleep(120);
+	msleep(10);
 	buf[0] = MIPI_DCS_SET_DISPLAY_ON;
-	//buf[0] = MIPI_DCS_SET_DISPLAY_OFF;
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_SHORT_WRITE_1_PARAM,
 		buf, 0);
 	CHECK_RETCODE(err);
 
-	//err = mipid_init_backlight(mipi_dsi);//not use by allenyao
 	return err;
+
+}
+
+int mipid_nt35517_lcd_suspend(struct mipi_dsi_info *mipi_dsi){	
+	int err=0;	
+	if(mipi_dsi->backlight_power){
+		mipi_dsi->backlight_power(0);
+	}
+	if(mipi_dsi->lcd_power){
+		mipi_dsi->lcd_power(0);
+	}else {
+		u32 buf[DSI_CMD_BUF_MAXSIZE];
+		buf[0] = 0x22 |(0x00 << 8) ;
+		err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
+			buf, 0x2);
+		CHECK_RETCODE(err);
+		msleep(50);
+		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_SET_DISPLAY_OFF,
+					NULL, 0);
+		CHECK_RETCODE(err);
+		msleep(50);
+		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_ENTER_SLEEP_MODE,
+						NULL, 0);
+		CHECK_RETCODE(err);
+	}
 	
+	return err;
 }
 
-/*we use pwm control  backlight 
-   so we not use the below
-*/
-#if 0
-static int mipid_bl_update_status(struct backlight_device *bl)
-{
-	u32 buf;
-	int brightness = bl->props.brightness;
-	struct mipi_dsi_info *mipi_dsi = bl_get_data(bl);
+int mipid_nt35517_lcd_resume(struct mipi_dsi_info *mipi_dsi){	
+	int err=0;	
+	
+	if(mipi_dsi->lcd_power){
+		mipi_dsi->lcd_power(1);
+		if(mipi_dsi->reset)
+			mipi_dsi->reset();
+		mipid_nt35517_setup(mipi_dsi);
+	}else {
+		u32 buf[DSI_CMD_BUF_MAXSIZE];
+		buf[0] = 0x22 |(0x00 << 8) ;
+		err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
+			buf, 0x2);
+		CHECK_RETCODE(err);
+		msleep(120);
+		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_EXIT_SLEEP_MODE,
+					NULL, 0);
+		CHECK_RETCODE(err);
 
-	if (bl->props.power != FB_BLANK_UNBLANK ||
-	    bl->props.fb_blank != FB_BLANK_UNBLANK)
-		brightness = 0;
-
-	buf = HX8369_CMD_WRT_DISP_BRIGHT |
-			((brightness & HX8369BL_MAX_BRIGHT) << 8);
-	mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_SHORT_WRITE_2_PARAM,
-		&buf, 0);
-
-	hx8369bl_brightness = brightness & HX8369BL_MAX_BRIGHT;
-
-	dev_dbg(&bl->dev, "mipid backlight bringtness:%d.\n", brightness);
-	return 0;
-}
-
-static int mipid_bl_get_brightness(struct backlight_device *bl)
-{
-	return hx8369bl_brightness;
-}
-
-static int mipi_bl_check_fb(struct backlight_device *bl, struct fb_info *fbi)
-{
-	return 0;
-}
-
-static const struct backlight_ops mipid_lcd_bl_ops = {
-	.update_status = mipid_bl_update_status,
-	.get_brightness = mipid_bl_get_brightness,
-	.check_fb = mipi_bl_check_fb,
-};
-
-static int mipid_init_backlight(struct mipi_dsi_info *mipi_dsi)
-{
-	struct backlight_properties props;
-	struct backlight_device	*bl;
-
-	if (mipi_dsi->bl) {
-		pr_debug("mipid backlight already init!\n");
-		return 0;
+		msleep(120);
+		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_SET_DISPLAY_ON,
+						NULL, 0);
+		CHECK_RETCODE(err);
 	}
-	memset(&props, 0, sizeof(struct backlight_properties));
-	props.max_brightness = HX8369BL_MAX_BRIGHT;
-	props.type = BACKLIGHT_RAW;
-	bl = backlight_device_register("mipid-bl", &mipi_dsi->pdev->dev,
-		mipi_dsi, &mipid_lcd_bl_ops, &props);
-	if (IS_ERR(bl)) {
-		pr_err("error %ld on backlight register\n", PTR_ERR(bl));
-		return PTR_ERR(bl);
+	
+	if(mipi_dsi->backlight_power){
+		mipi_dsi->backlight_power(1);
 	}
-	mipi_dsi->bl = bl;
-	bl->props.power = FB_BLANK_UNBLANK;
-	bl->props.fb_blank = FB_BLANK_UNBLANK;
-	bl->props.brightness = HX8369BL_DEF_BRIGHT;
-
-	mipid_bl_update_status(bl);
-	return 0;
+	
+	return err;
 }
-#endif
+
+
+int mipid_nt35517_lcd_setup(struct mipi_dsi_info *mipi_dsi)
+{
+	//FIXME skip setup since bootloader already init
+	return 0;
+
+}
 

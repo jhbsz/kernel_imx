@@ -52,6 +52,10 @@ struct mipi_dsi_lcd_callback {
 			struct mipi_lcd_config **);
 	int  (*mipi_lcd_setup)(struct mipi_dsi_info *);
 
+	int  (*mipi_lcd_suspend)(struct mipi_dsi_info *);
+
+	int  (*mipi_lcd_resume)(struct mipi_dsi_info *);
+
 };
 
 struct mipi_dsi_match_lcd {
@@ -106,6 +110,10 @@ int mipid_hx8369_lcd_setup(struct mipi_dsi_info *);
 void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 		struct mipi_lcd_config **data);
 int mipid_nt35517_lcd_setup(struct mipi_dsi_info *);
+int mipid_nt35517_lcd_resume(struct mipi_dsi_info *mipi_dsi);
+int mipid_nt35517_lcd_suspend(struct mipi_dsi_info *mipi_dsi);
+
+
 #endif
 
 #ifndef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
