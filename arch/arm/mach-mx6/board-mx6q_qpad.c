@@ -1013,6 +1013,45 @@ static int __init imx6x_add_ram_console(void)
 #endif
 
 
+static int wlan_bt_power_change(int status)
+{
+	if (status){
+		int ret = gpio_request(QPAD_WIFI_RST, "wifi-rst");
+		if (ret) {
+			pr_err("failed to get GPIO wifi-rst: %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(QPAD_WIFI_RST,0);
+		mdelay(10);
+		gpio_direction_output(QPAD_WIFI_RST,1);
+		gpio_free(QPAD_WIFI_RST);
+	}
+	else {
+		//always put wifi chip into reset state to save power???
+		int ret = gpio_request(QPAD_WIFI_RST, "wifi-rst");
+		if (ret) {
+			pr_err("failed to get GPIO wifi-rst: %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(QPAD_WIFI_RST,0);
+		gpio_free(QPAD_WIFI_RST);
+	}
+
+	return 0;
+}
+
+static struct platform_device wlan_bt_rfkill = {
+	.name = "mxc_bt_rfkill",
+};
+
+static struct imx_bt_rfkill_platform_data wlan_bt_rfkill_data = {
+	.name = "bluetooth",
+	.power_change = wlan_bt_power_change,
+};
+
+
 
 #define MODEM_PIN_POWER QPAD_MODEM_PWR
 #define MODEM_PIN_RESET QPAD_MODEM_RST
@@ -1064,19 +1103,6 @@ static int __init board_misc_init(void){
 	mdelay(5);
 	gpio_direction_output(QPAD_SENSOR_RST,0);
 	gpio_free(QPAD_SENSOR_RST);
-
-
-	//reset WIFI chip
-	ret = gpio_request(QPAD_WIFI_RST, "wifi-rst");
-	if (ret) {
-		pr_err("failed to get GPIO wifi-rst: %d\n",
-			ret);
-		return -EINVAL;
-	}
-	gpio_direction_output(QPAD_WIFI_RST,0);
-	mdelay(10);
-	gpio_direction_output(QPAD_WIFI_RST,1);
-	gpio_free(QPAD_WIFI_RST);
 
 	return 0;
 }
@@ -1225,6 +1251,8 @@ static void __init mx6_qpad_board_init(void)
 	if(eBootModeCharger!=android_bootmode){
 		imx6q_add_sdhci_usdhc_imx(1, &qpad_sd2_data);
 		imx6q_add_sdhci_usdhc_imx(2, &qpad_sd3_data);
+
+		mxc_register_device(&wlan_bt_rfkill, &wlan_bt_rfkill_data);
 
 		imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
 
