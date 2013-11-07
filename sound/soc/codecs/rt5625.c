@@ -512,8 +512,8 @@ static int rt5625_dump_dsp_put(struct snd_kcontrol *kcontrol,
 }
 
 static const char *rt5625_aec_path_sel[] = {
-	"pcm in pcm out", "analog in analog out",
-	"dac in adc out", "disable"
+	"disable","pcm in pcm out", "analog in analog out",
+	"dac in adc out"
 };
 
 static const char *rt5625_spk_out_sel[] = {
@@ -1440,7 +1440,7 @@ static const struct snd_soc_dapm_route rt5625_dapm_routes[] = {
 	/* aux out mux */
 	{"AUXOUT Mux", "HP Mixer", "HP Mixer"},
 	{"AUXOUT Mux", "SPK Mixer", "SPK Mixer"},
-	{"SPKOUT Mux", "Mono Mixer", "MoNo Mixer"},
+	{"AUXOUT Mux", "Mono Mixer", "MoNo Mixer"},
 
 	/* spkl out pga */
 	{"SPKL Out PGA", NULL, "SPKOUT Mux"},
