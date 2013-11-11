@@ -51,6 +51,8 @@ static const char *rt5625_supply_names[RT5625_NUM_SUPPLIES] = {
 	"SPKVDD",
 };
 
+static int debugmask = 0;
+module_param_named(debugmask, debugmask, int, S_IRUGO | S_IWUSR);
 
 struct rt5625_priv {
 	enum snd_soc_control_type control_type;
@@ -334,7 +336,9 @@ static int rt5625_direct_write(struct snd_soc_codec *codec, unsigned int reg,
 			}
 		}
 		#endif
-		pr_debug("rt5625 write reg %#x=%#x\n",reg,value);
+		if(debugmask){
+			pr_info("rt5625 write reg %#x=%#x\n",reg,value);
+		}
 		data[0] = reg;
 		data[1] = (value & 0xff00) >> 8;
 		data[2] = (value & 0x00ff);
@@ -364,7 +368,9 @@ static unsigned int rt5625_read(struct snd_soc_codec *codec,
 static int rt5625_write(struct snd_soc_codec *codec, unsigned int reg,
 			unsigned int value)
 {
-	pr_debug("rt5625 write reg:%2.2x value:%4.4x\n",reg,value);
+	if(debugmask){
+		pr_info("rt5625 write reg:%2.2x value:%4.4x\n",reg,value);
+	}
 	rt5625_write_reg_cache(codec, reg, value);
 	if(reg<=0x74)
 	{
@@ -986,25 +992,42 @@ SOC_SINGLE("Voice DAC Enable",RT5625_EXTEND_SDP_CTRL,15,1,0),
 
 static void hp_depop_mode2(struct snd_soc_codec *codec)
 {
-//        snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
-//			  PWR_MAIN_BIAS, PWR_MAIN_BIAS);
-        snd_soc_update_bits(codec, RT5625_HP_OUT_VOL,
-			  M_HP_L|M_HP_R, M_HP_L|M_HP_R);
-		//rt5625_write(codec,0x04,0x0707);
-
-        snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD2,
-			  PWR_MIXER_VREF, PWR_MIXER_VREF);
-        snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
-			  PWR_SOFTGEN_EN, PWR_SOFTGEN_EN);
-        snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
-			  PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL,
-			  PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL);
-        snd_soc_update_bits(codec, RT5625_MISC_CTRL,
-			  HP_DEPOP_MODE2_EN,
-			  HP_DEPOP_MODE2_EN);
-        schedule_timeout_uninterruptible(msecs_to_jiffies(300));
-
+	snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
+		PWR_SOFTGEN_EN, PWR_SOFTGEN_EN);
+	snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
+		PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL,
+		PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL);
+	snd_soc_write(codec, RT5625_MISC_CTRL, HP_DEPOP_MODE2_EN);
+	schedule_timeout_uninterruptible(msecs_to_jiffies(500));
+	snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
+		PWR_HP_OUT_ENH_AMP | PWR_HP_OUT_AMP,
+		PWR_HP_OUT_ENH_AMP | PWR_HP_OUT_AMP);
 }
+
+/* enable depop function for mute/unmute */
+static void hp_mute_unmute_depop(struct snd_soc_codec *codec,int mute)
+{
+ 	if(mute) {
+		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
+			PWR_SOFTGEN_EN, PWR_SOFTGEN_EN);
+		snd_soc_write(codec, RT5625_MISC_CTRL, M_UM_DEPOP_EN |
+			HP_R_M_UM_DEPOP_EN | HP_L_M_UM_DEPOP_EN);
+		snd_soc_update_bits(codec, RT5625_HP_OUT_VOL,
+			M_HP_L | M_HP_R,
+			M_HP_L | M_HP_R);
+		mdelay(50);
+		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1, PWR_SOFTGEN_EN, 0);
+	} else {
+		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
+			PWR_SOFTGEN_EN, PWR_SOFTGEN_EN);
+		snd_soc_write(codec, RT5625_MISC_CTRL, M_UM_DEPOP_EN |
+			HP_R_M_UM_DEPOP_EN | HP_L_M_UM_DEPOP_EN);
+		snd_soc_update_bits(codec,RT5625_HP_OUT_VOL,
+			M_HP_L | M_HP_R, 0);
+		mdelay(50);
+	}
+}
+
 
 
 /* _dapm_ Controls */
@@ -1195,28 +1218,23 @@ static int hp_pga_event(struct snd_soc_dapm_widget *w,
 			int event)
 {
 	struct snd_soc_codec *codec = w->codec;
-	int val,misc;
-
-
-	val = rt5625_read(codec, RT5625_VIRTUAL_MISC_FUNC);
-	val = (val & (0x3 << 6)) >> 6;
-	misc = rt5625_read(codec, RT5625_VIRTUAL_MISC2);
 
 	switch (event) {
-		default:
-		case SND_SOC_DAPM_POST_PMD:
+		default: return 0;
+		case SND_SOC_DAPM_PRE_PMD:
 		{
-			snd_soc_update_bits(codec, RT5625_HP_OUT_VOL, 0x8080, 0x8080);
-			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3, 0x0600, 0);
-			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1, 0x0030, 0);			
+			hp_mute_unmute_depop(codec,1);
+			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
+			PWR_HP_OUT_AMP | PWR_HP_OUT_ENH_AMP, 0);
+		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
+			PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL, 0);
+		break;
 		}
 		break;
-	
 		case SND_SOC_DAPM_POST_PMU:	
 		{
 			hp_depop_mode2(codec);
-			snd_soc_update_bits(codec, RT5625_HP_OUT_VOL,
-				  M_HP_L|M_HP_R, 0|0);
+			hp_mute_unmute_depop(codec,0);
 			
 		}
 		break;
@@ -2263,9 +2281,6 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 
 	//codec->bias_level = SND_SOC_BIAS_STANDBY;
 	//schedule_delayed_work(&codec->delayed_work, msecs_to_jiffies(2000));
-
-	//init depop
-	//hp_depop_mode2(codec);
 
 	
 	for (i = 0; i < ARRAY_SIZE(rt5625->supplies); i++)
