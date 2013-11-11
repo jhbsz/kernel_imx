@@ -733,10 +733,20 @@ static int rt5625_vodsp_set_aiao_mode(struct snd_soc_codec *codec)
 	 * vodsp txdp -> vodac -> analog out -> to far end analog input
 	 * adcr function select pdm slave interface
 	 * (mic-->adcr-->pdm interface)
-	 */
 	snd_soc_update_bits(codec, RT5625_DAC_ADC_VODAC_FUN_SEL,
 			  DAC_FUNC_SEL_MASK | VODAC_SOUR_SEL_MASK | ADCR_FUNC_SEL_MASK | ADCL_FUNC_SEL_MASK,
 			  DAC_FUNC_SEL_VODSP_TXDP | VODAC_SOUR_SEL_VODSP_TXDC | ADCR_FUNC_SEL_PDM | ADCL_FUNC_SEL_VODSP);
+	*/
+
+	/*
+	 * near end setting:
+	 * vodsp txdp -> vodac -> analog out -> to far end analog input
+	 * adcr function select pdm slave interface
+	 * (mic-->adcr-->pdm interface)
+	*/
+	snd_soc_update_bits(codec, RT5625_DAC_ADC_VODAC_FUN_SEL,
+			  DAC_FUNC_SEL_MASK | VODAC_SOUR_SEL_MASK | ADCR_FUNC_SEL_MASK | ADCL_FUNC_SEL_MASK,
+			  DAC_FUNC_SEL_DAC | VODAC_SOUR_SEL_VODSP_TXDP | ADCR_FUNC_SEL_PDM | ADCL_FUNC_SEL_VODSP);
 
 	rt5625_write(codec,0x26,0x0);
 
