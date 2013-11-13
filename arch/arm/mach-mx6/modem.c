@@ -686,5 +686,6 @@ static int __init board_modem_init(void)
  * Set modem as late init to ensure usb subsystem already initialized 
  *
  */
-//late_initcall(board_modem_init);
-
+#ifndef MODEM_INIT_EXCLUDE
+late_initcall(board_modem_init);
+#endif

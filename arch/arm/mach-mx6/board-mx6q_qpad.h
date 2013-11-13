@@ -162,7 +162,7 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	MX6Q_PAD_GPIO_19__GPIO_4_5,			/*FL_PWR_EN*/
 	
 	/*W1*/
-	MX6Q_PAD_EIM_D28__GPIO_3_28,		/*OneWire*/
+	NEW_PAD_CTRL(MX6Q_PAD_EIM_D28__GPIO_3_28,NO_PAD_CTRL),		/*OneWire*/
 
 	/*WiFi*/
 	MX6Q_PAD_SD3_RST__GPIO_7_8,			/*WiFi Reset*/

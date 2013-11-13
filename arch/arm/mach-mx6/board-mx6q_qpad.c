@@ -1058,12 +1058,12 @@ static struct imx_bt_rfkill_platform_data wlan_bt_rfkill_data = {
 #define MODEM_PIN_ONOFF QPAD_MODEM_ONOFF
 #define MODEM_PIN_WAKEAP QPAD_MODEM_WAKEAP
 #define MODEM_PIN_WAKEMODEM QPAD_MODEM_WAKEMODEM
+#define MODEM_INIT_EXCLUDE 1
 #include "modem.c"
 static int __init modem_init(void){
 	//dummy init for modem
 	board_modem_init();
 	return 0;
-	
 }
 
 
