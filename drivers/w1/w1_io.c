@@ -31,7 +31,7 @@
 static int w1_delay_parm = 1;
 module_param_named(delay_coef, w1_delay_parm, int, 0);
 
-static int w1_disable_irqs = 1;
+static int w1_disable_irqs = 0;
 module_param_named(disable_irqs, w1_disable_irqs, int, 0);
 
 static u8 w1_crc8_table[] = {
@@ -84,7 +84,7 @@ static void w1_write_bit(struct w1_master *dev, int bit)
 {
 	unsigned long flags = 0;
 
-	if(w1_disable_irqs) local_irq_save(flags);
+	local_irq_save(flags);
 
 	if (bit) {
 		dev->bus_master->write_bit(dev->bus_master->data, 0);
@@ -98,7 +98,7 @@ static void w1_write_bit(struct w1_master *dev, int bit)
 		w1_delay(10);
 	}
 
-	if(w1_disable_irqs) local_irq_restore(flags);
+	local_irq_restore(flags);
 }
 
 /**
