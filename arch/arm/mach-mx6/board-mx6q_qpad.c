@@ -100,8 +100,9 @@
 #define QPAD_BATTERY_ALERT	IMX_GPIO_NR(4, 14)
 #define QPAD_BATTERY_DET	IMX_GPIO_NR(4, 11)
 
-#define QPAD_CAM_PWR		IMX_GPIO_NR(1, 16)
-#define QPAD_CAM_RST		IMX_GPIO_NR(5, 20)
+#define QPAD_CSI0_PWDN		IMX_GPIO_NR(1, 16)
+#define QPAD_CSI0_RST		IMX_GPIO_NR(5, 20)
+#define QPAD_CSI0_POWER		IMX_GPIO_NR(2, 7)
 
 
 #define QPAD_W1_IO			IMX_GPIO_NR(3, 28)
@@ -119,9 +120,6 @@
 #define QPAD_DISP_PWR_EN		IMX_GPIO_NR(2, 6)
 #define QPAD_DISP_BL_PWR_EN	IMX_GPIO_NR(4, 15)
 #define QPAD_DISP_RST_B		IMX_GPIO_NR(6, 16)
-
-#define QPAD_CSI0_PWN		IMX_GPIO_NR(1, 16)
-#define QPAD_CSI0_RST		IMX_GPIO_NR(5, 20)
 
 #define QPAD_MODEM_ONOFF		IMX_GPIO_NR(2, 2)
 #define QPAD_MODEM_RST			IMX_GPIO_NR(2, 3)
@@ -276,38 +274,105 @@ static inline void mx6q_qpad_init_uart(void)
 	imx6q_add_imx_uart(4, NULL);	
 }
 
-static void mx6q_csi0_cam_powerdown(int powerdown)
+static void _mx6q_csi0_cam_powerdown(int powerdown,int init)
 {
-	if (powerdown)
-		gpio_set_value(QPAD_CSI0_PWN, 1);
+	int cam_pdn = QPAD_CSI0_PWDN;
+	int cam_reset = QPAD_CSI0_RST;
+	int cam_pwr_en = QPAD_CSI0_POWER;
+	struct clk *clko;
+
+	clko = clk_get(NULL, "clko_clk");
+	if (IS_ERR(clko))
+	{
+		pr_err("can't get CLKO clock.\n");
+		return;
+	}
+
+	if (gpio_request(cam_pwr_en, "cam-power enable")) {
+		printk(KERN_ERR "Request GPIO failed,"
+				"gpio: %d \n", cam_pwr_en);
+		return;
+	}
+
+	if (gpio_request(cam_pdn, "cam-power down")) {
+		printk(KERN_ERR "Request GPIO failed,"
+				"gpio: %d \n", cam_pdn);
+		return;
+	}
+
+	if (gpio_request(cam_reset, "cam-reset")) {
+		printk(KERN_ERR "Request GPIO failed,"
+				"gpio: %d \n", cam_reset);
+		return;
+	}
+
+	if(powerdown)
+	{
+		if(!init)
+			clk_disable(clko);
+		gpio_direction_output(cam_reset, 0);
+		msleep(1);
+		gpio_direction_output(cam_pwr_en, 1);
+		msleep(5);
+		gpio_direction_output(cam_pdn, 1);
+		if(!init)
+			clk_enable(clko); /*mxc_v4l2_capture.c will disable the clock, so enable it first */
+	}
 	else
-		gpio_set_value(QPAD_CSI0_PWN, 0);
+	{
+		if(!init)
+		{
+			clk_disable(clko); /*mxc_v4l2_capture.c has enabled the clock, so disable it first */
+			msleep(10);
+		}
+		gpio_direction_output(cam_pwr_en, 0);
+		msleep(10);
+		clk_enable(clko); /*enable mclk after powering on the sensor */
+		msleep(5);
+		gpio_direction_output(cam_pdn, 0);
+		msleep(3);
+		gpio_direction_output(cam_reset, 1);
+		msleep(25);
+	}
+
+	gpio_free(cam_pwr_en);
+	gpio_free(cam_pdn);
+	gpio_free(cam_reset);
+	clk_put(clko);
+
 }
 
+static void mx6q_csi0_cam_powerdown(int powerdown)
+{
+	_mx6q_csi0_cam_powerdown(powerdown,0);
+}
+
+static struct fsl_mxc_camera_platform_data camera_data;
 static void mx6q_csi0_io_init(void)
 {
+	int rate;	
+	struct clk *parent,*clko;
+
+	clko = clk_get(NULL, "clko_clk");
+	if (IS_ERR(clko))
+		pr_err("can't get CLKO clock.\n");
+
+	parent = clk_get(NULL, "osc_clk");
+	if (!IS_ERR(parent)) {
+		clk_set_parent(clko, parent);
+		clk_put(parent);
+	}
+	rate = clk_round_rate(clko, camera_data.mclk);
+	clk_set_rate(clko, rate);
+	clk_put(clko);
+
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_csi0_sensor_pads,
 			ARRAY_SIZE(mx6q_qpad_csi0_sensor_pads));
 	else if (cpu_is_mx6dl())
 		mxc_iomux_v3_setup_multiple_pads(mx6dl_qpad_csi0_sensor_pads,
 			ARRAY_SIZE(mx6dl_qpad_csi0_sensor_pads));
-
-	/* Camera reset */
-	gpio_request(QPAD_CSI0_RST, "cam-reset");
-	gpio_direction_output(QPAD_CSI0_RST, 1);
-
-	/* Camera power down */
-	gpio_request(QPAD_CSI0_PWN, "cam-pwdn");
-	gpio_direction_output(QPAD_CSI0_PWN, 1);
-	msleep(5);
-	gpio_set_value(QPAD_CSI0_PWN, 0);
-	msleep(5);
-	gpio_set_value(QPAD_CSI0_RST, 0);
-	msleep(1);
-	gpio_set_value(QPAD_CSI0_RST, 1);
-	msleep(5);
-	gpio_set_value(QPAD_CSI0_PWN, 1);
+		
 	/* For MX6Q:
 	 * GPR1 bit19 and bit20 meaning:
 	 * Bit19:       0 - Enable mipi to IPU1 CSI0
@@ -330,10 +395,14 @@ static void mx6q_csi0_io_init(void)
 		mxc_iomux_set_gpr_register(1, 19, 1, 1);
 	else if (cpu_is_mx6dl())
 		mxc_iomux_set_gpr_register(13, 0, 3, 4);
+
+	_mx6q_csi0_cam_powerdown(1,1);
+	msleep(100);
+	_mx6q_csi0_cam_powerdown(0,1);
 }
 
 static struct fsl_mxc_camera_platform_data camera_data = {
-	.mclk = 24000000,
+	.mclk = 24000000,/* 6 - 54 MHz, typical 24MHz */
 	.mclk_source = 0,
 	.csi = 0,
 	.io_init = mx6q_csi0_io_init,
@@ -448,7 +517,7 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 		I2C_BOARD_INFO("rt5625", 0x1f),
 	},
 	{
-		I2C_BOARD_INFO("ov564x", 0x3c),
+		I2C_BOARD_INFO("mt9p111", 0x3c),
 		.platform_data = (void *)&camera_data,
 	},
 };
@@ -678,7 +747,7 @@ static struct ion_platform_data imx_ion_data = {
 		.id = 0,
 		.type = ION_HEAP_TYPE_CARVEOUT,
 		.name = "vpu_ion",
-		.size = SZ_16M,
+		.size = SZ_32M,
 		.cacheable = 1,
 		},
 	},
@@ -693,7 +762,7 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 	}, {
 		.csi = 1,
 		.ipu = 0,
-		.mclk_source = 0,
+		.mclk_source = 0, /* index of imx_ipuv3_platform_data.csi_clk */
 		.is_mipi = 1,
 	},
 };
@@ -1093,7 +1162,7 @@ static int __init qpad_regulator_late_init(void){
 		struct reg_map maps[] = {
 			{.regulator=NULL,.supply="VGEN1_1V5"},
 			{.regulator=NULL,.supply="VGEN2_1V5"},
-			{.regulator=NULL,.supply="VGEN3_2V8"},
+			/*{.regulator=NULL,.supply="VGEN3_2V8"},*/
 		};
 		int i=0;
 		int count = ARRAY_SIZE(maps);

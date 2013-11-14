@@ -1,5 +1,5 @@
 ifeq ($(CONFIG_VIDEO_MXC_IPU_CAMERA),y)
-	obj-$(CONFIG_VIDEO_MXC_CAMERA) += mxc_v4l2_capture.o
+	obj-$(CONFIG_VIDEO_MXC_CAMERA) += mxc_v4l2_capture.o	
 	obj-$(CONFIG_MXC_IPU_PRP_VF_SDC) += ipu_prp_vf_sdc.o ipu_prp_vf_sdc_bg.o
 	obj-$(CONFIG_MXC_IPU_DEVICE_QUEUE_SDC) += ipu_fg_overlay_sdc.o ipu_bg_overlay_sdc.o
 	obj-$(CONFIG_MXC_IPU_PRP_ENC) += ipu_prp_enc.o ipu_still.o
@@ -22,6 +22,9 @@ obj-$(CONFIG_MXC_EMMA_CAMERA_MICRON111) += emma_mt9v111_camera.o
 
 mt9v111_camera-objs := mt9v111.o
 obj-$(CONFIG_MXC_CAMERA_MICRON111) += mt9v111_camera.o
+
+mt9p111_camera-objs := mt9p111.o
+obj-$(CONFIG_MXC_CAMERA_MICRONP111) += mt9p111_camera.o
 
 hv7161_camera-objs := hv7161.o
 obj-$(CONFIG_MXC_CAMERA_HV7161) += hv7161_camera.o

@@ -193,11 +193,13 @@ static iomux_v3_cfg_t mx6q_qpad_csi0_sensor_pads[] = {
 	MX6Q_PAD_CSI0_PIXCLK__IPU1_CSI0_PIXCLK,
 	MX6Q_PAD_CSI0_VSYNC__IPU1_CSI0_VSYNC,
 
-	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* camera clk */
+	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* camera mclk */
 
 	MX6Q_PAD_SD1_DAT0__GPIO_1_16,		/* camera PWDN */
 	
 	MX6Q_PAD_CSI0_DATA_EN__GPIO_5_20,	/* camera RESET */
+
+	MX6Q_PAD_NANDF_D7__GPIO_2_7,		/*camera 2.8v and 1.8v enable*/
 };
 
 
