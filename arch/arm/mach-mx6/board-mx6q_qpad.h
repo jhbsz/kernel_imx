@@ -94,7 +94,7 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 
 	/* USB OTG */
 	MX6Q_PAD_GPIO_1__USBOTG_ID,
-	MX6Q_PAD_EIM_D22__GPIO_3_22,
+	MX6Q_PAD_GPIO_19__GPIO_4_5,
 
 	/* USDHC2 */
 	MX6Q_PAD_SD2_CLK__USDHC2_CLK,
@@ -159,7 +159,7 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 
 	/*FlashLight*/
 	MX6Q_PAD_EIM_D31__GPIO_3_31,		/*FL_PWR_EN*/
-	MX6Q_PAD_GPIO_19__GPIO_4_5,			/*FLASHLIGHT_EN*/
+	MX6Q_PAD_EIM_D22__GPIO_3_22,			/*FLASHLIGHT_EN*/
 	
 	/*W1*/
 	MX6Q_PAD_EIM_D28__GPIO_3_28,		/*OneWire*/

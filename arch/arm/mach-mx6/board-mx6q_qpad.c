@@ -115,7 +115,7 @@
 #define GPIO_KEY_F1			IMX_GPIO_NR(6,9)
 #define GPIO_KEY_F2			IMX_GPIO_NR(6,10)
 
-#define QPAD_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
+#define QPAD_USB_OTG_PWR	IMX_GPIO_NR(4, 5)
 
 #define QPAD_DISP_PWR_EN		IMX_GPIO_NR(2, 6)
 #define QPAD_DISP_BL_PWR_EN	IMX_GPIO_NR(4, 15)
@@ -137,7 +137,7 @@
 
 //FLASHLIGHT
 #define QPAD_FL_PWR_EN		IMX_GPIO_NR(3, 31)
-#define QPAD_FL_EN			IMX_GPIO_NR(4, 5)
+#define QPAD_FL_EN			IMX_GPIO_NR(3, 22)
 
 //Touch Panel
 #define QPAD_TP_PWR_EN		IMX_GPIO_NR(2, 28)
@@ -280,6 +280,7 @@ static void _mx6q_csi0_cam_powerdown(int powerdown,int init)
 	int cam_reset = QPAD_CSI0_RST;
 	int cam_pwr_en = QPAD_CSI0_POWER;
 	struct clk *clko;
+	struct regulator* regulator;
 
 	clko = clk_get(NULL, "clko_clk");
 	if (IS_ERR(clko))
@@ -316,10 +317,30 @@ static void _mx6q_csi0_cam_powerdown(int powerdown,int init)
 		msleep(5);
 		gpio_direction_output(cam_pdn, 1);
 		if(!init)
+		{
 			clk_enable(clko); /*mxc_v4l2_capture.c will disable the clock, so enable it first */
+		}
+		/* disable VGEN3 regulator */
+		regulator = regulator_get(NULL,"VGEN3_2V8");
+		if(IS_ERR(regulator)){
+			printk("failed to get regulator[VGEN3_2V8]\n");
+		}else {
+			if(init)
+				regulator_enable(regulator);
+			regulator_disable(regulator);
+			regulator_put(regulator);
+		}
 	}
 	else
 	{
+		/* enable VGEN3 regulator */
+		regulator = regulator_get(NULL,"VGEN3_2V8");
+		if(IS_ERR(regulator)){
+			printk("failed to get regulator[VGEN3_2V8]\n");
+		}else {
+			regulator_enable(regulator);
+			regulator_put(regulator);
+		}
 		if(!init)
 		{
 			clk_disable(clko); /*mxc_v4l2_capture.c has enabled the clock, so disable it first */
@@ -1177,7 +1198,7 @@ static int __init qpad_regulator_late_init(void){
 			}
 			i++;
 		}while(i<count);
-	
+
 	return 0;
 }
 
