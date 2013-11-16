@@ -394,7 +394,8 @@ static void chip_get_status(struct i2c_client *client)
 	chip->online = battery_online(ops);
 
 	if(debug){
-		pr_info("status=%d,online=%d,soc=%d,vcell=%d\n",chip->status,chip->online,chip->soc,chip->vcell);
+		pr_info("status=%d,online=%d,soc=%d,vcell=%d\n",chip->status,chip->online,chip->soc,chip->vcell);		
+		pr_info("charger_online=%d,charger_enable=%d\n",charger_online(ops),charger_enable(ops));
 	}
 	
 }

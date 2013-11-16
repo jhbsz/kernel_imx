@@ -1092,7 +1092,7 @@ static int wlan_bt_power_change(int status)
 			return -EINVAL;
 		}
 		gpio_direction_output(QPAD_WIFI_RST,0);
-		mdelay(10);
+		msleep(10);
 		gpio_direction_output(QPAD_WIFI_RST,1);
 		gpio_free(QPAD_WIFI_RST);
 	}

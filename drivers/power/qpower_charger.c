@@ -28,7 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/power/qpower.h>
 
-#define QPOWER_CHARGER_POLLING_DELAY		(1 * HZ)
+#define QPOWER_CHARGER_POLLING_DELAY		(2 * HZ)
 struct qpower_charger_data {
 	struct qpower_charger_pdata *pdata;
 	struct device *dev;
@@ -50,6 +50,8 @@ static enum power_supply_property psy_usb_props[] = {
 
 static enum power_supply_property psy_dc_props[] = {
 	POWER_SUPPLY_PROP_ONLINE, /* External power source */
+	POWER_SUPPLY_PROP_STATUS, /* Charger status output */
+	POWER_SUPPLY_PROP_HEALTH, /* Fault or OK */
 };
 
 
@@ -57,6 +59,7 @@ static enum power_supply_property psy_dc_props[] = {
 static int psy_battery_online(void* drvdata){
 	struct qpower_charger_data *qcd = drvdata;	
 	struct qpower_charger_pdata *pdata = qcd->pdata;
+	if(pdata){}
 	#if 0
 	if(gpio_is_valid(pdata->det)){
 		qcd->det = !!((gpio_get_value(pdata->det)?1:0)^pdata->bat_det_active);
@@ -111,6 +114,22 @@ static int psy_dc_get_property(struct power_supply *psy,
 			struct qpower_charger_data, psy_dc);
 
 	switch (psp) {
+	case POWER_SUPPLY_PROP_STATUS:
+		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
+		if (data->pdata->chg) {
+			if (gpio_get_value(data->pdata->chg) == 0)
+				val->intval = POWER_SUPPLY_STATUS_CHARGING;
+			else if (data->usb_in || data->dc_in) {
+				val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+			} else
+				val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
+		}
+		break;
+	case POWER_SUPPLY_PROP_HEALTH:
+		val->intval = POWER_SUPPLY_HEALTH_GOOD;
+		if (data->fault)
+			val->intval = POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
+		break;		
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = 0;
 		if (data->usb_in || data->dc_in)
@@ -161,7 +180,10 @@ static void qpower_charger_work(struct work_struct *work)
 {
 	struct qpower_charger_data *data = container_of(work,
 			struct qpower_charger_data, work.work);
-	//FIXME,polling work?
+	if(data->pdata->usb_valid)
+		power_supply_changed(&data->psy_usb);
+	if(data->pdata->dc_valid)
+		power_supply_changed(&data->psy_dc);
 	schedule_delayed_work(&data->work, QPOWER_CHARGER_POLLING_DELAY);
 }
 
@@ -515,11 +537,6 @@ static __devinit int qpower_charger_probe(struct platform_device *pdev)
 	}
 	
 	
-	//enable our polling work? is this necessary?
-	//currently we use interrupt to check charge charge status,for desigin completeness, here only init 
-	//the delay work. If necessary,we can schedule it later.
-	INIT_DELAYED_WORK_DEFERRABLE(&data->work, qpower_charger_work);
-	//schedule_delayed_work(&data->work, QPOWER_CHARGER_POLLING_DELAY);
 
 	if(pdata->ops){
 		pdata->ops->drv_data = data;
@@ -532,6 +549,13 @@ static __devinit int qpower_charger_probe(struct platform_device *pdev)
 		if(!pdata->ops->qbf)
 			pdata->ops->qbf = psy_charger_faulty;		
 	}
+
+	
+	//enable our polling work? is this necessary?
+	//currently we use interrupt to check charge charge status,for desigin completeness, here only init 
+	//the delay work. If necessary,we can schedule it later.
+	INIT_DELAYED_WORK_DEFERRABLE(&data->work, qpower_charger_work);
+	schedule_delayed_work(&data->work, QPOWER_CHARGER_POLLING_DELAY);
 
 	return 0;
 
