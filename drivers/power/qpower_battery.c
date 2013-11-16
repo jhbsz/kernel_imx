@@ -374,17 +374,16 @@ static void chip_get_status(struct i2c_client *client)
 
 	//status
 	if (charger_online(ops)) {
-		if (charger_enable(ops))
+		if (charger_enable(ops)){
 			chip->status = POWER_SUPPLY_STATUS_CHARGING;
-		else
+		}
+		else {
 			chip->status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+			if (chip->soc >= MAX17058_BATTERY_FULL)
+				chip->status = POWER_SUPPLY_STATUS_FULL;
+		}
 	} else {
 		chip->status = POWER_SUPPLY_STATUS_DISCHARGING;
-	}
-	//FIXME: check if status full
-	if (chip->soc >= MAX17058_BATTERY_FULL){
-		
-		chip->status = POWER_SUPPLY_STATUS_FULL;
 	}
 
 	//battery health

@@ -705,8 +705,8 @@ static struct qpower_charger_pdata qcp = {
 	.chg = QPAD_CHARGE_CHG_1_B,
 	.flt = QPAD_CHARGE_FLT_1_B,	
 	.dcm_always_high = true,
-	.dc_valid = true,
-	.usb_valid = false,//true,
+	.dc_valid = false,
+	.usb_valid = true,//true,
 	.feature_flag = QPOWER_CHARGER_FEATURE_SHORT_MODE,
 	//for battery detection
 	.det = QPAD_BATTERY_DET,

@@ -44,6 +44,7 @@ struct qpower_charger_data {
 };
 
 static enum power_supply_property psy_usb_props[] = {
+	POWER_SUPPLY_PROP_ONLINE, /* External power source */
 	POWER_SUPPLY_PROP_STATUS, /* Charger status output */
 	POWER_SUPPLY_PROP_HEALTH, /* Fault or OK */
 };
@@ -458,7 +459,7 @@ static __devinit int qpower_charger_probe(struct platform_device *pdev)
 	data->dc_in = dc_in;
 	data->usb_in = usb_in;
 
-	if(pdata->dc_valid||pdata->feature_flag&QPOWER_CHARGER_FEATURE_SHORT_MODE){
+	if(pdata->dc_valid){
 		data->psy_dc.name = "qpower-dc";
 		data->psy_dc.type = POWER_SUPPLY_TYPE_MAINS;
 		data->psy_dc.get_property = psy_dc_get_property;
