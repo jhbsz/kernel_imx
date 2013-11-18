@@ -49,8 +49,11 @@ static int mxc_bt_set_block(void *rfkdata, bool blocked)
 	if (system_in_suspend)
 		return 0;
 	pr_info("rfkill: BT RF going to : %s\n", blocked ? "off" : "on");
-	if (!blocked)
+	if (!blocked){
 		ret = data->power_change(1);
+		if(data->host_interface_change)
+			data->host_interface_change(data->mmc);
+	}
 	else
 		ret = data->power_change(0);
 

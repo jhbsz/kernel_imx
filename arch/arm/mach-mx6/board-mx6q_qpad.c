@@ -84,6 +84,7 @@
 #include "board-mx6q_qpad.h"
 #include "board-mx6dl_qpad.h"
 #include <mach/imx_rfkill.h>
+#include <linux/mmc/host.h>
 
 
 #include "generic_devices.h"
@@ -215,7 +216,7 @@ static const struct esdhc_platform_data qpad_sd2_data __initconst = {
 };
 
 /*WIFI SDIO*/
-static const struct esdhc_platform_data qpad_sd3_data __initconst = {
+static struct esdhc_platform_data qpad_sd3_data = {
 	.always_present = 1,
 	.keep_power_at_suspend = 1,
 	.cd_type = ESDHC_CD_PERMANENT,
@@ -1111,6 +1112,12 @@ static int wlan_bt_power_change(int status)
 	return 0;
 }
 
+static int wlan_bt_host_interface_change(struct mmc_host *mmc){
+	if(mmc)
+		mmc_detect_change(mmc,HZ);
+	return 0;
+}
+
 static struct platform_device wlan_bt_rfkill = {
 	.name = "mxc_bt_rfkill",
 };
@@ -1118,6 +1125,8 @@ static struct platform_device wlan_bt_rfkill = {
 static struct imx_bt_rfkill_platform_data wlan_bt_rfkill_data = {
 	.name = "bluetooth",
 	.power_change = wlan_bt_power_change,
+	.mmc	= NULL,
+	.host_interface_change = wlan_bt_host_interface_change,
 };
 
 
@@ -1318,10 +1327,13 @@ static void __init mx6_qpad_board_init(void)
 	imx6q_qpad_init_usb();
 	
 	if(eBootModeCharger!=android_bootmode){
+		
+		qpad_sd3_data.pmmc = &wlan_bt_rfkill_data.mmc;
+		mxc_register_device(&wlan_bt_rfkill, &wlan_bt_rfkill_data);
 		imx6q_add_sdhci_usdhc_imx(1, &qpad_sd2_data);
 		imx6q_add_sdhci_usdhc_imx(2, &qpad_sd3_data);
 
-		mxc_register_device(&wlan_bt_rfkill, &wlan_bt_rfkill_data);
+		
 
 		imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
 

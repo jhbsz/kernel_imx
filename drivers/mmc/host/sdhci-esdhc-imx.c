@@ -923,6 +923,13 @@ static int esdhc_pltfm_init(struct sdhci_host *host, struct sdhci_pltfm_data *pd
 
 	if (host->clk_mgr_en)
 		clk_disable(pltfm_host->clk);
+
+	
+	#ifdef CONFIG_MACH_IMX_BLUETOOTH_RFKILL
+		if (boarddata && boarddata->pmmc)
+			*boarddata->pmmc = host->mmc;
+	#endif
+	
 	return 0;
 
  no_card_detect_irq:

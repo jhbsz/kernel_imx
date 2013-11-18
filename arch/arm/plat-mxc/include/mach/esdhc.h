@@ -37,5 +37,9 @@ struct esdhc_platform_data {
 	unsigned int delay_line;
 	bool runtime_pm;
 	int (*platform_pad_change)(unsigned int index, int clock);
+
+	
+	/* for sd8xxx-rfkill device */
+	struct mmc_host **pmmc;
 };
 #endif /* __ASM_ARCH_IMX_ESDHC_H */
