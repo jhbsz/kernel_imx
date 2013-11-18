@@ -437,7 +437,7 @@ static ssize_t chip_regs_show(struct device *dev,
 	ret = chip_read_word(chip->client,REG_OFFSET_SOC);
 	if(ret>=0){
 		value = ret>>9;
-		length+= sprintf(buf+length,"soc[%04x,%d]\n",ret,value);
+		length+= sprintf(buf+length,"soc[%04x,%d,%d]\n",ret,ret,value);
 	}
 	ret = chip_read_word(chip->client,REG_OFFSET_MODE);
 	if(ret>=0){
@@ -540,8 +540,9 @@ static int chip_init(struct battery_chip *chip,struct i2c_client *client){
 	ret = device_create_file(&client->dev,&dev_attr_table);
 
 
-	if(vmodel_table_1[0]){};
-	chip_load_table(chip,default_table,ARRAY_SIZE(default_table));
+	if(default_table[0]){}
+	if(vmodel_table_1[0]){}
+	chip_load_table(chip,vmodel_table_1,ARRAY_SIZE(vmodel_table_1));
 
 
 	//clear alert/sleep flags,2% alert warning
