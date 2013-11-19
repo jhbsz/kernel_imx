@@ -25,11 +25,7 @@
 
 struct imx_bt_rfkill_platform_data {
 	char* name;
-	int (*power_change) (int status);
-	
-	/*for issue mmc card_detection interrupt */
-	struct mmc_host *mmc;
-	int (*host_interface_change)(struct mmc_host *mmc);
+	int (*power_change) (int status);	
 };
 
 #endif

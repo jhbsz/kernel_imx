@@ -51,8 +51,6 @@ static int mxc_bt_set_block(void *rfkdata, bool blocked)
 	pr_info("rfkill: BT RF going to : %s\n", blocked ? "off" : "on");
 	if (!blocked){
 		ret = data->power_change(1);
-		if(data->host_interface_change)
-			data->host_interface_change(data->mmc);
 	}
 	else
 		ret = data->power_change(0);
@@ -116,6 +114,9 @@ static int mxc_bt_rfkill_probe(struct platform_device *dev)
 		goto error_rfkill;
 
 	platform_set_drvdata(dev, rfk);
+
+	//set default state as blocked
+	mxc_bt_set_block(data,true);
 	printk(KERN_INFO "mxc_bt_rfkill driver success loaded\n");
 	return 0;
 

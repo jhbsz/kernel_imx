@@ -892,44 +892,42 @@ static int esdhc_pltfm_init(struct sdhci_host *host, struct sdhci_pltfm_data *pd
 			if (host->clk_mgr_en)
 				clk_disable(pltfm_host->clk);
 			return 0;
-		}
+		}else if(boarddata->cd_gpio||boarddata->wp_gpio){
+			err = gpio_request_one(boarddata->wp_gpio, GPIOF_IN, "ESDHC_WP");
+			if (err) {
+				dev_warn(mmc_dev(host->mmc),
+					"no write-protect pin available!\n");
+				boarddata->wp_gpio = err;
+			}
 
-		err = gpio_request_one(boarddata->wp_gpio, GPIOF_IN, "ESDHC_WP");
-		if (err) {
-			dev_warn(mmc_dev(host->mmc),
-				"no write-protect pin available!\n");
-			boarddata->wp_gpio = err;
-		}
+			err = gpio_request_one(boarddata->cd_gpio, GPIOF_IN, "ESDHC_CD");
+			if (err) {
+				dev_warn(mmc_dev(host->mmc),
+					"no card-detect pin available!\n");
+				goto no_card_detect_pin;
+			}
 
-		err = gpio_request_one(boarddata->cd_gpio, GPIOF_IN, "ESDHC_CD");
-		if (err) {
-			dev_warn(mmc_dev(host->mmc),
-				"no card-detect pin available!\n");
-			goto no_card_detect_pin;
-		}
+			err = request_irq(gpio_to_irq(boarddata->cd_gpio), cd_irq,
+					 IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+					 mmc_hostname(host->mmc), host);
+			if (err) {
+				dev_warn(mmc_dev(host->mmc), "request irq error\n");
+				goto no_card_detect_irq;
+			}
 
-		err = request_irq(gpio_to_irq(boarddata->cd_gpio), cd_irq,
-				 IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-				 mmc_hostname(host->mmc), host);
-		if (err) {
-			dev_warn(mmc_dev(host->mmc), "request irq error\n");
-			goto no_card_detect_irq;
+			imx_data->flags |= ESDHC_FLAG_GPIO_FOR_CD_WP;
+			/* Now we have a working card_detect again */
+			host->quirks &= ~SDHCI_QUIRK_BROKEN_CARD_DETECTION;
 		}
-
-		imx_data->flags |= ESDHC_FLAG_GPIO_FOR_CD_WP;
-		/* Now we have a working card_detect again */
-		host->quirks &= ~SDHCI_QUIRK_BROKEN_CARD_DETECTION;
+		
+		if(boarddata->sdhc_host_init_cb)
+			boarddata->sdhc_host_init_cb(host);
+		
 	}
 
 	if (host->clk_mgr_en)
 		clk_disable(pltfm_host->clk);
 
-	
-	#ifdef CONFIG_MACH_IMX_BLUETOOTH_RFKILL
-		if (boarddata && boarddata->pmmc)
-			*boarddata->pmmc = host->mmc;
-	#endif
-	
 	return 0;
 
  no_card_detect_irq:

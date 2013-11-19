@@ -10,6 +10,8 @@
 #ifndef __ASM_ARCH_IMX_ESDHC_H
 #define __ASM_ARCH_IMX_ESDHC_H
 
+#include <linux/mmc/sdhci.h>
+
 enum cd_types {
 	ESDHC_CD_NONE,          /* no CD, neither controller nor gpio */
 	ESDHC_CD_CONTROLLER,    /* mmc controller internal CD */
@@ -38,8 +40,6 @@ struct esdhc_platform_data {
 	bool runtime_pm;
 	int (*platform_pad_change)(unsigned int index, int clock);
 
-	
-	/* for sd8xxx-rfkill device */
-	struct mmc_host **pmmc;
+	int (*sdhc_host_init_cb)(struct sdhci_host* sdhc);	
 };
 #endif /* __ASM_ARCH_IMX_ESDHC_H */

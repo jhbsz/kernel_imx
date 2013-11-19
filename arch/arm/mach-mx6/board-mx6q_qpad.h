@@ -29,7 +29,11 @@
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
 #define MX6Q_GENERIC_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
-		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_HIGH|	\
+		PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED|	\
+		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+
+#define MX6Q_WLAN_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |	\
+		PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED|	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
 static iomux_v3_cfg_t mx6q_qpad_pads[] = {
@@ -165,8 +169,9 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	NEW_PAD_CTRL(MX6Q_PAD_EIM_D28__GPIO_3_28,NO_PAD_CTRL),		/*OneWire*/
 
 	/*WiFi*/
-	MX6Q_PAD_SD3_RST__GPIO_7_8,			/*WiFi Reset*/
-
+	NEW_PAD_CTRL(MX6Q_PAD_SD3_RST__GPIO_7_8,MX6Q_WLAN_PAD_CTRL),			/*WiFi Reset*/
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS0__GPIO_6_11,MX6Q_WLAN_PAD_CTRL),		/*WiFi PowerDown*/
+	
 	/*Modem*/
 	MX6Q_PAD_NANDF_D2__GPIO_2_2,		/*3G_DIS_N :OnOff*/
 	MX6Q_PAD_NANDF_D3__GPIO_2_3,		/*3G_PRST_N: Reset*/

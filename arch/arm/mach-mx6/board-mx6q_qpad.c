@@ -152,7 +152,7 @@
 
 //WiFi
 #define QPAD_WIFI_RST		IMX_GPIO_NR(7, 8)
-
+#define QPAD_WIFI_PDN		IMX_GPIO_NR(6, 11)
 
 //SDHC
 #define QPAD_SD2_CD			IMX_GPIO_NR(2, 0)
@@ -216,10 +216,15 @@ static const struct esdhc_platform_data qpad_sd2_data __initconst = {
 };
 
 /*WIFI SDIO*/
-static struct esdhc_platform_data qpad_sd3_data = {
-	.always_present = 1,
+static struct sdhci_host* wlan_sdhc;
+static int wlan_host_init_cb(struct sdhci_host* host){
+	wlan_sdhc = host;
+	return 0;
+}
+static const struct esdhc_platform_data qpad_sd3_data __initconst= {
 	.keep_power_at_suspend = 1,
-	.cd_type = ESDHC_CD_PERMANENT,
+	.cd_type = ESDHC_CD_NONE,
+	.sdhc_host_init_cb = wlan_host_init_cb,
 };
 
 /*eMMC*/
@@ -1086,37 +1091,47 @@ static int __init imx6x_add_ram_console(void)
 static int wlan_bt_power_change(int status)
 {
 	if (status){
-		int ret = gpio_request(QPAD_WIFI_RST, "wifi-rst");
-		if (ret) {
-			pr_err("failed to get GPIO wifi-rst: %d\n",
-				ret);
-			return -EINVAL;
+			int ret = gpio_request(QPAD_WIFI_PDN, "wifi-pdn");		
+			if (ret) {
+				pr_err("failed to get GPIO wifi-pdn: %d\n",
+					ret);
+				return -EINVAL;
+			}
+			gpio_direction_output(QPAD_WIFI_PDN,1);
+			gpio_free(QPAD_WIFI_PDN);
+			msleep(10);
+			ret = gpio_request(QPAD_WIFI_RST, "wifi-rst");
+			if (ret) {
+				pr_err("failed to get GPIO wifi-rst: %d\n",
+					ret);
+				return -EINVAL;
+			}
+			gpio_direction_output(QPAD_WIFI_RST,0);
+			msleep(1);
+			gpio_direction_output(QPAD_WIFI_RST,1);
+			gpio_free(QPAD_WIFI_RST);
 		}
-		gpio_direction_output(QPAD_WIFI_RST,0);
-		msleep(10);
-		gpio_direction_output(QPAD_WIFI_RST,1);
-		gpio_free(QPAD_WIFI_RST);
-	}
-	else {
-		//always put wifi chip into reset state to save power???
-		int ret = gpio_request(QPAD_WIFI_RST, "wifi-rst");
-		if (ret) {
-			pr_err("failed to get GPIO wifi-rst: %d\n",
-				ret);
-			return -EINVAL;
+		else {
+			//always put wifi chip into reset state to save power???
+			int ret = gpio_request(QPAD_WIFI_PDN, "wifi-pdn");		
+			if (ret) {
+				pr_err("failed to get GPIO wifi-pdn: %d\n",
+					ret);
+				return -EINVAL;
+			}
+			gpio_direction_output(QPAD_WIFI_PDN,0);
+			gpio_free(QPAD_WIFI_PDN);
+			
 		}
-		gpio_direction_output(QPAD_WIFI_RST,0);
-		gpio_free(QPAD_WIFI_RST);
+
+	if(wlan_sdhc&&wlan_sdhc->mmc){
+		mmc_detect_change(wlan_sdhc->mmc,0);
+		msleep(100);
 	}
 
 	return 0;
 }
 
-static int wlan_bt_host_interface_change(struct mmc_host *mmc){
-	if(mmc)
-		mmc_detect_change(mmc,HZ);
-	return 0;
-}
 
 static struct platform_device wlan_bt_rfkill = {
 	.name = "mxc_bt_rfkill",
@@ -1125,8 +1140,6 @@ static struct platform_device wlan_bt_rfkill = {
 static struct imx_bt_rfkill_platform_data wlan_bt_rfkill_data = {
 	.name = "bluetooth",
 	.power_change = wlan_bt_power_change,
-	.mmc	= NULL,
-	.host_interface_change = wlan_bt_host_interface_change,
 };
 
 
@@ -1328,7 +1341,6 @@ static void __init mx6_qpad_board_init(void)
 	
 	if(eBootModeCharger!=android_bootmode){
 		
-		qpad_sd3_data.pmmc = &wlan_bt_rfkill_data.mmc;
 		mxc_register_device(&wlan_bt_rfkill, &wlan_bt_rfkill_data);
 		imx6q_add_sdhci_usdhc_imx(1, &qpad_sd2_data);
 		imx6q_add_sdhci_usdhc_imx(2, &qpad_sd3_data);
