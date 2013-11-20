@@ -41,8 +41,16 @@
 
 #define RT5625_VERSION 	"1.0"
 
-#define RT5625_NUM_SUPPLIES 6
-static const char *rt5625_supply_names[RT5625_NUM_SUPPLIES] = {
+enum {
+  RT5625_REGULATOR_DBVDD=0,
+  RT5625_REGULATOR_DCVDD,
+  RT5625_REGULATOR_AVDD1,
+  RT5625_REGULATOR_AVDD2,
+  RT5625_REGULATOR_HPVDD,
+  RT5625_REGULATOR_SPKVDD,
+  RT5625_REGULATOR_NUM,
+};
+static const char *rt5625_supply_names[RT5625_REGULATOR_NUM] = {
 	"DBVDD",
 	"DCVDD",
 	"AVDD1",
@@ -62,7 +70,7 @@ struct rt5625_priv {
 	unsigned int voice_sysclk;
 
 	
-	struct regulator_bulk_data supplies[RT5625_NUM_SUPPLIES];
+	struct regulator_bulk_data supplies[RT5625_REGULATOR_NUM];
 };
 
 
@@ -2299,6 +2307,12 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 		dev_err(codec->dev, "Failed to enable supplies: %d\n", ret);
 		goto err_get;
 	}
+	ret = regulator_set_voltage(rt5625->supplies[RT5625_REGULATOR_SPKVDD].consumer,
+				    3300000,3300000);
+	if (ret != 0) {
+		dev_warn(codec->dev, "Failed to set spkvdd regulator: %d\n", ret);
+	}
+	
 
 	return 0;
 	
