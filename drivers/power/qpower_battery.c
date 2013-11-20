@@ -437,7 +437,7 @@ static ssize_t chip_regs_show(struct device *dev,
 	ret = chip_read_word(chip->client,REG_OFFSET_SOC);
 	if(ret>=0){
 		value = ret>>9;
-		length+= sprintf(buf+length,"soc[%04x,%d,%d]\n",ret,ret,value);
+		length+= sprintf(buf+length,"soc[%04x,%d]\n",ret,value);
 	}
 	ret = chip_read_word(chip->client,REG_OFFSET_MODE);
 	if(ret>=0){
