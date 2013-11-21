@@ -907,8 +907,51 @@ static ssize_t mt9p111_set_reg(struct device *dev,
 	return count;
 }
 
+static int mt9p111_start_focus(struct i2c_client *client)
+{
+	return mt9p111_write_array(client,mt9p111_reg_start_focus);
+}
+
+static int mt9p111_stop_focus(struct i2c_client *client)
+{
+	return mt9p111_write_array(client,mt9p111_reg_stop_focus);
+}
+
+static int mt9p111_check_focus(struct i2c_client *client)
+{
+	u16 val;
+	int ret;
+	ret = mt9p111_read(client, 0xb006, &val, 1);
+	if (ret)
+	{
+		printk(KERN_ERR "reading focus state fail\n");
+		return -1;
+	}
+	return (val==0);
+}
+
+static ssize_t mt9p111_set_focus(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int start;
+	int ret;
+	struct i2c_client* c = container_of(dev, struct i2c_client, dev);
+
+	ret = sscanf(buf, "%d", &start);
+	if (ret == 1)
+	{
+		if(start)
+			mt9p111_start_focus(c);
+		else
+			mt9p111_stop_focus(c);
+	}
+
+	return count;
+}
+
 static struct device_attribute static_attrs[] = {
 	__ATTR(reg, 0666, mt9p111_get_reg, mt9p111_set_reg),
+	__ATTR(focus, 0666, NULL, mt9p111_set_focus),
 };
 
 /*
@@ -1358,6 +1401,16 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	int ret = 0;
 
 	switch (vc->id) {
+	case V4L2_CID_MXC_AUTOFOCUS:
+		{
+			ret=mt9p111_check_focus(mt9p111_data.i2c_client);
+			if(ret>=0)
+			{
+				vc->value = ret;
+				ret=0;
+			}
+			break;
+		}
 	case V4L2_CID_BRIGHTNESS:
 		vc->value = mt9p111_data.brightness;
 		break;
@@ -1386,6 +1439,7 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	return ret;
 }
 
+
 /*!
  * ioctl_s_ctrl - V4L2 sensor interface handler for VIDIOC_S_CTRL ioctl
  * @s: pointer to standard V4L2 device structure
@@ -1403,6 +1457,14 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 		 vc->id);
 
 	switch (vc->id) {
+	case V4L2_CID_MXC_AUTOFOCUS:
+		{
+			if(vc->value)
+				retval=mt9p111_start_focus(mt9p111_data.i2c_client);
+			else
+				retval=mt9p111_stop_focus(mt9p111_data.i2c_client);
+			break;
+		}
 	case V4L2_CID_BRIGHTNESS:
 		break;
 	case V4L2_CID_CONTRAST:

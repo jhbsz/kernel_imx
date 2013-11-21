@@ -115,7 +115,7 @@
 #define GPIO_KEY_F1			IMX_GPIO_NR(6,9)
 #define GPIO_KEY_F2			IMX_GPIO_NR(6,10)
 
-#define QPAD_USB_OTG_PWR	IMX_GPIO_NR(4, 5)
+#define QPAD_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
 
 #define QPAD_DISP_PWR_EN		IMX_GPIO_NR(2, 6)
 #define QPAD_DISP_BL_PWR_EN	IMX_GPIO_NR(4, 15)
@@ -137,7 +137,7 @@
 
 //FLASHLIGHT
 #define QPAD_FL_PWR_EN		IMX_GPIO_NR(3, 31)
-#define QPAD_FL_EN			IMX_GPIO_NR(3, 22)
+#define QPAD_FL_EN			IMX_GPIO_NR(4, 5)
 
 //Touch Panel
 #define QPAD_TP_PWR_EN		IMX_GPIO_NR(2, 28)
@@ -470,15 +470,15 @@ static int eup2471_flash(int on)
 	printk("eup2471 flash %s\n", on?"on":"off");
 	if (on)
 	{
-		gpio_direction_output(en, 0);
+		gpio_direction_output(en, 1);
 		udelay(10);
 
-		gpio_direction_output(en, 1);
+		gpio_direction_output(en, 0);
 		udelay(10);
 	}
 	else
 	{
-		gpio_direction_output(en, 0);
+		gpio_direction_output(en, 1);
 	}
 
 	gpio_free(en);
