@@ -440,6 +440,8 @@ static int pfuze100_init(struct mc_pfuze *pfuze)
 	/*set all switches APS in normal and PFM mode in standby*/
 		for (i = 0; i < 7; i++) {
 			value = 0xc;
+			if(0==i)//shutdown sw1ab in standby
+				value = 0x4;
 			ret = pfuze_reg_write(pfuze,
 					PFUZE100_SW1AMODE + (i * 7),
 					value);
@@ -501,6 +503,27 @@ static int pfuze100_init(struct mc_pfuze *pfuze)
 		if (ret)
 			goto err;
 	}
+
+	//shutdown pmic extra LDOs since we don't required 
+
+	//shutdown VGEN3 in standby mode
+	/*ret = pfuze_reg_rmw(pfuze, 0x6E,
+				0x20,
+				0x20);
+	if (ret) goto err;
+
+	//shutdown VGEN4 in standby mode 
+	ret = pfuze_reg_rmw(pfuze, 0x6F,
+				0x20,
+				0x20);
+	if (ret) goto err;*/
+
+	//shutdown VGEN6 in standby mode
+	ret = pfuze_reg_rmw(pfuze, 0x71,
+				0x20,
+				0x20);
+	if (ret) goto err;
+
 	return 0;
 err:
 	printk(KERN_ERR "pfuze100 init error!\n");
