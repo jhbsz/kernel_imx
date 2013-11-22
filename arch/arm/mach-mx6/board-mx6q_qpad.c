@@ -197,6 +197,17 @@ static int __init  detect_bootmode(char *arg)
 __setup("androidboot.mode=", detect_bootmode);
 
 
+static int enable_armpmu;
+static int __init  detect_armpmu(char *arg)
+{
+	enable_armpmu++;
+    return 0;
+}
+
+__setup("armpmu", detect_armpmu);
+
+
+
 //
 //
 //
@@ -1359,11 +1370,13 @@ static void __init mx6_qpad_board_init(void)
 
 	imx6q_add_mxc_pwm(0);
 	imx6q_add_mxc_pwm(1);
-	imx6q_add_mxc_pwm(2);
-	imx6q_add_mxc_pwm(3);
+	//For fast boot
+	/*imx6q_add_mxc_pwm(2);
+	imx6q_add_mxc_pwm(3);*/
 	imx6q_add_mxc_pwm_backlight(0, &mx6_qpad_pwm_backlight_data);
 
-	imx6q_add_otp();
+	//For fast boot
+	//imx6q_add_otp();
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(1, NULL);
 	imx6q_add_dma();
@@ -1389,15 +1402,18 @@ static void __init mx6_qpad_board_init(void)
 	pm_power_off = mx6_snvs_poweroff;
 	imx6q_add_busfreq();
 
-	imx6_add_armpmu();
 	
 	qpad_power_init();
-	
-	if(eBootModeCharger!=android_bootmode){
+
+	//enable armpmu if necessary
+	if(enable_armpmu){
+		imx6_add_armpmu();
 		imx6q_add_perfmon(0);
 		imx6q_add_perfmon(1);
 		imx6q_add_perfmon(2);
 		
+	}
+	if(eBootModeCharger!=android_bootmode){
 		nfc_init();
 
 		modem_init();
