@@ -862,9 +862,6 @@ static int __init imx6q_init_audio(void)
 
 	rt5625_data.sysclk = rate;
 
-	//enable clko2 since somtimes codec require it for initialization
-	clk_enable(clko2);
-
 	//reset audio codec
 	ret = gpio_request(QPAD_AUDIO_RST, "audio-rst");
 	if (ret) {
