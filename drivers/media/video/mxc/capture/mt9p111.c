@@ -1128,11 +1128,11 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 	
 	/* Make sure power on */
 	if (on){
-		if (camera_plat->pwdn)
-			camera_plat->pwdn(0);
+		if (camera_plat->pwdn2)
+			camera_plat->pwdn2(0,1);
 	}else{
-		if (camera_plat->pwdn)
-			camera_plat->pwdn(1);
+		if (camera_plat->pwdn2)
+			camera_plat->pwdn2(1,1);
 	}
 
 
@@ -1703,10 +1703,6 @@ static int mt9p111_probe(struct i2c_client *client,
 	else
 		printk("MT9P111 found!!\n");
 
-	// Ellie: mxc_v4l2_master_attach will power off the sensor
-	//if (plat_data->pwdn)
-	//	plat_data->pwdn(1);
-
 	camera_plat = plat_data;
 
 	mtp9111_int_device.priv = &mt9p111_data;
@@ -1720,9 +1716,10 @@ static int mt9p111_probe(struct i2c_client *client,
 	pr_info("camera mtp9111 is found\n");
 	return retval;
 
-
 err:
-	printk("%s ret %d\n",__func__,retval);
+	printk("%s ret %d\n",__func__,retval);	
+	if (plat_data->pwdn2)
+		plat_data->pwdn2(1,0);	
 	return retval;
 }
 

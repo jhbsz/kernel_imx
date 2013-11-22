@@ -5524,17 +5524,21 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 
 	clk_set_parent(&ldb_di0_clk, &pll2_pfd_352M);
 	clk_set_parent(&ldb_di1_clk, &pll2_pfd_352M);
-
-	/* PCLK camera - J5 */
-	clk_set_parent(&clko2_clk, &osc_clk);
-	clk_set_rate(&clko2_clk, 2400000);
-
-	clk_set_parent(&clko_clk, &pll4_audio_main_clk);
-
+	if(machine_is_mx6q_qpad()){
+		clk_set_parent(&clko_clk, &pll4_audio_main_clk);
+		clk_set_parent(&clko2_clk, &osc_clk);
+	}else {
+		/* PCLK camera - J5 */
+		clk_set_rate(&clko2_clk, 2400000);
+		clk_set_parent(&clko_clk, &pll4_audio_main_clk);
+	}
 	clk_set_parent(&ssi2_clk, &pll4_audio_main_clk);
 	//for 44.1kHz
-	//clk_set_rate(&ssi2_clk, 11289600);
-	clk_set_rate(&ssi2_clk, 22579200);
+	
+	if(machine_is_mx6q_qpad())
+		clk_set_rate(&ssi2_clk, 22579200);
+	else
+		clk_set_rate(&ssi2_clk, 11289600);
 	
 	/*
 	 * FIXME: asrc needs to use asrc_serial(spdif1) clock to do sample

@@ -292,7 +292,7 @@ static inline void mx6q_qpad_init_uart(void)
 	imx6q_add_imx_uart(4, NULL);	
 }
 
-static void _mx6q_csi0_cam_powerdown(int powerdown,int init)
+static void _mx6q_csi0_cam_powerdown(int powerdown,int init,int found)
 {
 	int cam_pdn = QPAD_CSI0_PWDN;
 	int cam_reset = QPAD_CSI0_RST;
@@ -353,6 +353,9 @@ static void _mx6q_csi0_cam_powerdown(int powerdown,int init)
 		msleep(25);
 	}
 
+	if(!found)
+		clk_disable(clko);
+
 	gpio_free(cam_pwr_en);
 	gpio_free(cam_pdn);
 	gpio_free(cam_reset);
@@ -360,29 +363,24 @@ static void _mx6q_csi0_cam_powerdown(int powerdown,int init)
 
 }
 
-static void mx6q_csi0_cam_powerdown(int powerdown)
-{
-	_mx6q_csi0_cam_powerdown(powerdown,0);
+static void mx6q_csi0_cam_powerdown2(int powerdown,int found){
+	_mx6q_csi0_cam_powerdown(powerdown,0,found);	
 }
+
 
 static struct fsl_mxc_camera_platform_data camera_data;
 static void mx6q_csi0_io_init(void)
 {
-	int rate;	
-	struct clk *parent,*clko;
+	struct clk *clko;
+	printk("%s\n",__func__);
 
 	clko = clk_get(NULL, "clko_clk");
 	if (IS_ERR(clko))
 		pr_err("can't get CLKO clock.\n");
-
-	parent = clk_get(NULL, "osc_clk");
-	if (!IS_ERR(parent)) {
-		clk_set_parent(clko, parent);
-		clk_put(parent);
+	else {
+		clk_set_rate(clko, clk_round_rate(clko, camera_data.mclk));
+		clk_put(clko);
 	}
-	rate = clk_round_rate(clko, camera_data.mclk);
-	clk_set_rate(clko, rate);
-	clk_put(clko);
 
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_csi0_sensor_pads,
@@ -414,9 +412,9 @@ static void mx6q_csi0_io_init(void)
 	else if (cpu_is_mx6dl())
 		mxc_iomux_set_gpr_register(13, 0, 3, 4);
 
-	_mx6q_csi0_cam_powerdown(1,1);
+	_mx6q_csi0_cam_powerdown(1,1,1);
 	msleep(100);
-	_mx6q_csi0_cam_powerdown(0,1);
+	_mx6q_csi0_cam_powerdown(0,1,1);
 }
 
 static struct fsl_mxc_camera_platform_data camera_data = {
@@ -424,7 +422,7 @@ static struct fsl_mxc_camera_platform_data camera_data = {
 	.mclk_source = 0,
 	.csi = 0,
 	.io_init = mx6q_csi0_io_init,
-	.pwdn = mx6q_csi0_cam_powerdown,
+	.pwdn2 = mx6q_csi0_cam_powerdown2, 
 };
 
 #include <linux/i2c/eup2471.h>
@@ -845,22 +843,18 @@ static struct mxc_audio_platform_data rt5625_data = {
 static int __init imx6q_init_audio(void)
 {
 	int ret,rate;	
-	struct clk *parent,*clko2;
-	
+	struct clk *clko2;
 
 	clko2 = clk_get(NULL, "clko2_clk");
-	if (IS_ERR(clko2))
-		pr_err("can't get CLKO2 clock.\n");
-
-	parent = clk_get(NULL, "osc_clk");
-	if (!IS_ERR(parent)) {
-		clk_set_parent(clko2, parent);
-		clk_put(parent);
+	if (IS_ERR(clko2)){
+		pr_err("can't get clko2 clock.\n");
 	}
-	rate = clk_round_rate(clko2, 12000000);
-	clk_set_rate(clko2, rate);
-
-	rt5625_data.sysclk = rate;
+	else {
+		rate = clk_round_rate(clko2, 12000000);
+		rt5625_data.sysclk = rate;
+		clk_set_rate(clko2, rate);
+		clk_put(clko2);
+	}
 
 	//reset audio codec
 	ret = gpio_request(QPAD_AUDIO_RST, "audio-rst");
