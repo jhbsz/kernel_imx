@@ -5427,11 +5427,11 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	pll3_pfd_454M.disable(&pll3_pfd_454M);
 	pll3_pfd_508M.disable(&pll3_pfd_508M);
 	pll3_pfd_720M.disable(&pll3_pfd_720M);
-	if (cpu_is_mx6q()) {
-		//pll3_pfd_540M.disable(&pll3_pfd_540M);/*Add by allen:This clk is use by mipi in bootloader,so do not disable*/
-		//pll3_usb_otg_main_clk.disable(&pll3_usb_otg_main_clk);
-	} else if (cpu_is_mx6dl()) {
 #ifndef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
+	if (cpu_is_mx6q()) {
+		pll3_pfd_540M.disable(&pll3_pfd_540M);/*Add by allen:This clk is use by mipi in bootloader,so do not disable*/
+		pll3_usb_otg_main_clk.disable(&pll3_usb_otg_main_clk);
+	} else if (cpu_is_mx6dl()) {
 		/*
 		 * Bootloader may use pll3_pfd_540M to drive ipu1_clk
 		 * to support splashimage so we should not disable the
@@ -5439,8 +5439,8 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		 */
 		pll3_pfd_540M.disable(&pll3_pfd_540M);
 		pll3_usb_otg_main_clk.disable(&pll3_usb_otg_main_clk);
-#endif
 	}
+#endif
 #endif
 	pll4_audio_main_clk.disable(&pll4_audio_main_clk);
 	pll5_video_main_clk.disable(&pll5_video_main_clk);
@@ -5578,32 +5578,31 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		     3 << MXC_CCM_CCGRx_CG9_OFFSET |
 		     3 << MXC_CCM_CCGRx_CG8_OFFSET, MXC_CCM_CCGR2);
 
-	__raw_writel(1 << MXC_CCM_CCGRx_CG14_OFFSET |
+	{
+		u32 ccgr3 = 1 << MXC_CCM_CCGRx_CG14_OFFSET |
 		     1 << MXC_CCM_CCGRx_CG13_OFFSET |
 		     3 << MXC_CCM_CCGRx_CG12_OFFSET |
 		     1 << MXC_CCM_CCGRx_CG11_OFFSET |
-#ifdef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
-		     /*
-		      * We use IPU1 DI1 to do bootloader splashimage by
-		      * default, so we need to enable the clocks to
-		      * keep the display running.
-		      */
-		      #if 1
-			3 << 16 |							/* mipi_core_cfg_clk,mipi is use in bootloader ,so we should enable that,add by allenyao */  
-			3 << MXC_CCM_CCGRx_CG7_OFFSET |	/* ldb_di1_clk */
-			3 << MXC_CCM_CCGRx_CG2_OFFSET |	/* ipu1_di1_clk */
-			3 << MXC_CCM_CCGRx_CG0_OFFSET |	/* ipu1_clk */
-		     #endif
-			#if 0
-			/*add by allenyao*/
-			3 << 16 |
-			3 << MXC_CCM_CCGRx_CG6_OFFSET |	/* ldb_di1_clk */
-			3 << MXC_CCM_CCGRx_CG4_OFFSET |	/* ipu1_di1_clk */
-			3 << MXC_CCM_CCGRx_CG3_OFFSET |	/* ipu1_clk */
-			/*add by allenyao*/
+			#ifdef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
+			3 << MXC_CCM_CCGRx_CG2_OFFSET | /* ipu1_di1_clk */
+			3 << MXC_CCM_CCGRx_CG0_OFFSET | /* ipu1_clk */
 			#endif
-#endif
-		     3 << MXC_CCM_CCGRx_CG10_OFFSET, MXC_CCM_CCGR3);
+			3 << MXC_CCM_CCGRx_CG10_OFFSET;
+
+		#ifdef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
+		/*
+		 * We use IPU1 DI1 to do bootloader splashimage by
+		 * default, so we need to enable the clocks to
+		 * keep the display running.
+		 */
+		if(machine_is_mx6q_qpad())
+			ccgr3 |= 3 << MXC_CCM_CCGRx_CG8_OFFSET; //mipi
+		else
+			ccgr3 |= 3 << MXC_CCM_CCGRx_CG7_OFFSET;//ldb
+		#endif
+		__raw_writel(ccgr3,MXC_CCM_CCGR3);
+	}
+
 	__raw_writel(3 << MXC_CCM_CCGRx_CG7_OFFSET |
 #ifdef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
 			/*
