@@ -1869,6 +1869,11 @@ static int serial_imx_probe(struct platform_device *pdev)
 		sport->use_irda = 1;
 #endif
 
+	if(pdata&&(pdata->flags & IMXUART_CON_DISABLE))
+		imx_reg.cons = NULL;
+	else
+		imx_reg.cons = IMX_CONSOLE;
+
 	if (pdata && pdata->init) {
 		ret = pdata->init(pdev);
 		if (ret)

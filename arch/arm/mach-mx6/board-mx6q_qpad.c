@@ -185,7 +185,8 @@ enum {
  eBootModeMax,
 };
 
-static int android_bootmode;
+//bootmode support
+static int android_bootmode __initdata;
 static int __init  detect_bootmode(char *arg)
 {
 	//if(arg&&!strcmp(arg,"charger"))
@@ -196,8 +197,8 @@ static int __init  detect_bootmode(char *arg)
 
 __setup("androidboot.mode=", detect_bootmode);
 
-
-static int enable_armpmu;
+//armpmu support
+static int enable_armpmu __initdata;
 static int __init  detect_armpmu(char *arg)
 {
 	enable_armpmu++;
@@ -205,6 +206,16 @@ static int __init  detect_armpmu(char *arg)
 }
 
 __setup("armpmu", detect_armpmu);
+
+//console support
+static int console_assigned __initdata = 0;
+static int __init  detect_console_assigned(char *str)
+{
+    console_assigned++;
+    return 0;
+}
+
+__setup("console=", detect_console_assigned);
 
 
 
@@ -276,20 +287,25 @@ void uart_modulation_enable(int en){
  * IMX-78,For Infrared modulation communication,we need using half duplex,Never enable DMA mode since 
  * IMX serial driver does not support half duplex mode in DMA mode.
  */
-static const struct imxuart_platform_data mx6q_uart4_data __initconst = {
-       .flags      = IMXUART_MODULATION,
+static struct imxuart_platform_data mx6_uart4_pdata __initdata = {
+       .flags      = IMXUART_MODULATION|IMXUART_CON_DISABLE,
        .modulation_enable = uart_modulation_enable,
        .transceiver_delay = 2000,
 
 };
+static struct imxuart_platform_data mx6_uart_pdata __initdata = {
+       .flags      = IMXUART_CON_DISABLE,
+};
 
 static inline void mx6q_qpad_init_uart(void)
 {
-	imx6q_add_imx_uart(0, NULL);	
-	imx6q_add_imx_uart(1, NULL);
-	imx6q_add_imx_uart(2, NULL);
-	imx6q_add_imx_uart(3, &mx6q_uart4_data);
-	imx6q_add_imx_uart(4, NULL);	
+	if(console_assigned)
+		mx6_uart_pdata.flags&=~IMXUART_CON_DISABLE;
+	imx6q_add_imx_uart(0, &mx6_uart_pdata);	
+	imx6q_add_imx_uart(1, &mx6_uart_pdata);
+	imx6q_add_imx_uart(2, &mx6_uart_pdata);
+	imx6q_add_imx_uart(3, &mx6_uart4_pdata);
+	imx6q_add_imx_uart(4, &mx6_uart_pdata);	
 }
 
 static void _mx6q_csi0_cam_powerdown(int powerdown,int init,int found)
@@ -1417,6 +1433,8 @@ static void __init mx6_qpad_board_init(void)
 }
 
 extern void __iomem *twd_base;
+
+
 static void __init mx6_qpad_timer_init(void)
 {
 #ifdef CONFIG_LOCAL_TIMERS
@@ -1425,7 +1443,9 @@ static void __init mx6_qpad_timer_init(void)
 #endif
 	mx6_clocks_init(32768, 24000000, 0, 0);
 
-	early_console_setup(UART1_BASE_ADDR, clk_get_sys("imx-uart.0", NULL));
+	if(console_assigned){
+		early_console_setup(UART1_BASE_ADDR, clk_get_sys("imx-uart.0", NULL));
+	}
 }
 
 static struct sys_timer mx6_qpad_timer = {
