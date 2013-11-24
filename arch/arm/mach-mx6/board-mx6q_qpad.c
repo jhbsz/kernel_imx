@@ -505,8 +505,37 @@ static struct eup2471_platform_data eup2471_pdata =
 
 #include <linux/ft5x0x_ts.h>
 
+static int ft5x0x_set_power(int on){
+	int ret=0;
+	ret = gpio_request(QPAD_TP_PWR_EN, "tp-pwr");
+	if (ret) {
+		pr_err("failed to get GPIO tp-pwr: %d\n",
+			ret);
+		goto err;
+	}
+	gpio_direction_output(QPAD_TP_PWR_EN, on?1:0);
+	gpio_free(QPAD_TP_PWR_EN);
+
+	ret = gpio_request(QPAD_TP_RST, "tp-rst");
+	if (ret) {
+		pr_err("failed to get GPIO tp-rst: %d\n",
+			ret);
+		goto err;
+	}
+	
+	if(1==on){
+		gpio_direction_output(QPAD_TP_RST, 1);
+		msleep(50);
+	}else {
+		gpio_direction_output(QPAD_TP_RST, 0);
+	}
+	
+	gpio_free(QPAD_TP_RST);
+err:
+	return ret;
+}
 static int ft5x0x_plat_init(void){
-	int ret=0;	
+	int ret=0;
 	ret = gpio_request(QPAD_TP_PWR_EN, "tp-pwr");
 	if (ret) {
 		pr_err("failed to get GPIO tp-pwr: %d\n",
@@ -522,18 +551,20 @@ static int ft5x0x_plat_init(void){
 			ret);
 		goto err;
 	}
+	
 	gpio_direction_output(QPAD_TP_RST, 0);
 	msleep(50);
 	gpio_direction_output(QPAD_TP_RST, 1);
-	gpio_free(QPAD_TP_RST);
 	msleep(50);
-
+	
+	gpio_free(QPAD_TP_RST);
 err:
 	return ret;
-	
 }
+
 static struct ft5x0x_ts_platform_data ft5x0x_data=
 {
+	.setpower	= ft5x0x_set_power,
 	.plat_init	= ft5x0x_plat_init,
 };
 

@@ -70,6 +70,9 @@ struct ft5x0x_ts_data {
 	#endif
 
 	
+	int (*setpower)(int on);
+
+	
 };
 
 
@@ -902,8 +905,10 @@ static irqreturn_t ft5x0x_ts_interrupt(int irq, void *dev_id)
 static int ft5x0x_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	struct ft5x0x_ts_data *priv = (struct ft5x0x_ts_data *)i2c_get_clientdata(client);
-	//supress compiler warning
-	if(priv){}
+	if(priv){
+		if(priv->setpower)
+			priv->setpower(0);
+	}
 	return 0;
 	
 }
@@ -911,8 +916,10 @@ static int ft5x0x_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 static int ft5x0x_ts_resume(struct i2c_client *client)
 {
 	struct ft5x0x_ts_data *priv = (struct ft5x0x_ts_data *)i2c_get_clientdata(client);
-	//supress compiler warning
-	if(priv){}
+	if(priv){		
+		if(priv->setpower)
+			priv->setpower(1);
+	}
 	return 0;
 }
 
@@ -968,6 +975,7 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct input_dev *input_dev;	
 	struct device *dev = &client->dev;
 	struct ft5x0x_ts_platform_data* pdata = client->dev.platform_data;
+	unsigned long irqflags;
 	int err = 0;
 	u8 uc_reg_value; 
 #if CFG_SUPPORT_TOUCH_KEY
@@ -1006,6 +1014,7 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	ft5x0x_ts->irq = client->irq;
 	ft5x0x_ts->client = client;
+	ft5x0x_ts->setpower = pdata->setpower;
 	i2c_set_clientdata(client, ft5x0x_ts);
 	if(pdata)
 	{
@@ -1032,14 +1041,19 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 
-	err = request_irq(ft5x0x_ts->irq, ft5x0x_ts_interrupt, IRQF_NO_SUSPEND|IRQF_TRIGGER_FALLING, "ft5x0x_ts", ft5x0x_ts);
+	irqflags = IRQF_TRIGGER_FALLING;
+	if(pdata->quirks&FT5X0X_QUIRK_WAKEUP){
+		irqflags |= IRQF_NO_SUSPEND;		
+		device_init_wakeup(&client->dev, 1);
+	}
+	
+	err = request_irq(ft5x0x_ts->irq, ft5x0x_ts_interrupt, irqflags, "ft5x0x_ts", ft5x0x_ts);
 	if (err < 0) {
 		dev_err(&client->dev, "ft5x0x_probe: request irq failed\n");
 		goto exit_irq_request_failed;
 	}
 
 	disable_irq_nosync(ft5x0x_ts->irq);
-	device_init_wakeup(&client->dev, 1);
 
 	input_dev = input_allocate_device();
 	if (!input_dev) {
