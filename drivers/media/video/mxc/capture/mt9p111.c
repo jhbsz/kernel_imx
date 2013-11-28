@@ -382,6 +382,12 @@ enum mt9p111_mode {
 	mt9p111_mode_MAX = 8
 };
 
+#define mt9p111_exp_comp_MIN -2
+#define mt9p111_exp_comp_MAX 3
+
+static u16 mt9p111_exposure_value[mt9p111_exp_comp_MAX-mt9p111_exp_comp_MIN+1] = 
+{0x2C,0x38,0x44,0x50,0x5C,0x68};
+
 /*
  * Then there is the issue of window sizes.  Try to capture the info here.
  */
@@ -664,6 +670,8 @@ static int mt9p111_int_reset(struct i2c_client *client)
 	mt9p111_write_array(client, mt9p111_reg_init);
 	printk(KERN_ERR "Write initial setting done.\n");
 	mt9p111_fw_down(client);
+	mt9p111_data.pix.width = 640;
+	mt9p111_data.pix.height = 480;
 	return 0;
 }
 
@@ -1484,6 +1492,12 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	case V4L2_CID_GAMMA:
 		break;
 	case V4L2_CID_EXPOSURE:
+		{
+			if(vc->value<mt9p111_exp_comp_MIN||vc->value>mt9p111_exp_comp_MAX)
+				retval = -EPERM;
+			else
+				retval=mt9p111_write(mt9p111_data.i2c_client, 0xA409, mt9p111_exposure_value[vc->value-mt9p111_exp_comp_MIN], 1);
+		}
 		break;
 	case V4L2_CID_AUTOGAIN:
 		break;
