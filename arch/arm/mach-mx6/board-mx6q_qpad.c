@@ -378,11 +378,6 @@ static void mx6q_csi0_io_init(void)
 	if (IS_ERR(clko))
 		pr_err("can't get CLKO clock.\n");
 
-	parent = clk_get(NULL, "osc_clk");
-	if (!IS_ERR(parent)) {
-		clk_set_parent(clko, parent);
-		clk_put(parent);
-	}
 	rate = clk_round_rate(clko, camera_data.mclk);
 	clk_set_rate(clko, rate);
 	clk_put(clko);
@@ -857,7 +852,7 @@ static int __init imx6q_init_audio(void)
 	if (IS_ERR(clko2))
 		pr_err("can't get CLKO2 clock.\n");
 
-	parent = clk_get(NULL, "osc_clk");
+	parent = clk_get(NULL, "osc");
 	if (!IS_ERR(parent)) {
 		clk_set_parent(clko2, parent);
 		clk_put(parent);
