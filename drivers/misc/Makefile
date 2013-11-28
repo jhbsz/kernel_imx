@@ -54,3 +54,5 @@ obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_APANIC)		+= apanic.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
 obj-$(CONFIG_PN544)		+= pn544.o
+obj-$(CONFIG_EUP2471)	+= eup2471.o
+

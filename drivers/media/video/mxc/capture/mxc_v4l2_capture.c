@@ -1044,6 +1044,14 @@ static int mxc_v4l2_g_ctrl(cam_data *cam, struct v4l2_control *c)
 			status = -ENODEV;
 		}
 		break;
+	case V4L2_CID_MXC_AUTOFOCUS:
+		if (cam->sensor) {
+			status = vidioc_int_g_ctrl(cam->sensor, c);
+		} else {
+			pr_err("ERROR: v4l2 capture: slave not found!\n");
+			status = -ENODEV;
+		}
+		break;
 	default:
 		pr_err("ERROR: v4l2 capture: unsupported ioctrl!\n");
 	}
@@ -1232,6 +1240,14 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 #ifdef CONFIG_MXC_IPU_V1
 		ipu_csi_flash_strobe(true);
 #endif
+		break;
+	case V4L2_CID_MXC_AUTOFOCUS:
+		if (cam->sensor) {
+			ret = vidioc_int_s_ctrl(cam->sensor, c);
+		} else {
+			pr_err("ERROR: v4l2 capture: slave not found!\n");
+			ret = -ENODEV;
+		}
 		break;
 	case V4L2_CID_MXC_SWITCH_CAM: /* Ellie Cao: need to check implementation of io_init and vidioc_int_s_power */
 		if (cam->sensor != cam->all_sensors[c->value]) {

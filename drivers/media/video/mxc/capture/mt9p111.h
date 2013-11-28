@@ -1192,6 +1192,19 @@ static struct mt9p111_regval_list mt9p111_reg_af_fw[] = {
 	{0xffff, 0xffff, 0},
 };
 
+static struct mt9p111_regval_list mt9p111_reg_start_focus[] = {
+	{0x8419, 0x03, 1},
+	{0x8404, 0x05, 1},
+	{0xb006, 0x01, 1},
+	{0xffff, 0xffff, 0},
+};
+
+static struct mt9p111_regval_list mt9p111_reg_stop_focus[] = {
+	{0x8419, 0x00, 1},
+	{0x8404, 0x05, 1},
+	{0xffff, 0xffff, 0},
+};
+
 static struct mt9p111_regval_list mt9p111_reg_176x144[] = {
 	
 	{0xffff, 0xffff, 0},

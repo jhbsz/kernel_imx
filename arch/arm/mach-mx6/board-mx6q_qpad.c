@@ -314,6 +314,7 @@ static void _mx6q_csi0_cam_powerdown(int powerdown,int init,int found)
 	int cam_reset = QPAD_CSI0_RST;
 	int cam_pwr_en = QPAD_CSI0_POWER;
 	struct clk *clko;
+	struct regulator* regulator;
 
 	clko = clk_get(NULL, "clko_clk");
 	if (IS_ERR(clko))
@@ -350,10 +351,30 @@ static void _mx6q_csi0_cam_powerdown(int powerdown,int init,int found)
 		msleep(5);
 		gpio_direction_output(cam_pdn, 1);
 		if(!init)
+		{
 			clk_enable(clko); /*mxc_v4l2_capture.c will disable the clock, so enable it first */
+		}
+		/* disable VGEN3 regulator */
+		regulator = regulator_get(NULL,"VGEN3_2V8");
+		if(IS_ERR(regulator)){
+			printk("failed to get regulator[VGEN3_2V8]\n");
+		}else {
+			if(init)
+				regulator_enable(regulator);
+			regulator_disable(regulator);
+			regulator_put(regulator);
+		}
 	}
 	else
 	{
+		/* enable VGEN3 regulator */
+		regulator = regulator_get(NULL,"VGEN3_2V8");
+		if(IS_ERR(regulator)){
+			printk("failed to get regulator[VGEN3_2V8]\n");
+		}else {
+			regulator_enable(regulator);
+			regulator_put(regulator);
+		}
 		if(!init)
 		{
 			clk_disable(clko); /*mxc_v4l2_capture.c has enabled the clock, so disable it first */
@@ -481,15 +502,15 @@ static int eup2471_flash(int on)
 	printk("eup2471 flash %s\n", on?"on":"off");
 	if (on)
 	{
-		gpio_direction_output(en, 0);
+		gpio_direction_output(en, 1);
 		udelay(10);
 
-		gpio_direction_output(en, 1);
+		gpio_direction_output(en, 0);
 		udelay(10);
 	}
 	else
 	{
-		gpio_direction_output(en, 0);
+		gpio_direction_output(en, 1);
 	}
 
 	gpio_free(en);
@@ -1273,7 +1294,7 @@ static int __init qpad_regulator_late_init(void){
 			}
 			i++;
 		}while(i<count);
-	
+
 	return 0;
 }
 
