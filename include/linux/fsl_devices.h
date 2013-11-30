@@ -311,7 +311,7 @@ struct fsl_mxc_camera_platform_data {
 	u8 mclk_source;
 	u32 csi;
 	void (*pwdn)(int pwdn);
-	void (*pwdn2)(int pwdn,int found);
+	void (*mclk_on)(int on);
 	void (*io_init)(void);
 };
 

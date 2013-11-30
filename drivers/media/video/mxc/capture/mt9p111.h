@@ -18,6 +18,7 @@
 
 #define REG_READMODE	0x3040
 
+
 struct mt9p111_regval_list {
 	unsigned short reg_num;
 	unsigned short value;
@@ -96,10 +97,10 @@ static struct mt9p111_regval_list mt9p111_reg_init[] = {
 	{ 0xC86A, 0x0E87, 2}, 				  
 	{ 0xC870, 0x0014, 2}, 					  
 	{ 0xC8AA, 0x0280, 2}, 					  
-	{ 0xC8AC, 0x01E0, 2}, 					  
-	{ 0xC8AE, 0x0001, 2}, 						  
-	{ 0xC8B0, 0x0080, 2}, 
-	//{ 0xC8B0, 0x0000, 2}, 						 
+	{ 0xC8AC, 0x01E0, 2},
+	{ 0xC8AE, 0x0001, 2}, 					  
+	{ 0xC8B0, 0x0000, 2}, 
+	//{ 0xC8B0, 0x0000, 2}, 	 
 	{ 0xC8B8, 0x0004, 2}, 					   
 	{ 0xC8A4, 0x0A28, 2}, 
 	{ 0xC8A6, 0x07A0, 2}, 
@@ -160,9 +161,9 @@ static struct mt9p111_regval_list mt9p111_reg_init[] = {
 	{ 0xE004, 0x1E00, 2}, 
 #else
 	{ 0xA01A, 0x0095, 2},	
-	{ 0xA01C, 0x0109, 2}, 
+	{ 0xA01C, 0x0109, 2},
 	{ 0xA01E, 0x007C, 2},	
-	{ 0xDC0A, 0x06, 1}, 
+	{ 0xDC0A, 0x06, 1},
 #endif
 	{ 0xDC1C, 0x2710, 2}, 
 	{ 0x8404, 0x06, 1}, 
@@ -1301,16 +1302,6 @@ static struct mt9p111_regval_list mt9p111_reg_1920x1080[] = {
 static struct mt9p111_regval_list mt9p111_reg_rgb565[] = {
 
 	{0xffff, 0xffff, 0}
-};
-
-struct reg_range mt9p111_regrange_list[]={
-
-	{0xffff,0xffff}
-};
-
-u16 mt9p111_reglist[]={
-	
-	0xffff,
 };
 
 

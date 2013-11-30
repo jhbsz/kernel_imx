@@ -18,6 +18,7 @@
  *
  * @ingroup MXC_V4L2_CAPTURE
  */
+#define DEBUG
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/init.h>
@@ -1275,7 +1276,6 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 					       cam->mclk_source, true, true);
 			cam->mclk_on[cam->mclk_source] = true;
 			vidioc_int_s_power(cam->sensor, 1);
-			vidioc_int_init(cam->sensor); // Ellie added
 			vidioc_int_dev_init(cam->sensor);
 		}
 		break;
@@ -1761,7 +1761,7 @@ static int mxc_v4l_close(struct file *file)
 			err |= mxc_streamoff(cam);
 			wake_up_interruptible(&cam->enc_queue);
 		}
-		vidioc_int_dev_exit(cam->sensor); // Ellie added
+
 		vidioc_int_s_power(cam->sensor, 0);
 		if (cam->mclk_on[cam->mclk_source]) {
 			ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
@@ -2866,14 +2866,13 @@ static int mxc_v4l2_suspend(struct platform_device *pdev, pm_message_t state)
 	}
 
 	if (cam->sensor && cam->open_count) {
-		vidioc_int_dev_exit(cam->sensor); // Ellie
-		vidioc_int_s_power(cam->sensor, 0); // Ellie
 		if (cam->mclk_on[cam->mclk_source]) {
 			ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
 					       cam->mclk_source,
 					       false, false);
 			cam->mclk_on[cam->mclk_source] = false;
 		}
+		vidioc_int_s_power(cam->sensor, 0);
 	}
 
 	up(&cam->busy_lock);
@@ -2906,7 +2905,7 @@ static int mxc_v4l2_resume(struct platform_device *pdev)
 	wake_up_interruptible(&cam->power_queue);
 
 	if (cam->sensor && cam->open_count) {
-		//vidioc_int_s_power(cam->sensor, 1);
+		vidioc_int_s_power(cam->sensor, 1);
 
 		if (!cam->mclk_on[cam->mclk_source]) {
 			ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
@@ -2914,8 +2913,6 @@ static int mxc_v4l2_resume(struct platform_device *pdev)
 					       true, true);
 			cam->mclk_on[cam->mclk_source] = true;
 		}
-		vidioc_int_s_power(cam->sensor, 1); // Ellie
-		vidioc_int_init(cam->sensor); // Ellie
 		vidioc_int_dev_init(cam->sensor); // Ellie
 	}
 
@@ -2981,10 +2978,6 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 		vidioc_int_dev_exit(cam->all_sensors[i]);
 		vidioc_int_s_power(cam->all_sensors[i], 0);
 	}
-	// Ellie added
-	ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
-				   cam->mclk_source,
-				   false, false);
 
 	cam_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	vidioc_int_g_fmt_cap(cam->sensor, &cam_fmt);

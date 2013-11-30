@@ -90,6 +90,10 @@
 #include "generic_devices.h"
 #include <linux/pwm.h>
 
+#define BOARD_QPAD_REVA 0x1
+#define BOARD_QPAD_REVB 0x2
+#define BOARD_QPAD_REVC 0x3
+
 
 #define QPAD_PFUZE_INT		IMX_GPIO_NR(7, 13)
 
@@ -147,8 +151,6 @@
 
 //Sensor
 #define QPAD_SENSOR_RST		IMX_GPIO_NR(2, 23)
-#define QPAD_SENSOR_INT1	IMX_GPIO_NR(3, 16)
-#define QPAD_SENSOR_INT2	IMX_GPIO_NR(3, 15)
 
 //WiFi
 #define QPAD_WIFI_RST		IMX_GPIO_NR(7, 8)
@@ -308,116 +310,34 @@ static inline void mx6q_qpad_init_uart(void)
 	imx6q_add_imx_uart(4, &mx6_uart_pdata);	
 }
 
-static void _mx6q_csi0_cam_powerdown(int powerdown,int init,int found)
-{
-	int cam_pdn = QPAD_CSI0_PWDN;
-	int cam_reset = QPAD_CSI0_RST;
-	int cam_pwr_en = QPAD_CSI0_POWER;
-	struct clk *clko;
-	struct regulator* regulator;
-
-	clko = clk_get(NULL, "clko_clk");
-	if (IS_ERR(clko))
-	{
-		pr_err("can't get CLKO clock.\n");
-		return;
-	}
-
-	if (gpio_request(cam_pwr_en, "cam-power enable")) {
-		printk(KERN_ERR "Request GPIO failed,"
-				"gpio: %d \n", cam_pwr_en);
-		return;
-	}
-
-	if (gpio_request(cam_pdn, "cam-power down")) {
-		printk(KERN_ERR "Request GPIO failed,"
-				"gpio: %d \n", cam_pdn);
-		return;
-	}
-
-	if (gpio_request(cam_reset, "cam-reset")) {
-		printk(KERN_ERR "Request GPIO failed,"
-				"gpio: %d \n", cam_reset);
-		return;
-	}
-
-	if(powerdown)
-	{
-		if(!init)
-			clk_disable(clko);
-		gpio_direction_output(cam_reset, 0);
-		msleep(1);
-		gpio_direction_output(cam_pwr_en, 1);
-		msleep(5);
-		gpio_direction_output(cam_pdn, 1);
-		if(!init)
-		{
-			clk_enable(clko); /*mxc_v4l2_capture.c will disable the clock, so enable it first */
-		}
-		/* disable VGEN3 regulator */
-		regulator = regulator_get(NULL,"VGEN3_2V8");
-		if(IS_ERR(regulator)){
-			printk("failed to get regulator[VGEN3_2V8]\n");
-		}else {
-			if(init)
-				regulator_enable(regulator);
-			regulator_disable(regulator);
-			regulator_put(regulator);
-		}
-	}
-	else
-	{
-		/* enable VGEN3 regulator */
-		regulator = regulator_get(NULL,"VGEN3_2V8");
-		if(IS_ERR(regulator)){
-			printk("failed to get regulator[VGEN3_2V8]\n");
-		}else {
-			regulator_enable(regulator);
-			regulator_put(regulator);
-		}
-		if(!init)
-		{
-			clk_disable(clko); /*mxc_v4l2_capture.c has enabled the clock, so disable it first */
-			msleep(10);
-		}
-		gpio_direction_output(cam_pwr_en, 0);
-		msleep(10);
-		clk_enable(clko); /*enable mclk after powering on the sensor */
-		msleep(5);
-		gpio_direction_output(cam_pdn, 0);
-		msleep(3);
-		gpio_direction_output(cam_reset, 1);
-		msleep(25);
-	}
-
-	if(!found)
-		clk_disable(clko);
-
-	gpio_free(cam_pwr_en);
-	gpio_free(cam_pdn);
-	gpio_free(cam_reset);
-	clk_put(clko);
-
-}
-
-static void mx6q_csi0_cam_powerdown2(int powerdown,int found){
-	_mx6q_csi0_cam_powerdown(powerdown,0,found);	
-}
-
 
 static struct fsl_mxc_camera_platform_data camera_data;
-static void mx6q_csi0_io_init(void)
-{
-	struct clk *clko;
-	printk("%s\n",__func__);
+static struct regulator* camera_regulator;
 
-	clko = clk_get(NULL, "clko_clk");
-	if (IS_ERR(clko))
-		pr_err("can't get CLKO clock.\n");
-	else {
-		clk_set_rate(clko, clk_round_rate(clko, camera_data.mclk));
-		clk_put(clko);
+static void mx6q_csi0_mclk_on(int on){
+	struct clk *mclk = clk_get(NULL, "clko_clk");
+	if(!IS_ERR(mclk)){		
+		clk_set_rate(mclk, clk_round_rate(mclk, camera_data.mclk));
+		on?clk_enable(mclk):clk_disable(mclk);
+		clk_put(mclk);
 	}
+}
+
+static void mx6q_csi0_cam_powerdown(int pdn){	
+	if (pdn){
+		gpio_set_value(QPAD_CSI0_PWDN, 1);
+	}else{
+		gpio_set_value(QPAD_CSI0_PWDN, 0);
+	}
+
+	msleep(2);
+}
+
+static void mx6q_csi0_io_init(void)
+{	
+	int cam_pdn = QPAD_CSI0_PWDN;
+	int cam_rst = QPAD_CSI0_RST;
+	int cam_pwr_en = QPAD_CSI0_POWER;	
 
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_csi0_sensor_pads,
@@ -425,6 +345,46 @@ static void mx6q_csi0_io_init(void)
 	else if (cpu_is_mx6dl())
 		mxc_iomux_v3_setup_multiple_pads(mx6dl_qpad_csi0_sensor_pads,
 			ARRAY_SIZE(mx6dl_qpad_csi0_sensor_pads));
+
+	camera_regulator = regulator_get(NULL,"VGEN3_2V8");
+	if(IS_ERR(camera_regulator)){
+		printk("failed to get regulator[VGEN3_2V8]\n");
+		camera_regulator = NULL;
+	}else {
+		regulator_enable(camera_regulator);
+	}
+
+	if(BOARD_QPAD_REVA==mx6_board_rev()){
+		iomux_v3_cfg_t csi0_power = MX6Q_PAD_NANDF_D7__GPIO_2_7;/*camera 2.8v and 1.8v enable*/
+		mxc_iomux_v3_setup_pad(csi0_power);
+		if (gpio_request(cam_pwr_en, "cam-pen")) {
+			printk(KERN_ERR "Request GPIO failed,"
+					"gpio: %d \n", cam_pwr_en);
+		}else {		
+			gpio_direction_output(cam_pwr_en, 0);			
+		}
+	}
+
+	if (gpio_request(cam_rst, "cam-rst")) {
+		printk(KERN_ERR"Request GPIO failed,"
+				"gpio: %d \n", cam_rst);
+	}else {
+		gpio_direction_output(cam_rst,1);
+	}
+
+	if (gpio_request(cam_pdn, "cam-pdn")) {
+		printk(KERN_ERR "Request GPIO failed,"
+				"gpio: %d \n", cam_pdn);
+	}else {
+		gpio_direction_output(cam_pdn,1);
+	}
+	msleep(5);
+	gpio_set_value(cam_pdn, 0);
+	gpio_set_value(cam_rst, 0);
+	msleep(1);
+	gpio_set_value(cam_rst, 1);
+	msleep(5);
+	gpio_set_value(cam_pdn, 1);
 		
 	/* For MX6Q:
 	 * GPR1 bit19 and bit20 meaning:
@@ -449,9 +409,6 @@ static void mx6q_csi0_io_init(void)
 	else if (cpu_is_mx6dl())
 		mxc_iomux_set_gpr_register(13, 0, 3, 4);
 
-	_mx6q_csi0_cam_powerdown(1,1,1);
-	msleep(100);
-	_mx6q_csi0_cam_powerdown(0,1,1);
 }
 
 static struct fsl_mxc_camera_platform_data camera_data = {
@@ -459,15 +416,18 @@ static struct fsl_mxc_camera_platform_data camera_data = {
 	.mclk_source = 0,
 	.csi = 0,
 	.io_init = mx6q_csi0_io_init,
-	.pwdn2 = mx6q_csi0_cam_powerdown2, 
+	.mclk_on = mx6q_csi0_mclk_on,
+	.pwdn = mx6q_csi0_cam_powerdown,
 };
 
 #include <linux/i2c/eup2471.h>
 
 
+static int fl_pwren=QPAD_FL_PWR_EN;
+static int fl_en=QPAD_FL_EN;
 static int eup2471_enable(int on)
 {
-	int en = QPAD_FL_PWR_EN;
+	int en = fl_pwren;
 
 	if (gpio_request(en, "eup2471 enable")) {
 		printk(KERN_INFO "gpio %d request failed\n", en);
@@ -492,7 +452,7 @@ static int eup2471_enable(int on)
 
 static int eup2471_flash(int on)
 {
-	int en = QPAD_FL_EN;
+	int en = fl_en;
 
 	if (gpio_request(en, "eup2471 flash on")) {
 		printk(KERN_INFO "gpio %d request failed\n", en);
@@ -628,12 +588,17 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 };
 
 
+static void qpad_usbotg_vbus_v1(bool on){
+	if(on){}
+}
+
 static void qpad_usbotg_vbus(bool on)
 {
+	int otg_pwren = QPAD_USB_OTG_PWR;
 	if (on)
-		gpio_set_value(QPAD_USB_OTG_PWR, 1);
+		gpio_set_value(otg_pwren, 1);
 	else
-		gpio_set_value(QPAD_USB_OTG_PWR, 0);
+		gpio_set_value(otg_pwren, 0);
 
 }
 
@@ -646,17 +611,21 @@ static void __init imx6q_qpad_init_usb(void)
 {
 	int ret = 0;
 
+	if(BOARD_QPAD_REVA<mx6_board_rev()){
+		mxc_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL4__USBOH3_USBOTG_OC);
+		/* disable external charger detect,
+		 * or it will affect signal quality at dp .
+		 */
+		ret = gpio_request(QPAD_USB_OTG_PWR, "otg-vbus");
+		if (ret) {
+			pr_err("failed to get GPIO otg-vbus: %d\n",
+				ret);
+			return;
+		}
+		gpio_direction_output(QPAD_USB_OTG_PWR, 0);
+	}	
+
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
-	/* disable external charger detect,
-	 * or it will affect signal quality at dp .
-	 */
-	ret = gpio_request(QPAD_USB_OTG_PWR, "otg-vbus");
-	if (ret) {
-		pr_err("failed to get GPIO otg-vbus: %d\n",
-			ret);
-		return;
-	}
-	gpio_direction_output(QPAD_USB_OTG_PWR, 0);
 	/*
 	 *
 	 *OTG ID daisy chain set
@@ -664,7 +633,10 @@ static void __init imx6q_qpad_init_usb(void)
 	 * 1: GPIO_1 as USB_OTG_ID
 	 */
 	mxc_iomux_set_gpr_register(1, 13, 1, 1);
-	mx6_set_otghost_vbus_func(qpad_usbotg_vbus);
+	if(BOARD_QPAD_REVA==mx6_board_rev())
+		mx6_set_otghost_vbus_func(qpad_usbotg_vbus_v1);
+	else
+		mx6_set_otghost_vbus_func(qpad_usbotg_vbus);
 	mx6_set_host1_vbus_func(qpad_host1_vbus);
 
 }
@@ -736,6 +708,21 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 
 };
 
+static struct fsl_mxc_lcd_platform_data lcdif_data = {
+	.ipu_id = 0,
+	.disp_id = 0,
+	.default_ifmt = IPU_PIX_FMT_RGB565,
+};
+
+static struct fsl_mxc_ldb_platform_data ldb_data = {
+	.ipu_id = 0,
+	.disp_id = 1,
+	.ext_ref = 1,
+	.mode = LDB_SEP1,
+	.sec_ipu_id = 0,
+	.sec_disp_id = 0,
+};
+
 static struct ipuv3_fb_platform_data qpad_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "mipi_dsi",
@@ -761,20 +748,6 @@ static struct ipuv3_fb_platform_data qpad_fb_data[] = {
 	},
 };
 
-static struct fsl_mxc_lcd_platform_data lcdif_data = {
-	.ipu_id = 0,
-	.disp_id = 0,
-	.default_ifmt = IPU_PIX_FMT_RGB565,
-};
-
-static struct fsl_mxc_ldb_platform_data ldb_data = {
-	.ipu_id = 0,
-	.disp_id = 1,
-	.ext_ref = 1,
-	.mode = LDB_SEP1,
-	.sec_ipu_id = 0,
-	.sec_disp_id = 0,
-};
 
 
 
@@ -803,7 +776,10 @@ static struct qpower_pdata qp = {
 };
 
 static int __init qpad_power_init(void){
-	
+	if(BOARD_QPAD_REVA<mx6_board_rev()){
+		mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D16__GPIO_3_16);
+		qbp.alert = IMX_GPIO_NR(3,16);
+	}
 	imx_add_platform_device("qpower", -1,
 			NULL, 0, &qp, sizeof(qp));
 	return 0;
@@ -841,12 +817,7 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 		.ipu = 0,
 		.mclk_source = 0,
 		.is_mipi = 0,
-	}, {
-		.csi = 1,
-		.ipu = 0,
-		.mclk_source = 0, /* index of imx_ipuv3_platform_data.csi_clk */
-		.is_mipi = 1,
-	},
+	}
 };
 
 
@@ -1265,6 +1236,14 @@ static int __init board_misc_init(void){
 	gpio_direction_output(QPAD_SENSOR_RST,0);
 	gpio_free(QPAD_SENSOR_RST);
 
+
+	if(BOARD_QPAD_REVA==mx6_board_rev()){
+		fl_pwren = IMX_GPIO_NR(3,31);
+		fl_en = IMX_GPIO_NR(3,22);
+	}
+	eup2471_enable(0);
+	eup2471_flash(0);
+
 	return 0;
 }
 
@@ -1279,7 +1258,6 @@ static int __init qpad_regulator_late_init(void){
 		struct reg_map maps[] = {
 			{.regulator=NULL,.supply="VGEN1_1V5"},
 			{.regulator=NULL,.supply="VGEN2_1V5"},
-			/*{.regulator=NULL,.supply="VGEN3_2V8"},*/
 		};
 		int i=0;
 		int count = ARRAY_SIZE(maps);
@@ -1327,7 +1305,7 @@ static void __init mx6_qpad_board_init(void)
 		mxc_iomux_v3_setup_multiple_pads(mx6dl_qpad_pads,
 			ARRAY_SIZE(mx6dl_qpad_pads));
 	}
-
+	printk("QPAD board id=0x%x rev=0x%x\n",mx6_board_id(),mx6_board_rev());
 	gp_reg_id = qpad_dvfscore_data.reg_id;
 	soc_reg_id = qpad_dvfscore_data.soc_id;
 	mx6q_qpad_init_uart();
@@ -1435,7 +1413,7 @@ static void __init mx6_qpad_board_init(void)
 	imx6q_add_mxc_pwm_backlight(0, &mx6_qpad_pwm_backlight_data);
 
 	//For fast boot
-	//imx6q_add_otp();
+	imx6q_add_otp();
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(1, NULL);
 	imx6q_add_dma();

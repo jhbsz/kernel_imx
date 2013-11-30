@@ -30,8 +30,18 @@
 #include <linux/fsl_devices.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-int-device.h>
+#include <linux/i2c.h>
+#include <linux/clk.h>
+#include <media/v4l2-common.h>
+#include <media/v4l2-chip-ident.h>
+#include <mach/hardware.h>
+
+
+#include "mt9p111.h"
 #include "mxc_v4l2_capture.h"
-#include "fsl_csi.h"
+
+/* Debug MT9P111 register Read/Write */
+//#define MT9P111_DEBUG
 
 
 #define MIN_FPS 5
@@ -56,40 +66,7 @@ static int mt9p111_framerates[] = {
  */
 struct sensor_data mt9p111_data;
 
-//add by allenyao 
-/*
- * Aptina MT9P111 sensor driver
- *
- * Copyright (C) 2013-2014 Questers Co. Ltd.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- */
-#include <linux/i2c.h>
-#include <linux/clk.h>
-#include <media/v4l2-common.h>
-#include <media/v4l2-chip-ident.h>
-#include <mach/hardware.h>
 
-//#include "common.h"
-#include "mt9p111.h"
-
-//MODULE_AUTHOR("Ellie Cao <ellie.cao@quester.com.cn>");
-//MODULE_DESCRIPTION("Aptina MT9P111 sensor driver");
-//MODULE_LICENSE("GPL");
-
-/* The maximum allowed times for repeating MT9P111 detection */
-#define MAX_DETECT_NUM	1
-
-//static int fm_low = 0;
-//static int fm_high = 0;
-
-/* Non-CameraEngine Usage */
-//#define NON_CAMERA_ENGINE
-
-/* Debug MT9P111 register Read/Write */
-//#define MT9P111_DEBUG
 
 struct mt9p111_format_struct;  /* coming later */
 
@@ -228,8 +205,6 @@ static int build_sequential_buffer(unsigned char *pBuf, u16 width, u16 value) {
  */
 static int mt9p111_write_array(struct i2c_client *client, struct mt9p111_regval_list *vals)
 {
-	//int datasize = 0;
-	//u8 data[128];
 	int ret;
 
 	while (vals->reg_num != 0xffff || vals->value != 0xffff) {
@@ -237,55 +212,12 @@ static int mt9p111_write_array(struct i2c_client *client, struct mt9p111_regval_
 		{
 			msleep(vals->value);
 		}
-#if 0
-		else if (vals->reg_num == 0xfffd) {	/* seq write start */
-			vals += 1;
-			while (vals->reg_num !=0xfffe && vals->reg_num !=0xffff) {	/* seq write end */
-				if (datasize==0) {//
-					datasize += build_sequential_buffer(&data[datasize], 16, vals->reg_num);
-					datasize += build_sequential_buffer(&data[datasize], 16, vals->value);
-				}
-				else
-					datasize += build_sequential_buffer(&data[datasize], 16, vals->value);
-				if (datasize>=128) {
-					mt9p111_sequential_write_reg(client, data, datasize);
-					printk("seq write: %d bytes written.\n", datasize);
-					datasize = 0;
-				}
-				vals += 1;
-			}
-			mt9p111_sequential_write_reg(client, data, datasize); //flush out the remaining buffer.
-			printk("seq write: %d bytes written.\n", datasize);
-			datasize = 0;
-		}
-#endif
 		else
 		{
-#if 0
-			if((vals->num_bytes==2)&&(vals->reg_num&0x8000))
-			{
-#if 0
-				ret = mt9p111_write(client, vals->reg_num, (vals->value>>8)&0xff, 1);
-				if (ret < 0)
-					return ret;
-				ret = mt9p111_write(client, vals->reg_num+1, vals->value&0xff, 1);
-				if (ret < 0)
-					return ret;
-#else
-				ret = mt9p111_write(client, 0x098e, vals->reg_num&0x7fff, 2);
-				if (ret < 0)
-					return ret;
-				ret = mt9p111_write(client, 0x0990, vals->value, 2);
-				if (ret < 0)
-					return ret;
-#endif
-			}
-			else
-#endif
-			{
-				ret = mt9p111_write(client, vals->reg_num, vals->value, vals->num_bytes);
-				if (ret < 0)
-					return ret;
+			ret = mt9p111_write(client, vals->reg_num, vals->value, vals->num_bytes);
+			if (ret < 0){
+				pr_err("failed to write mt9p111 reg %d\n",vals->reg_num);
+				return ret;
 			}
 			
 		}
@@ -303,7 +235,6 @@ static int mt9p111_g_register(struct i2c_client *client, struct v4l2_dbg_registe
 
 static int mt9p111_s_register(struct i2c_client *client, struct v4l2_dbg_register * reg)
 {
-	//printk(KERN_ERR "mt9p111_s_register 0x%x 0x%x\n",(u16)reg->reg,(u16)reg->val);
 	return mt9p111_write(client, (u16)reg->reg, (u16)reg->val, (u16)reg->size);
 }
 #endif
@@ -326,47 +257,6 @@ static int mt9p111_detect(struct i2c_client *client)
 	return 0;
 }
 
-#if 0
-/*
- * Store information about the video data format.  The color matrix
- * is deeply tied into the format, so keep the relevant values here.
- * The magic matrix nubmers come from OmniVision.
- */
-static struct mt9p111_format_struct {
-	__u8 *desc;
-	__u32 pixelformat;
-	struct mt9p111_regval_list *regs;
-	int bpp;   /* bits per pixel */
-} mt9p111_formats[] = {
-	{
-		.desc		= "YUYV422 packet",
-		.pixelformat	= V4L2_PIX_FMT_UYVY,   /*for preview*/
-		.regs        = NULL,
-		.bpp		= 16,
-	},
-	{
-		.desc		= "YUYV 4:2:0",
-		.pixelformat	= V4L2_PIX_FMT_YUV420,    /*for picture, will be compressed to JPEG using IPP*/
-		.regs		 = NULL,
-		.bpp		= 12,
-	},
-	{
-		.desc		= "JFIF JPEG",
-		.pixelformat	= V4L2_PIX_FMT_JPEG,
-		.bpp		= 16,
-	},
-#ifdef NON_CAMERA_ENGINE
-	{
-		.desc		= "RGB 565",
-		.pixelformat	= V4L2_PIX_FMT_RGB565,
-		.regs		= reg_rgb565,
-		.bpp		= 16,
-	},
-#endif
-};
-
-#define N_MT9P111_FMTS ARRAY_SIZE(mt9p111_formats)
-#endif
 
 enum mt9p111_mode {
 	mt9p111_mode_MIN = 0,
@@ -445,230 +335,18 @@ static struct mt9p111_win_size mt9p111_win_jpg_sizes[] = {
 static int mt9p111_fw_down(struct i2c_client *client)
 {
 	int ret;
-	printk(KERN_ERR "Write af fw start...\n");
+	pr_info("Write af fw start...\n");
 	ret=mt9p111_write_array(client, mt9p111_reg_af_fw);
-	printk(KERN_ERR "Write af fw end\n");
+	pr_info("Write af fw end\n");
 	return ret;
 }
 
-#if 0
-static struct mt9p111_control {
-	struct v4l2_queryctrl qc;
-	int (*query)(struct i2c_client *client, __s32 *value);
-	int (*tweak)(struct i2c_client *client, int value);
-} mt9p111_controls[] =
-{
-#if 0
-	{
-		.qc = {
-			.id = V4L2_CID_FOCUS_AUTO,
-			.type = V4L2_CTRL_TYPE_BOOLEAN,
-			.name = "auto focus",
-			.minimum = 0,
-			.maximum = 1,
-			.step = 1,
-			.default_value = 0,
-		},
-		.tweak = ov5640_t_af,
-		.query = ov5640_q_af,
-	},
-	{
-		.qc = {
-			.id = V4L2_CID_AUTO_WHITE_BALANCE,
-			.type = V4L2_CTRL_TYPE_BOOLEAN,
-			.name = "auto white balance",
-			.minimum = 0,
-			.maximum = 1,
-			.step = 1,
-			.default_value = 0,
-		},
-		.tweak = ov5640_t_awb,
-		.query = ov5640_q_awb,
-	},
-	{
-		.qc = {
-			.id = V4L2_CID_EXPOSURE_AUTO,
-			.type = V4L2_CTRL_TYPE_BOOLEAN,
-			.name = "auto exposure",
-			.minimum = 0,
-			.maximum = 1,
-			.step = 1,
-			.default_value = 0,
-		},
-		.tweak = ov5640_t_ae,
-		.query = ov5640_q_ae,
-	},
-#endif
-};
-
-#define N_CONTROLS (ARRAY_SIZE(mt9p111_controls))
-
-static int mt9p111_querycap(struct i2c_client *client, struct v4l2_capability *argp)
-{
-	if (!argp) {
-		printk(KERN_ERR " argp is NULL %s %d \n", __FUNCTION__, __LINE__);
-		return -EINVAL;
-	}
-	strcpy(argp->driver, "mt9p111");
-	strcpy(argp->card, "MMP2");
-
-	return 0;
-}
-
-static int mt9p111_enum_fmt(struct i2c_client *client, struct v4l2_fmtdesc *fmt)
-{
-	struct mt9p111_format_struct *ofmt;
-
-	if (fmt->index >= N_MT9P111_FMTS)
-		return -EINVAL;
-
-	ofmt = mt9p111_formats + fmt->index;
-	fmt->flags = 0;
-	strcpy(fmt->description, ofmt->desc);
-	fmt->pixelformat = ofmt->pixelformat;
-
-	return 0;
-}
-
-static int mt9p111_try_fmt(struct i2c_client *client, struct v4l2_format *fmt,
-		struct mt9p111_format_struct **ret_fmt,
-		struct mt9p111_win_size **ret_wsize)
-{
-	int index_fmt, index_wsize;
-	struct v4l2_pix_format *pix = &fmt->fmt.pix;
-
-	for (index_fmt = 0; index_fmt < N_MT9P111_FMTS; index_fmt++)
-		if (mt9p111_formats[index_fmt].pixelformat == pix->pixelformat)
-			break;
-	if (index_fmt >= N_MT9P111_FMTS) {
-		printk(KERN_ERR "camera: mt9p111 try unsupported format!\n");
-		return -EINVAL;
-	}
-	if (ret_fmt != NULL)
-		*ret_fmt = &mt9p111_formats[index_fmt];
-
-	if (pix->field == V4L2_FIELD_ANY)
-		pix->field = V4L2_FIELD_NONE;
-	else if (pix->field != V4L2_FIELD_NONE) {
-		printk(KERN_ERR "camera: mt9p111 pixel filed should be V4l2_FIELD_NONE!\n");
-		return -EINVAL;
-	}
-
-	/*
-	 * Round requested image size down to the nearest
-	 * we support, but not below the smallest.
-	 */
-	if (V4L2_PIX_FMT_JPEG == pix->pixelformat) {
-		for (index_wsize = 0; index_wsize < N_WIN_JPEG_SIZES; index_wsize++)
-			if (pix->width == mt9p111_win_jpg_sizes[index_wsize].width
-				&& pix->height == mt9p111_win_jpg_sizes[index_wsize].height)
-				break;
-		if (index_wsize >= N_WIN_JPEG_SIZES) {
-			printk(KERN_ERR"camera: mt9p111 try unsupported jpeg format size!\n");
-			return -EINVAL;
-		}
-		if (ret_wsize != NULL)
-			*ret_wsize = &mt9p111_win_jpg_sizes[index_wsize];
-		/* for OV5640, HSYNC contains 2048bytes */
-		pix->bytesperline = 2048;
-	} else {
-		for (index_wsize = 0; index_wsize < N_WIN_SIZES; index_wsize++)
-			if (pix->width == mt9p111_win_sizes[index_wsize].width
-				&& pix->height == mt9p111_win_sizes[index_wsize].height)
-				break;
-		if (index_wsize >= N_WIN_SIZES) {
-			printk(KERN_ERR "camera: mt9p111 try unsupported preview format size!\n");
-			return -EINVAL;
-		}
-		if (ret_wsize != NULL)
-			*ret_wsize = &mt9p111_win_sizes[index_wsize];
-		pix->bytesperline = pix->width*mt9p111_formats[index_fmt].bpp/8;
-		pix->sizeimage = pix->height*pix->bytesperline;
-	}
-
-	return 0;
-}
-
-static int mt9p111_enum_fmsize(struct i2c_client *client, struct v4l2_frmsizeenum *argp)
-{
-	switch (argp->pixel_format) {
-		case V4L2_PIX_FMT_UYVY:
-		//case V4L2_PIX_FMT_YUV422P:
-		case V4L2_PIX_FMT_YUV420:
-			if (argp->index == N_WIN_SIZES)
-				return -EINVAL;
-			else if (argp->index > N_WIN_SIZES) {
-				printk(KERN_ERR "camera: mt9p111 enum unsupported preview format size!\n");
-				return -EINVAL;
-			} else {
-				argp->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-				argp->discrete.height = mt9p111_win_sizes[argp->index].height;
-				argp->discrete.width = mt9p111_win_sizes[argp->index].width;
-				break;
-			}
-		case V4L2_PIX_FMT_JPEG:
-			if (argp->index == N_WIN_JPEG_SIZES)
-				return -EINVAL;
-			else if (argp->index > N_WIN_JPEG_SIZES) {
-				printk(KERN_ERR "camera: mt9p111 enum unsupported jpeg format size!\n");
-				return -EINVAL;
-			} else {
-				argp->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-				argp->discrete.height = mt9p111_win_jpg_sizes[argp->index].height;
-				argp->discrete.width = mt9p111_win_jpg_sizes[argp->index].width;
-				break;
-			}
-		default:
-			printk(KERN_ERR "camera: mt9p111 enum format size with unsupported format!\n");
-			return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int mt9p111_enum_fminterval(struct i2c_client *client, struct v4l2_frmivalenum *argp)
-{
-	switch (argp->pixel_format) {
-		case V4L2_PIX_FMT_UYVY:
-		//case V4L2_PIX_FMT_YUV422P:
-		case V4L2_PIX_FMT_YUV420:
-			if (argp->index == N_WIN_SIZES)
-				return -EINVAL;
-			else if (argp->index > N_WIN_SIZES) {
-				printk(KERN_ERR "camera: mt9p111 enum unsupported preview format frame rate!\n");
-				return -EINVAL;
-			} else {
-				argp->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-				argp->discrete.numerator = 1;
-				argp->discrete.denominator = mt9p111_win_sizes[argp->index].fps;
-				break;
-			}
-		case V4L2_PIX_FMT_JPEG:
-			if (argp->index == N_WIN_JPEG_SIZES)
-				return -EINVAL;
-			else if (argp->index > N_WIN_JPEG_SIZES) {
-				printk(KERN_ERR "camera: mt9p111 enum unsupported jpeg format frame rate!\n");
-				return -EINVAL;
-			} else {
-				argp->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-				argp->discrete.numerator = 1;
-				argp->discrete.denominator = mt9p111_win_jpg_sizes[argp->index].fps;
-				break;
-			}
-		default:
-			printk(KERN_ERR "camera: mt9p111 enum format frame rate with unsupported format!\n");
-			return -EINVAL;
-	}
-
-	return 0;
-}
-#endif
 
 static int mt9p111_int_reset(struct i2c_client *client)
 {
 	/* Initialize settings */
 	mt9p111_write_array(client, mt9p111_reg_init);
-	printk(KERN_ERR "Write initial setting done.\n");
+	pr_info("Write initial setting done.\n");
 	mt9p111_fw_down(client);
 	mt9p111_data.pix.width = 640;
 	mt9p111_data.pix.height = 480;
@@ -751,165 +429,64 @@ static int wait_for_state(struct i2c_client *client, u16 value, int cnt, int int
 	return -1;
 }
 
-#if 0
-/*
- * Set a format.
- */
-static int mt9p111_s_fmt(struct i2c_client *client, struct v4l2_format *fmt)
-{
-	u16 val, cnt=0;
-	int ret = 0;
-	struct mt9p111_format_struct *ovfmt = NULL;
-	struct mt9p111_win_size *wsize = NULL;
-	//struct sensor_platform_data *pdata = client->dev.platform_data;
-	//int fm_ctrl;
 
-	ret = mt9p111_try_fmt(client, fmt, &ovfmt, &wsize);
-	if (ret)
-		return ret;
 
-    switch (ovfmt->pixelformat) {
-        case V4L2_PIX_FMT_UYVY:
-        //case V4L2_PIX_FMT_YUV422P:
-        case V4L2_PIX_FMT_YUV420:
-        case V4L2_PIX_FMT_JPEG:
-            if (wsize->width == 640)
-            {
-                ret= mt9p111_read(client,0x8405, &val, 1);
-                if(ret)
-                {
-                    return ret;
-                }
-                if(val==7) // still->preview
-                {
-                    mt9p111_write_array(client,mt9p111_reg_preview);
-                    return ((wait_for_state(client,3,2000,50)>=0)?0:-1);
-                }
-            }
-again:
-            if(wsize->regs!=NULL)
-            {
-                mt9p111_write_array(client, wsize->regs);
-                printk(KERN_ERR "Writting resolution [%dx%d] done\n", wsize->width, wsize->height);
-            }
-            if (wsize->width == 2592)
-            {
-                return ((wait_for_state(client,7,2000,50)>=0)?0:-1);
-            }
-            else if(wsize->width == 640 || wsize->width == 352)
-            {
-                ret=wait_for_state(client,2,100,5);
-                if(ret<=0)
-                {
-                    if(ret==0)
-                        wait_for_state(client,3,2000,10);
-                    if(cnt++<5)
-                    {
-                        printk(KERN_ERR "ret %d try again\n",ret);
-                        goto again;
-                    }
-                    return -1;
-                }
-                return ((wait_for_state(client,3,2000,50)>=0)?0:-1);
-			}
-            break;
-        default:
-            printk("camera: mt9p111 set unsupported pixel format!\n");
-            ret = -EINVAL;
-            break;
-    }
-#if 0
-	/* flip and mirror */
-	if (pdata->id == SENSOR_LOW)
-		fm_ctrl = fm_low;
-	else
-		fm_ctrl = fm_high;
-	
-	/* flip */
-	mt9p111_read(client, REG_READMODE, &val);
-	val &= ~(0x3<<14);
-	val |= (fm_ctrl & 0x3)<<14;
-	mt9p111_write(client, REG_READMODE, val);
-#endif
-	return ret;
-}
-
-/*
- * Implement G/S_PARM.  There is a "high quality" mode we could try
- * to do someday; for now, we just do the frame rate tweak.
- */
-static int mt9p111_g_parm(struct i2c_client *client, struct v4l2_streamparm *parms)
-{
-	return 0;
-}
-
-static int mt9p111_s_parm(struct i2c_client *client, struct v4l2_streamparm *parms)
-{
-	return 0;
-}
-
-static int mt9p111_s_input(struct i2c_client *client, int *id)
-{
-	return 0;
-}
-#endif
-
-static u16 last_reg = 0;
-static u16 last_size = 0;
+struct struct_reg_dump_range{
+	u16 start;
+	u16 end;
+	u16 step;
+};
 static ssize_t mt9p111_get_reg(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	u16 val = 0;
 	struct i2c_client* c = container_of(dev, struct i2c_client, dev);
+	struct struct_reg_dump_range reg_dump_ranges[] = {
+		//registers
+		{0x3000,0x300c,0x2},
+		{0x3012,0x303c,0x2},
+		{0x3040,0x31fc,0x2},
+		{0x3210,0x33c2,0x2},
 
-	if (last_reg)
+		//variables
+		{0x8001,0x8018,0x2},
+		{0x8401,0x8440,0x2},
+		
+	};
+	struct struct_reg_dump_range *reg_dump_range;
+	u16 reg,val;
+	int i;
+	//sensor core
+	for(i=0;i<sizeof(reg_dump_ranges)/sizeof(reg_dump_ranges[0]);i++)
 	{
-		mt9p111_read(c, last_reg, &val, last_size);
-		return sprintf(buf, "%04x:%02x\n", last_reg, val);
-	}
-#if 0
-	else
-	{
-		//dump all registers
-		u16 reg;
-		int i;
-		for(i=0;mt9p111_regrange_list[i].start!=0xffff;i++)
+		reg_dump_range = &reg_dump_ranges[i];
+		for(reg = reg_dump_range->start;
+			reg<=reg_dump_range->end;
+			reg+=reg_dump_range->step)
 		{
-			for(reg=mt9p111_regrange_list[i].start;reg<=mt9p111_regrange_list[i].end;reg++)
-			{
-				mt9p111_read(c, reg, &val);
-				printk(KERN_ERR "0x%04x ---  0x%02x\n",reg,val);
-			}
+			mt9p111_read(c, reg, &val,reg_dump_range->step);
+			pr_info("0x%04x ---  0x%02x\n",reg,val);
 		}
-		for(i=0;mt9p111_reglist[i]!=0xffff;i++)
-		{
-			mt9p111_read(c, mt9p111_reglist[i], &val);
-			printk(KERN_ERR "0x%04x ---  0x%02x\n",mt9p111_reglist[i],val);
-		}
-		return sprintf(buf, "Dumped all registers.\n");
 	}
-#endif
-	return 0;
+	
+	return sprintf(buf, "Dumped all registers.\n");
 }
 
 static ssize_t mt9p111_set_reg(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	u32 reg ,val,size;
-	int ret;
 	struct i2c_client* c = container_of(dev, struct i2c_client, dev);
-
-	ret = sscanf(buf, "%x:%d:%x", &reg, &size, &val);
-	if (ret == 2)
+	u32 reg ,val,size=2;
+	int ret = sscanf(buf, "%x %d %x", &reg, &val, &size);
+	if (ret<2)
 	{
-		last_reg = reg;
-		last_size = size;
+		mt9p111_read(c,reg,&val,size);
+		pr_debug("read mt9p111 reg[0x%x]=0x%x size0x%x\n",reg,val,size);
+		
 	}
-	else if (ret == 3)
+	else 
 	{
+		pr_debug("write mt9p111 reg[0x%x]=0x%x size0x%x\n",reg,val,size);
 		mt9p111_write(c, reg, val, size);
-		last_reg = reg;
-		last_size = size;
 	}
 
 	return count;
@@ -962,159 +539,6 @@ static struct device_attribute static_attrs[] = {
 	__ATTR(focus, 0666, NULL, mt9p111_set_focus),
 };
 
-/*
- * Basic i2c stuff.
- */
-extern void ccic_mclk_set(int on);
-#if 0
-int __devinit mt9p111_probe(struct i2c_client *client, const struct i2c_device_id *id, int fmctl_low, int fmctl_high)
-{
-	int fm_ctrl;
-	int ret=-1, i;
-	struct mt9p111_info *info;
-	struct sensor_platform_data *pdata;
-	int count = MAX_DETECT_NUM;
-
-	pdata = client->dev.platform_data;
-
-	while(count--)
-	{
-		pdata->power_set(SENSOR_POWER, pdata->id, pdata->eco_flag, pdata->sensor_flag);
-		msleep(10);
-		ccic_mclk_set(1);
-		msleep(5);
-		pdata->power_set(SENSOR_OPEN, pdata->id, pdata->eco_flag, pdata->sensor_flag);
-		msleep(25);
-		ret = mt9p111_detect(client);
-		ccic_mclk_set(0);
-		pdata->power_set(SENSOR_CLOSE, pdata->id, pdata->eco_flag, pdata->sensor_flag);
-		msleep(20);
-		if(ret==0)
-			break;
-	}
-	
-	
-	if (ret)
-	{
-		printk(KERN_ERR "camera: failed detecting mt9p111\n");
-		return -1;
-	}
-	else
-		printk(KERN_ERR "camera: detected mt9p111 with %d tries\n",MAX_DETECT_NUM-count);
-
-	/*
-	 * Set up our info structure.
-	 */
-	info = kzalloc(sizeof (struct mt9p111_info), GFP_KERNEL);
-	if (!info) {
-		return -ENOMEM;
-	}
-
-	strcpy(info->com.name,MT9P111_NAME_STRING);
-	info->fmt = &mt9p111_formats[1];
-	info->sat = 128; /* Review this */
-	i2c_set_clientdata(client, info);
-
-	ccic_sensor_attach(client);
-
-	if (pdata->id == SENSOR_LOW)
-		fm_ctrl = fm_low = fmctl_low;
-	else
-		fm_ctrl = fm_high = fmctl_high;
-
-	printk("mt9p111[%s] mirror [%s] flip [%s]\n", 
-		dev_name(&client->dev), 
-		(fm_ctrl&0x1)?"on":"off", 
-		(fm_ctrl&0x2)?"on":"off");
-
-	for (i=0; i<ARRAY_SIZE(static_attrs); i++)
-	{
-		ret = device_create_file(&client->dev, &static_attrs[i]);
-		if (ret) printk("camera: failed creating device file\n");
-	}
-	
-	return 0;
-}
-
-int mt9p111_remove(struct i2c_client *client)
-{
-	int i;
-	struct mt9p111_info *info;
-
-	for (i=0; i<ARRAY_SIZE(static_attrs); i++)
-	{
-		device_remove_file(&client->dev, &static_attrs[i]);
-	}
-
-	ccic_sensor_detach(client);
-	info = i2c_get_clientdata(client);
-	i2c_set_clientdata(client, NULL);
-	kfree(info);
-	
-	return 0;
-}
-
-static int mt9p111_streamon(struct i2c_client *client)
-{
-	return 0;
-}
-
-static int mt9p111_streamoff(struct i2c_client *client)
-{
-	return 0;
-}
-
-int mt9p111_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	switch (cmd) {
-		case VIDIOC_DBG_G_CHIP_IDENT:
-			return v4l2_chip_ident_i2c_client(client, arg, V4L2_IDENT_MT9P111, 0);
-		case VIDIOC_INT_RESET:
-			return mt9p111_int_reset(client);
-		case VIDIOC_QUERYCAP:
-			return mt9p111_querycap(client, (struct v4l2_capability *) arg);
-		case VIDIOC_ENUM_FMT:
-			return mt9p111_enum_fmt(client, (struct v4l2_fmtdesc *) arg);
-		case VIDIOC_TRY_FMT:
-			return mt9p111_try_fmt(client, (struct v4l2_format *) arg, NULL, NULL);
-		case VIDIOC_ENUM_FRAMESIZES:
-			return mt9p111_enum_fmsize(client, (struct v4l2_frmsizeenum *) arg);
-		case VIDIOC_ENUM_FRAMEINTERVALS:
-			return mt9p111_enum_fminterval(client, (struct v4l2_frmivalenum *) arg);
-		case VIDIOC_S_FMT:
-			return mt9p111_s_fmt(client, (struct v4l2_format *) arg);
-		case VIDIOC_QUERYCTRL:
-			return mt9p111_q_ctrl(client, (struct v4l2_queryctrl *) arg);
-		case VIDIOC_S_CTRL:
-			return mt9p111_s_ctrl(client, (struct v4l2_control *) arg);
-		case VIDIOC_G_CTRL:
-			return mt9p111_g_ctrl(client, (struct v4l2_control *) arg);
-		case VIDIOC_S_PARM:
-			return mt9p111_s_parm(client, (struct v4l2_streamparm *) arg);
-		case VIDIOC_G_PARM:
-			return mt9p111_g_parm(client, (struct v4l2_streamparm *) arg);
-		case VIDIOC_S_INPUT:
-			return mt9p111_s_input(client, (int *) arg);
-		case VIDIOC_STREAMON:
-			return mt9p111_streamon(client);
-		case VIDIOC_STREAMOFF:
-			return mt9p111_streamoff(client);
-#ifdef CONFIG_VIDEO_ADV_DEBUG
-		case VIDIOC_DBG_G_REGISTER:
-			return mt9p111_g_register(client, (struct v4l2_dbg_register *) arg);
-		case VIDIOC_DBG_S_REGISTER:
-			return mt9p111_s_register(client, (struct v4l2_dbg_register *) arg);
-		default:
-			break;
-#endif
-	}
-
-	return -EINVAL;
-}
-#endif
-
-
-//add by allenyao end
 
 static struct fsl_mxc_camera_platform_data *camera_plat;
 
@@ -1178,13 +602,8 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 	sensor->on = on;
 	
 	/* Make sure power on */
-	if (on){
-		if (camera_plat->pwdn2)
-			camera_plat->pwdn2(0,1);
-	}else{
-		if (camera_plat->pwdn2)
-			camera_plat->pwdn2(1,1);
-	}
+	if (camera_plat->pwdn)
+		camera_plat->pwdn(on?0:1);
 
 
 	return 0;
@@ -1559,8 +978,8 @@ static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
 					 struct v4l2_frmivalenum *argp)
 {
 	switch (argp->pixel_format) {
+		case V4L2_PIX_FMT_VYUY:
 		case V4L2_PIX_FMT_UYVY:
-		//case V4L2_PIX_FMT_YUV422P:
 		case V4L2_PIX_FMT_YUV420:
 			if (argp->index == N_WIN_SIZES)
 				return -EINVAL;
@@ -1648,31 +1067,6 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 {
 	struct sensor_data *sensor = s->priv;
 	int ret;
-#if 0
-	//u32 tgt_xclk;	/* target xclk */
-	u32 tgt_fps;	/* target frames per secound */
-	//enum ov5640_frame_rate frame_rate;
-
-	mt9p111_data.on= true;
-	/* mclk */
-	pr_debug("   Setting mclk to %d MHz\n", mt9p111_data.mclk);
-	printk("   Setting mclk to %d MHz\n", mt9p111_data.mclk/1000000);
-
-	set_mclk_rate(&mt9p111_data.mclk, mt9p111_data.mclk_source);
-
-	/* Default camera frame rate is set in probe */
-	tgt_fps = sensor->streamcap.timeperframe.denominator /
-		  sensor->streamcap.timeperframe.numerator;
-
-	#if 0
-	if (tgt_fps == 15)
-		frame_rate = ov5640_15_fps;
-	else if (tgt_fps == 30)
-		frame_rate = ov5640_30_fps;
-	else
-		return -EINVAL; /* Only support 15fps or 30fps now. */
-	#endif
-#endif
 	//ret = ov5640_init_mode();
 	ret=mt9p111_int_reset(sensor->i2c_client);
 	
@@ -1754,10 +1148,9 @@ static int mt9p111_probe(struct i2c_client *client,
 	mt9p111_data.mclk = plat_data->mclk;
 	mt9p111_data.mclk_source = plat_data->mclk_source;
 	mt9p111_data.csi = plat_data->csi;
-	//mt9p111_data.io_init = plat_data->io_init;
 
 	mt9p111_data.i2c_client = client;
-	mt9p111_data.pix.pixelformat = V4L2_PIX_FMT_UYVY;
+	mt9p111_data.pix.pixelformat = V4L2_PIX_FMT_UYVY;//V4L2_PIX_FMT_YUYV;
 	mt9p111_data.pix.width = 640;
 	mt9p111_data.pix.height = 480;
 	mt9p111_data.streamcap.capability = 0;
@@ -1769,16 +1162,19 @@ static int mt9p111_probe(struct i2c_client *client,
 	if (plat_data->io_init)
 		plat_data->io_init();
 
+	if (plat_data->pwdn)
+		plat_data->pwdn(0);	
+
+	if (plat_data->mclk_on)
+		plat_data->mclk_on(1);
 	ret = mt9p111_detect(client);
 
 	if(ret<0)
 	{
+		pr_warn("MT9P111 not found!!\n");
 		retval = -ENODEV;
 		goto err;
 	}
-	else
-		printk("MT9P111 found!!\n");
-
 	camera_plat = plat_data;
 
 	mtp9111_int_device.priv = &mt9p111_data;
@@ -1787,15 +1183,14 @@ static int mt9p111_probe(struct i2c_client *client,
 	{
 		ret = device_create_file(&client->dev, &static_attrs[i]);
 		if (ret) printk("camera: failed creating device file\n");
-	}
+	}	
 
 	pr_info("camera mtp9111 is found\n");
-	return retval;
-
 err:
-	printk("%s ret %d\n",__func__,retval);	
-	if (plat_data->pwdn2)
-		plat_data->pwdn2(1,0);	
+	if (plat_data->mclk_on)
+		plat_data->mclk_on(0);
+	if (plat_data->pwdn)
+		plat_data->pwdn(1);	
 	return retval;
 }
 
