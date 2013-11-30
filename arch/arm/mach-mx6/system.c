@@ -630,6 +630,24 @@ void do_switch_linux(void)
 
 #endif
 
+/*
+* Because of system_rev limitation,we have to read boardid one more time from OTP fuse area.
+* 0x0 : Unknown
+* 0x1 : Sabre-AI (ARD)
+* 0x2 : Smart Device (SD)
+* 0x3 : Quick-Start Board (QSB)
+* 0x4 : SoloLite EVK (SL-EVK)
+* 0x6 : HDMI Dongle
+* 0xA : SparkAuto
+* 0xB : QPad
+*/
+unsigned int mx6_board_id(void){
+	#define	HW_OCOTP_GP1 (0x00000660)
+	u32 board_type=0;	
+	board_type = readl(MX6_IO_ADDRESS(OCOTP_BASE_ADDR) + HW_OCOTP_GP1);
+	return ((board_type>>12)&0xF);
+}
+
 int mxs_reset_block(void __iomem *hwreg)
 {
 	return _mxs_reset_block(hwreg, false);

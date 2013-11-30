@@ -121,24 +121,15 @@ extern unsigned int system_rev;
  *     0x61: i.MX6 Solo/DualLite
  *     0x60: i.MX6 SoloLite
  * 
- * bit 23-20:Board Identification (type) 
- * 0x0 : Unknown
- * 0x1 : Sabre-AI (ARD)
- * 0x2 : Smart Device (SD)
- * 0x3 : Quick-Start Board (QSB)
- * 0x4 : SoloLite EVK (SL-EVK)
- * 0x6 : HDMI Dongle
- * 0xA : SparkAuto
- * 0xB : QPad
  */
 
-#define mx6_board_id()	((system_rev>>20)&0xF)
 #define mx6_board_rev()	((system_rev>>8)&0xF)
 
 #endif
 
 #ifndef __ASSEMBLY__
 extern unsigned int __mxc_cpu_type;
+unsigned int mx6_board_id(void);
 #endif
 
 #ifdef CONFIG_ARCH_MX1
