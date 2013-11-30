@@ -507,11 +507,12 @@ static int pfuze100_init(struct mc_pfuze *pfuze)
 	//shutdown pmic extra LDOs since we don't required 
 
 	//shutdown VGEN3 in standby mode
-	/*ret = pfuze_reg_rmw(pfuze, 0x6E,
+	ret = pfuze_reg_rmw(pfuze, 0x6E,
 				0x20,
 				0x20);
 	if (ret) goto err;
 
+	/*	
 	//shutdown VGEN4 in standby mode 
 	ret = pfuze_reg_rmw(pfuze, 0x6F,
 				0x20,
