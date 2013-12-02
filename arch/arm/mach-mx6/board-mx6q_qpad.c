@@ -879,6 +879,77 @@ static struct mxc_audio_platform_data rt5625_data = {
 	.hp_active_low = 0,
 };
 
+
+//
+//mode: 0->default headphone ,1->uart mode
+//
+#define UART_SWITCH_SELECT_IN1 IMX_GPIO_NR(6,14) /*Default low->hp,high->uart*/
+#define UART_SWITCH_SELECT_IN2 IMX_GPIO_NR(3,19) /*Default High->hp,low->uart ,power control ,be careful*/
+
+static int uart_switch_granted=0;
+static int headphone_switch_to_mode(int mode){
+	if(!mode){
+		gpio_set_value(UART_SWITCH_SELECT_IN2,1);		
+		gpio_set_value(UART_SWITCH_SELECT_IN1,0);
+	}else {
+		if(!uart_switch_granted){
+			printk(KERN_WARNING "uart switcher not granted\n");
+		}else {
+			gpio_set_value(UART_SWITCH_SELECT_IN1,1);
+			gpio_set_value(UART_SWITCH_SELECT_IN2,0);				
+		}
+	}
+	return mode;
+}
+static int headphone_switch(int state){
+	//switch state changed,	
+	/*
+	 *	state meaning
+	 *	0: no headset plug in
+	 *	1: headset with microphone plugged
+	 *	2: headset without microphone plugged
+	*/
+	if(!state){
+		//can't switch hardware to uart
+		headphone_switch_to_mode(0);
+		uart_switch_granted=0;
+	}else if(state){
+		headphone_switch_to_mode(0);
+		uart_switch_granted++;
+		printk(KERN_WARNING "FIXME:hp state->1 or state->2\n");		
+	}
+	return 0;
+}
+
+static int read_uartswitcher(char *page, char **start,
+			     off_t off, int count,
+			     int *eof, void *data)
+{
+	return sprintf(page, "uart_switch_granted : %s\r\n"
+						 "echo 1 > uartswitcher -->switch to uart mode\r\n"
+						 "echo 0 > uartswitcher -->switch to hp mode\r\n"
+						 "\n",
+                      uart_switch_granted?"yes":"no");
+}
+
+static int write_uartswitcher (struct file *file, const char *buffer,
+                      unsigned long count, void *data) 
+{
+	char kbuf[256];
+	int action;
+
+	if (count >= 256)
+		return -EINVAL;
+	if (copy_from_user(kbuf, buffer, count))
+		return -EFAULT;
+
+	action = (int)simple_strtoul(kbuf, NULL, 10);
+	headphone_switch_to_mode(action);
+	
+    return count;
+}
+
+
 static int __init imx6q_init_audio(void)
 {
 	int ret,rate;	
@@ -893,6 +964,40 @@ static int __init imx6q_init_audio(void)
 		rt5625_data.sysclk = rate;
 		clk_set_rate(clko2, rate);
 		clk_put(clko2);
+	}
+
+	//uart switcher support on v2
+	if(BOARD_QPAD_REVA<mx6_board_rev()){
+		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_hp_uart_switcher_pads_v2,ARRAY_SIZE(mx6q_qpad_hp_uart_switcher_pads_v2));
+		rt5625_data.headphone_switch=headphone_switch;
+
+		
+		ret = gpio_request(UART_SWITCH_SELECT_IN1, "UART_SWITCH_SELECT_IN1");
+		if (ret) {
+			pr_err("failed to get GPIO UART_SWITCH_SELECT_IN2: %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(UART_SWITCH_SELECT_IN1, 0);
+		ret = gpio_request(UART_SWITCH_SELECT_IN2, "UART_SWITCH_SELECT_IN2");
+		if (ret) {
+			pr_err("failed to get GPIO UART_SWITCH_SELECT_IN2: %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(UART_SWITCH_SELECT_IN2, 1);
+
+
+		//init proc interface 
+		{
+			struct proc_dir_entry *entry;			
+			entry = create_proc_entry("driver/uartswitcher", 0/*default mode*/, NULL);
+			if (entry) {
+				entry->read_proc = read_uartswitcher;
+				entry->write_proc = write_uartswitcher;
+			}
+		}
+		
 	}
 
 	//reset audio codec
@@ -990,6 +1095,21 @@ static struct gpio_keys_platform_data qpad_button_data = {
 	.nbuttons	= ARRAY_SIZE(qpad_buttons),
 };
 
+static struct gpio_keys_button qpad_buttons_v2[] = {
+	GPIO_BUTTON(IMX_GPIO_NR(1,2), KEY_MENU, 1, "menu", 1, 1),
+	GPIO_BUTTON(IMX_GPIO_NR(1,4), KEY_HOME, 1, "home", 1, 1),
+	GPIO_BUTTON(IMX_GPIO_NR(1,5), KEY_BACK, 1, "back", 1, 1),	
+	GPIO_BUTTON(GPIO_KEY_F1, KEY_F1, 1, "F1", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_F2, KEY_F2, 1, "F2", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1),	
+};
+
+static struct gpio_keys_platform_data qpad_button_v2_data = {
+	.buttons	= qpad_buttons_v2,
+	.nbuttons	= ARRAY_SIZE(qpad_buttons_v2),
+};
+
+
 static struct platform_device qpad_button_device = {
 	.name		= "gpio-keys",
 	.id		= -1,
@@ -998,9 +1118,20 @@ static struct platform_device qpad_button_device = {
 
 static void __init imx6q_add_device_buttons(void)
 {
-	platform_device_add_data(&qpad_button_device,
-			&qpad_button_data,
-			sizeof(qpad_button_data));
+	if(BOARD_QPAD_REVA<mx6_board_rev()){		
+		static iomux_v3_cfg_t mx6q_qpad_keypad[] = {
+			NEW_PAD_CTRL(MX6Q_PAD_GPIO_2__GPIO_1_2,MX6Q_KEYPAD_PAD_CTRL),
+			NEW_PAD_CTRL(MX6Q_PAD_GPIO_4__GPIO_1_4,MX6Q_KEYPAD_PAD_CTRL),
+			NEW_PAD_CTRL(MX6Q_PAD_GPIO_5__GPIO_1_5,MX6Q_KEYPAD_PAD_CTRL),
+		};
+		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_keypad,ARRAY_SIZE(mx6q_qpad_keypad));
+		platform_device_add_data(&qpad_button_device,
+				&qpad_button_v2_data,
+				sizeof(qpad_button_v2_data));		
+	}else {
+		platform_device_add_data(&qpad_button_device,
+				&qpad_button_data,
+				sizeof(qpad_button_data));	}
 
 	platform_device_register(&qpad_button_device);
 }
@@ -1201,27 +1332,43 @@ static int __init modem_init(void){
 
 static int __init board_misc_init(void){
 	int ret;
-	//QR Engine 
-	//Set Reset On,Trigger Off
-	ret = gpio_request(QPAD_QRE_RST, "qre-rst");
-	if (ret) {
-		pr_err("failed to get GPIO qre-rst: %d\n",
-			ret);
-		return -EINVAL;
-	}
-	gpio_direction_output(QPAD_QRE_RST,0);
-	mdelay(5);
-	gpio_direction_output(QPAD_QRE_RST,1);
-	gpio_free(QPAD_QRE_RST);
+	if(BOARD_QPAD_REVA==mx6_board_rev()){
+		//QR Engine 
+		//Set Reset On,Trigger Off
+		ret = gpio_request(QPAD_QRE_RST, "qre-rst");
+		if (ret) {
+			pr_err("failed to get GPIO qre-rst: %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(QPAD_QRE_RST,0);
+		mdelay(5);
+		gpio_direction_output(QPAD_QRE_RST,1);
+		gpio_free(QPAD_QRE_RST);
 
-	ret = gpio_request(QPAD_QRE_TRIG, "qre-trig");
-	if (ret) {
-		pr_err("failed to get GPIO qre-trig: %d\n",
-			ret);
-		return -EINVAL;
+		ret = gpio_request(QPAD_QRE_TRIG, "qre-trig");
+		if (ret) {
+			pr_err("failed to get GPIO qre-trig: %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(QPAD_QRE_TRIG,1);
+		gpio_free(QPAD_QRE_TRIG);
+	}else if(BOARD_QPAD_REVA<mx6_board_rev()){
+		#warning "FIXME:bringup minde barcode engine"
+		int qr_trig = IMX_GPIO_NR(3,30);
+		int qr_wake = IMX_GPIO_NR(6,31);
+		int qr_pwn = IMX_GPIO_NR(2,25);
+		int qr_pwr_en = IMX_GPIO_NR(1,7);
+		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_barcode_pads_v2,ARRAY_SIZE(mx6q_qpad_barcode_pads_v2));
+		gpio_request(qr_pwr_en, "qr_pwr_en");
+		gpio_direction_output(qr_pwr_en,0);
+		gpio_free(qr_pwr_en);
+		//suppress compiler warning
+		if(qr_trig){}
+		if(qr_wake){}
+		if(qr_pwn){}
 	}
-	gpio_direction_output(QPAD_QRE_TRIG,1);
-	gpio_free(QPAD_QRE_TRIG);
 
 	//Sensor ,FXO8700 driver don't use interrupt but using polling
 	//default RST is high ,and no power control
@@ -1237,9 +1384,15 @@ static int __init board_misc_init(void){
 	gpio_free(QPAD_SENSOR_RST);
 
 
+	#warning "FIXME:use GPIO19 or RGMII_RXC for fl_en on v2"
 	if(BOARD_QPAD_REVA==mx6_board_rev()){
 		fl_pwren = IMX_GPIO_NR(3,31);
 		fl_en = IMX_GPIO_NR(3,22);
+	}else {
+		mxc_iomux_v3_setup_pad(MX6Q_PAD_RGMII_RXC__GPIO_6_30);
+		fl_pwren = IMX_GPIO_NR(3,31);
+		fl_en = IMX_GPIO_NR(4,5);//IMX_GPIO_NR(6,30)
+		
 	}
 	eup2471_enable(0);
 	eup2471_flash(0);

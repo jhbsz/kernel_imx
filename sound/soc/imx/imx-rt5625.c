@@ -242,6 +242,7 @@ static int hp_jack_status_check(void)
 	int  ret = 0;
 
 	if (gpio_is_valid(plat->hp_gpio)) {
+		int state=0;
 		priv->hp_status = gpio_get_value(plat->hp_gpio);
 		#if 0
 		/* if headphone is inserted, disable speaker */
@@ -260,7 +261,6 @@ static int hp_jack_status_check(void)
 		}
 
 		if (priv->hp_status != plat->hp_active_low) {
-			int state=2;
 			/*
 			 *	state meaning
 			 *	0: no headset plug in
@@ -268,15 +268,19 @@ static int hp_jack_status_check(void)
 			 *	2: headset without microphone plugged
 			 *    if
 			*/
+			state = 2;
 			if(rt5625_headset_detect(gcodec))
 				state=1;
 			switch_set_state(&priv->sdev, state);
 			snprintf(buf, 32, "STATE=%d", state);
 			ret = imx_hp_jack_gpio.report;
 		} else {
-			switch_set_state(&priv->sdev, 0);
-			snprintf(buf, 32, "STATE=%d", 0);
+			switch_set_state(&priv->sdev, state);
+			snprintf(buf, 32, "STATE=%d", state);
 		}
+		if(plat->headphone_switch)
+			plat->headphone_switch(state);
+
 		envp[0] = "NAME=headphone";
 		envp[1] = buf;
 		envp[2] = NULL;

@@ -143,7 +143,6 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	MX6Q_PAD_SD1_CLK__GPIO_1_20,		/*AUDIO_INT*/
 	
 	/*Hardware Monitor*/
-	/*MX6Q_PAD_EIM_EB3__GPIO_2_31,	It's confict with BOOT_CFG2[7]*/	/*SENSOR_POWER_EN*/
 	MX6Q_PAD_EIM_CS0__GPIO_2_23,		/*SENSOR_RST*/
 
 	/*QR Engine*/
@@ -160,8 +159,8 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	MX6Q_PAD_EIM_DA0__GPIO_3_0,			/*GPS_PWR_EN*/
 
 	/*FlashLight*/
-	MX6Q_PAD_EIM_D31__GPIO_3_31,		/*FLASHLIGHT_EN*/
-	MX6Q_PAD_GPIO_19__GPIO_4_5,			/*FL_PWR_EN*/
+	MX6Q_PAD_EIM_D31__GPIO_3_31,		/*FL_PWR_EN*/
+	MX6Q_PAD_GPIO_19__GPIO_4_5,			/*FLASHLIGHT_EN*/
 	
 	/*W1*/
 	NEW_PAD_CTRL(MX6Q_PAD_EIM_D28__GPIO_3_28,NO_PAD_CTRL),		/*OneWire*/
@@ -177,6 +176,23 @@ static iomux_v3_cfg_t mx6q_qpad_pads[] = {
 	MX6Q_PAD_NANDF_D5__GPIO_2_5,		/*3GWakeModem*/
 	MX6Q_PAD_SD1_CMD__GPIO_1_18,		/*3GWakeAP*/
 };
+
+static iomux_v3_cfg_t mx6q_qpad_barcode_pads_v2[] = {
+	MX6Q_PAD_EIM_D30__GPIO_3_30,	/*QR Trig*/
+	MX6Q_PAD_EIM_BCLK__GPIO_6_31,	/*QR Wake*/
+	MX6Q_PAD_EIM_OE__GPIO_2_25,		/*QR_PWN*/
+	MX6Q_PAD_GPIO_7__GPIO_1_7,		/*QR_PWR_EN*/
+};
+
+static iomux_v3_cfg_t mx6q_qpad_hp_uart_switcher_pads_v2[] = {
+	MX6Q_PAD_EIM_D19__GPIO_3_19,	/*SELECT_IN2*/
+	MX6Q_PAD_NANDF_CS1__GPIO_6_14,	/*SELECT_IN1*/	
+};
+
+
+
+
+
 
 static iomux_v3_cfg_t mx6q_qpad_csi0_sensor_pads[] = {
 	/* IPU1 Camera */

@@ -393,6 +393,7 @@ struct mxc_audio_platform_data {
 	int (*amp_enable) (int enable);
 	int (*clock_enable) (int enable);
 	int (*finit) (void);	/* board specific finit */
+	int (*headphone_switch)(int state);	/*board hp callback*/
 	void *priv;		/* used by board specific functions */
 };
 
