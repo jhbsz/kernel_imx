@@ -18,7 +18,6 @@
  *
  * @ingroup MXC_V4L2_CAPTURE
  */
-#define DEBUG
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/init.h>
