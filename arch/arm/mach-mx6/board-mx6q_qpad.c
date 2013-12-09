@@ -425,6 +425,7 @@ static struct fsl_mxc_camera_platform_data camera_data = {
 	.io_init = mx6q_csi0_io_init,
 	.mclk_on = mx6q_csi0_mclk_on,
 	.pwdn = mx6q_csi0_cam_powerdown,
+	.trigger_led_flash = "camera",
 };
 
 #include <linux/i2c/eup2471.h>
@@ -441,7 +442,6 @@ static int eup2471_enable(int on)
 		return -EINVAL;
 	}
 
-	printk("eup2471 %s\n", on?"enable":"disable");
 	if (on)
 	{
 		gpio_direction_output(en, 1);
@@ -466,14 +466,12 @@ static int eup2471_flash(int on)
 		return -EINVAL;
 	}
 
-	printk("eup2471 flash %s\n", on?"on":"off");
 	if (on)
 	{
 		gpio_direction_output(en, 1);
 		udelay(10);
 
 		gpio_direction_output(en, 0);
-		udelay(10);
 	}
 	else
 	{
@@ -487,6 +485,8 @@ static int eup2471_flash(int on)
 
 static struct eup2471_platform_data eup2471_pdata = 
 {
+	.default_trigger = "camera",
+	.name		= "flashlight:camera",
 	.enable 	= eup2471_enable,
 	.flash 		= eup2471_flash,
 };
@@ -824,6 +824,7 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 		.ipu = 0,
 		.mclk_source = 0,
 		.is_mipi = 0,
+		.flag = MXC_CAMERA_FLAG_POWER_UP_SEQUENCE_MCLK_FIRST|MXC_CAMERA_FLAG_POWER_DOWN_SEQUENCE_POWER_FIRST,
 	}
 };
 

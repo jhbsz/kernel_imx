@@ -15,6 +15,8 @@
 
 /* MT9P111 porting */
 #define REG_CHIPID	0x0000
+#define REG_MT9P111_SENSOR_RESET     0x001A
+#define REG_MT9P111_STANDBY_CONTROL  0x0018
 
 #define REG_READMODE	0x3040
 
@@ -41,7 +43,8 @@ static struct mt9p111_regval_list mt9p111_reg_init[] = {
 	{ 0x001A, 0x0019, 2},	
 	{ 0xDDDD, 20, 0},
 	{ 0x001A, 0x0018, 2},	
-	
+
+
 #ifdef PICTURE_JPEG	
 	{ 0x0010, 0x0010, 2},	
 	{ 0x0012, 0x00F0, 2},	

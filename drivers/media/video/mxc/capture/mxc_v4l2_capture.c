@@ -2675,6 +2675,7 @@ static void init_camera_struct(cam_data *cam, struct platform_device *pdev)
 
 	cam->ipu_id = pdata->ipu;
 	cam->csi = pdata->csi;
+	cam->board_flag = pdata->flag;
 	cam->mclk_source = pdata->mclk_source;
 	cam->mclk_on[cam->mclk_source] = false;
 
@@ -2865,13 +2866,25 @@ static int mxc_v4l2_suspend(struct platform_device *pdev, pm_message_t state)
 	}
 
 	if (cam->sensor && cam->open_count) {
-		if (cam->mclk_on[cam->mclk_source]) {
-			ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
-					       cam->mclk_source,
-					       false, false);
-			cam->mclk_on[cam->mclk_source] = false;
+		if(cam->board_flag&MXC_CAMERA_FLAG_POWER_DOWN_SEQUENCE_POWER_FIRST){
+			vidioc_int_s_power(cam->sensor, 0);
+			if (cam->mclk_on[cam->mclk_source]) {
+				ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
+						       cam->mclk_source,
+						       false, false);
+				cam->mclk_on[cam->mclk_source] = false;
+			}
+			vidioc_int_s_power(cam->sensor, 0);
+			
+		}else{
+			if (cam->mclk_on[cam->mclk_source]) {
+				ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
+						       cam->mclk_source,
+						       false, false);
+				cam->mclk_on[cam->mclk_source] = false;
+			}
+			vidioc_int_s_power(cam->sensor, 0);
 		}
-		vidioc_int_s_power(cam->sensor, 0);
 	}
 
 	up(&cam->busy_lock);
@@ -2904,13 +2917,24 @@ static int mxc_v4l2_resume(struct platform_device *pdev)
 	wake_up_interruptible(&cam->power_queue);
 
 	if (cam->sensor && cam->open_count) {
-		vidioc_int_s_power(cam->sensor, 1);
+		if(cam->board_flag&MXC_CAMERA_FLAG_POWER_UP_SEQUENCE_MCLK_FIRST){
+			if (!cam->mclk_on[cam->mclk_source]) {
+				ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
+						       cam->mclk_source,
+						       true, true);
+				cam->mclk_on[cam->mclk_source] = true;
+			}
+			vidioc_int_s_power(cam->sensor, 1);
+			
+		}else {
+			vidioc_int_s_power(cam->sensor, 1);
 
-		if (!cam->mclk_on[cam->mclk_source]) {
-			ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
-					       cam->mclk_source,
-					       true, true);
-			cam->mclk_on[cam->mclk_source] = true;
+			if (!cam->mclk_on[cam->mclk_source]) {
+				ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
+						       cam->mclk_source,
+						       true, true);
+				cam->mclk_on[cam->mclk_source] = true;
+			}
 		}
 		vidioc_int_dev_init(cam->sensor); // Ellie
 	}

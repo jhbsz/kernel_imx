@@ -31,6 +31,8 @@
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <linux/i2c/eup2471.h>
+#include <linux/leds.h>
+#include <linux/workqueue.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -60,6 +62,18 @@
 #define MAX_EUP2471_BRIGHTNESS 10
 #define MIN_EUP2471_BRIGHTNESS 0
 
+#define ldev_to_led(c)       container_of(c, struct eup2471_device, ldev)
+
+
+enum flash_state{
+	kStateOff,
+	kStatePreFlash,
+	kStateFlash,
+	kStatePostFlash,
+	kStateCompleted,	
+	kStateMax,
+};
+
 struct eup2471_device{
 	struct i2c_client* client;
 
@@ -69,48 +83,15 @@ struct eup2471_device{
 	unsigned char outen;
 
 	struct eup2471_platform_data* pdata;
+
 	
-	struct early_suspend    early_suspend;
+	struct led_classdev ldev;
+	struct delayed_work work;
+	int new_brightness;
+
+	int state;
 	
 };
-
-static int eup2471_regwrite(struct i2c_client *client,u8 reg,u8 value)
-{
-	u8 buf[4];
-	int ret;
-	buf[0]=reg;
-	buf[1]=value;
-	ret=i2c_master_send(client,buf,2);
-	if(ret!=2)
-	{
-		dev_err(&client->dev,"eup2471_regwrite:i2c_master_send ret %d\n",ret);
-		return -1;
-	}
-	return 0;
-
-}
-#if 0
-static int eup2471_idle(struct eup2471_device* eup2471)
-{	
-	int ret;
-	ret = eup2471_regwrite(eup2471->client,EUP2471_REG_0,(((MAX_EUP2471_MOVIE_CURRENT_LEVEL-MIN_EUP2471_MOVIE_CURRENT_LEVEL)& \
-		EUP2471_MOVIE_CURRENT_LEVEL_MASK)<<EUP2471_MOVIE_CURRENT_LEVEL_OFFSET));
-	if(ret != 0)
-		return ret;
-	return eup2471_regwrite(eup2471->client,EUP2471_REG_1,((MAX_EUP2471_FLASH_MOVIE_RATIO-MIN_EUP2471_FLASH_MOVIE_RATIO)& \
-		EUP2471_FLASH_MOVIE_RATIO_MASK));
-}
-#endif
-static int eup2471_sync(struct eup2471_device* eup2471)
-{	
-	int ret;
-	ret = eup2471_regwrite(eup2471->client,EUP2471_REG_0,((MAX_EUP2471_FLASH_TIMEOUT-eup2471->timeout)&EUP2471_FLASH_TIMEOUT_MASK)| \
-		(((MAX_EUP2471_MOVIE_CURRENT_LEVEL-eup2471->level)&EUP2471_MOVIE_CURRENT_LEVEL_MASK)<<EUP2471_MOVIE_CURRENT_LEVEL_OFFSET));
-	if(ret != 0)
-		return ret;
-	return eup2471_regwrite(eup2471->client,EUP2471_REG_1,((MAX_EUP2471_FLASH_MOVIE_RATIO-eup2471->ratio)& \
-		EUP2471_FLASH_MOVIE_RATIO_MASK)| eup2471->outen);
-}
 
 struct eup2471_ratio_level_table
 {
@@ -132,6 +113,42 @@ static struct eup2471_ratio_level_table rlt[MAX_EUP2471_BRIGHTNESS+1]={
 	{16,16}, /* 100/2   = 50 */
 };
 
+
+//first is brightness,2nd is timing in ms
+static int flash_brightness_timing[kStateMax][2]={
+	{LED_OFF,0},
+	{200,1000},
+	{255,200},
+	{LED_OFF,0},
+	{LED_OFF,0},
+};
+static int eup2471_regwrite(struct i2c_client *client,u8 reg,u8 value)
+{
+	u8 buf[4];
+	int ret;
+	buf[0]=reg;
+	buf[1]=value;
+	ret=i2c_master_send(client,buf,2);
+	if(ret!=2)
+	{
+		dev_err(&client->dev,"eup2471_regwrite:i2c_master_send ret %d\n",ret);
+		return -1;
+	}
+	return 0;
+
+}
+static int eup2471_sync(struct eup2471_device* eup2471)
+{	
+	int ret;
+	ret = eup2471_regwrite(eup2471->client,EUP2471_REG_0,((MAX_EUP2471_FLASH_TIMEOUT-eup2471->timeout)&EUP2471_FLASH_TIMEOUT_MASK)| \
+		(((MAX_EUP2471_MOVIE_CURRENT_LEVEL-eup2471->level)&EUP2471_MOVIE_CURRENT_LEVEL_MASK)<<EUP2471_MOVIE_CURRENT_LEVEL_OFFSET));
+	if(ret != 0)
+		return ret;
+	return eup2471_regwrite(eup2471->client,EUP2471_REG_1,((MAX_EUP2471_FLASH_MOVIE_RATIO-eup2471->ratio)& \
+		EUP2471_FLASH_MOVIE_RATIO_MASK)| eup2471->outen);
+}
+
+
 static int eup2471_set_movie_brightness(struct eup2471_device* eup2471, int brightness)
 {	
 	struct eup2471_platform_data* pdata=eup2471->pdata;
@@ -141,9 +158,6 @@ static int eup2471_set_movie_brightness(struct eup2471_device* eup2471, int brig
 	if(brightness<MIN_EUP2471_BRIGHTNESS)
 		brightness=MIN_EUP2471_BRIGHTNESS;
 
-	//terminate flash event
-	if(pdata->flash)
-		pdata->flash(0);
 	if(brightness!=MIN_EUP2471_BRIGHTNESS)
 	{
 		if(pdata->enable)
@@ -171,14 +185,20 @@ static int eup2471_set_movie_brightness(struct eup2471_device* eup2471, int brig
 	return 0;
 }
 
-static int eup2471_enable_flash(struct eup2471_device* eup2471)
+static int eup2471_set_brightness(struct eup2471_device* eup2471,int brightness)
 {	
-	struct eup2471_platform_data* pdata=eup2471->pdata;
-
-	if(pdata->flash)
-		return pdata->flash(1);
-	else
-		return -1;
+	if(LED_FULL==brightness){
+		//start flash mode
+		if(eup2471->pdata&&eup2471->pdata->flash)
+			eup2471->pdata->flash(1);
+	}else {
+		if(eup2471->pdata&&eup2471->pdata->flash)
+			eup2471->pdata->flash(0);
+		//256->10
+		brightness = brightness/25;
+		eup2471_set_movie_brightness(eup2471,brightness);
+	}
+	return 0;
 }
 
 static ssize_t eup2471_set_flashlight_brightness(struct device *dev,
@@ -190,23 +210,7 @@ static ssize_t eup2471_set_flashlight_brightness(struct device *dev,
 
 	sscanf(buf, "%d", &brightness);
 	printk("flashlight brightness: %d\n", brightness);
-	if(brightness>MAX_EUP2471_BRIGHTNESS)
-	{
-		if(eup2471->outen!=0)
-		{
-			if(eup2471_enable_flash(eup2471)==0)
-				return count;
-			else
-				return 0;
-		}
-		else
-			brightness=MAX_EUP2471_BRIGHTNESS;
-	}
-	if(((brightness>0)&&(eup2471->outen==0))||(brightness==0))
-	{
-		if(eup2471_set_movie_brightness(eup2471,brightness)==0)
-			return count;
-	}
+	eup2471_set_brightness(eup2471,brightness);
 	return count;
 }
 
@@ -215,24 +219,47 @@ static struct device_attribute eup2471_attrs[] = {
 	__ATTR(brightness, 0666, NULL, eup2471_set_flashlight_brightness),
 };
 
+static void eup2471_led_work(struct work_struct *work)
+{
+	struct eup2471_device *led = container_of(work, struct eup2471_device, work.work);
+
+	if(LED_FULL==led->new_brightness){
+		led->state++;
+		eup2471_set_brightness(led, flash_brightness_timing[led->state][0]);
+		if(kStateCompleted!=led->state)
+			schedule_delayed_work(&led->work,msecs_to_jiffies(flash_brightness_timing[led->state][1]));
+		else
+			led->state=kStateOff;
+	}else {
+		eup2471_set_brightness(led, led->new_brightness);
+	}
+}
+
+static void eup2471_led_set_brightness(struct led_classdev *led_cdev,
+				      enum led_brightness brightness)
+{
+	struct eup2471_device *led = ldev_to_led(led_cdev);
+
+	dev_dbg(&led->client->dev, "%s: %s, %d\n",
+		__func__, led_cdev->name, brightness);
+
+	cancel_delayed_work_sync(&led->work);
+
+	led->new_brightness = brightness;
+	if(LED_FULL==brightness){
+		led->state = kStateOff;
+		schedule_delayed_work(&led->work,msecs_to_jiffies(flash_brightness_timing[kStateOff][1]));
+	}else 
+		schedule_delayed_work(&led->work,0);
+}
+
 static int eup2471_suspend(struct i2c_client* client,pm_message_t state)
 {
 	struct eup2471_device *eup2471 = i2c_get_clientdata(client);	
 	struct eup2471_platform_data* pdata=eup2471->pdata;
 
-	if(pdata)
-	{
-		if(pdata->flash)
-			pdata->flash(0);
-	}
-
-	//eup2471_idle(eup2471);
-
-	if(pdata)
-	{
-		if(pdata->enable)
-			pdata->enable(0);
-	}
+	if(pdata&&pdata->flash)	pdata->flash(0);
+	if(pdata&&pdata->enable) pdata->enable(0);
 	
 	return 0;
 }
@@ -240,40 +267,16 @@ static int eup2471_suspend(struct i2c_client* client,pm_message_t state)
 static int eup2471_resume(struct i2c_client* client)
 {
 	struct eup2471_device *eup2471 = i2c_get_clientdata(client);	
-	/*struct eup2471_platform_data* pdata=eup2471->pdata;
-
-	if(pdata)
-	{
-		if(pdata->enable)
-			pdata->enable(1);
-	}
-
-	return eup2471_sync(eup2471);*/
 	eup2471->level = MIN_EUP2471_MOVIE_CURRENT_LEVEL;
 	eup2471->ratio = MIN_EUP2471_FLASH_MOVIE_RATIO;
 	eup2471->outen= 0;
 	return 0;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-//TODO early suspend/resume support
-static void eup2471_early_suspend(struct early_suspend *h)
-{
-	struct eup2471_device *eup2471 = container_of(h, struct eup2471_device, early_suspend);
-	eup2471_suspend(eup2471->client, PMSG_SUSPEND);
-
-}
-static void eup2471_late_resume(struct early_suspend *h)
-{
-	struct eup2471_device *eup2471 = container_of(h, struct eup2471_device, early_suspend);
-	eup2471_resume(eup2471->client);
-
-}
-#endif
 
 static int __devinit eup2471_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
-	struct eup2471_device* eup2471;
+	struct eup2471_device* eup2471=NULL;
 	struct eup2471_platform_data* pdata = (struct eup2471_platform_data*)client->dev.platform_data;
 	struct device *dev = &client->dev;
 	int ret = 0,i;		
@@ -314,14 +317,24 @@ static int __devinit eup2471_probe(struct i2c_client *client, const struct i2c_d
 		goto err1;
 	}*/
 
+	eup2471->ldev.name = pdata->name?pdata->name:"eup2471";
+	eup2471->ldev.max_brightness = LED_FULL;
+	eup2471->ldev.brightness_set = eup2471_led_set_brightness;
+	if(pdata->default_trigger)
+		eup2471->ldev.default_trigger = pdata->default_trigger;
+	eup2471->ldev.flags = LED_CORE_SUSPENDRESUME;
+
+	ret = led_classdev_register(&client->dev, &eup2471->ldev);
+	if (ret < 0) {
+		dev_err(&client->dev,
+			"couldn't register LED %s\n",
+			eup2471->ldev.name);
+		goto err;
+	}
+
 	i2c_set_clientdata(client, eup2471);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	eup2471->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN+1;
-	eup2471->early_suspend.suspend = eup2471_early_suspend;
-	eup2471->early_suspend.resume = eup2471_late_resume;
-	register_early_suspend(&eup2471->early_suspend);
-#endif
+	INIT_DELAYED_WORK(&eup2471->work, eup2471_led_work);
 
 	for (i=0; i<ARRAY_SIZE(eup2471_attrs); i++)
 	{
@@ -331,6 +344,8 @@ static int __devinit eup2471_probe(struct i2c_client *client, const struct i2c_d
 
 	return 0;
 err:
+	if(eup2471)
+		kfree(eup2471);
 	/*if(pdata)
 	{
 		if(pdata->enable)
@@ -350,31 +365,18 @@ static int eup2471_remove(struct i2c_client *client)
 		device_remove_file(&client->dev, &eup2471_attrs[i]);
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&eup2471->early_suspend);
-#endif
+	if(pdata&&pdata->flash)	pdata->flash(0);
+	if(pdata&&pdata->enable) pdata->enable(0);
+	
+	cancel_delayed_work_sync(&eup2471->work);
+	led_classdev_unregister(&eup2471->ldev);
 
-	if(pdata)
-	{
-		if(pdata->flash)
-			pdata->flash(0);
-	}
-
-	//eup2471_idle(eup2471);
-
-	if(pdata)
-	{
-		if(pdata->enable)
-			pdata->enable(0);
-	}
 	kfree(eup2471);
 
 	dev_set_drvdata(&client->dev, NULL);
 	return 0;
 }
  
-
-
 
 static struct i2c_device_id eup2471_idtable[] = { 
 	{ "eup2471", 0 }, 
@@ -390,10 +392,8 @@ static struct i2c_driver eup2471_driver = {
 	.remove		= __devexit_p(eup2471_remove),
 	
 	#ifdef CONFIG_PM
-	#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend  = eup2471_suspend,
 	.resume   = eup2471_resume,
-	#endif
 	#endif
 };
 

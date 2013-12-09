@@ -17,7 +17,6 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -32,6 +31,7 @@
 #include <media/v4l2-int-device.h>
 #include <linux/i2c.h>
 #include <linux/clk.h>
+#include <linux/leds.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-chip-ident.h>
 #include <mach/hardware.h>
@@ -66,6 +66,7 @@ static int mt9p111_framerates[] = {
  */
 struct sensor_data mt9p111_data;
 
+DEFINE_LED_TRIGGER(ledtrig_flash);
 
 
 struct mt9p111_format_struct;  /* coming later */
@@ -243,19 +244,21 @@ static int mt9p111_detect(struct i2c_client *client)
 {
 	u16 model_id=0;
 	int ret = 0;
-
-	/*
-	 * no MID register found. OK, we know we have an OmniVision chip...but which one?
-	 */
 	ret = mt9p111_read(client, REG_CHIPID, &model_id, 2);
-	printk(KERN_ERR "model_id=0x%x\n",model_id);
 	if (ret < 0 || model_id != 0x2880)
 	{
-		return -ENXIO;
+		return -ENODEV;
 	}
+	dev_info(&client->dev,"model_id=0x%x\n",model_id);
 
 	return 0;
 }
+
+static void ledtrig_camera_flash(int brightness)
+{
+	led_trigger_event(ledtrig_flash, brightness);
+}
+
 
 
 enum mt9p111_mode {
@@ -422,7 +425,7 @@ static int wait_for_state(struct i2c_client *client, u16 value, int cnt, int int
 			printk(KERN_ERR "wait %d ms for state %d\n", times*interval_ms,value);
 			return times;
 		}
-		mdelay(interval_ms);
+		msleep(interval_ms);
 		times++;
 	}
 	printk(KERN_ERR "wait for state %d fail\n",value);
@@ -475,7 +478,7 @@ static ssize_t mt9p111_set_reg(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct i2c_client* c = container_of(dev, struct i2c_client, dev);
-	u32 reg ,val,size=2;
+	u16 reg ,val,size=2;
 	int ret = sscanf(buf, "%x %d %x", &reg, &val, &size);
 	if (ret<2)
 	{
@@ -534,9 +537,26 @@ static ssize_t mt9p111_set_focus(struct device *dev,
 	return count;
 }
 
+static ssize_t mt9p111_set_flash(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int brightness;
+	int ret;
+
+	ret = sscanf(buf, "%d", &brightness);
+	if (ret == 1)
+	{
+		ledtrig_camera_flash(brightness);	
+	}
+
+	return count;
+}
+
+
 static struct device_attribute static_attrs[] = {
 	__ATTR(reg, 0666, mt9p111_get_reg, mt9p111_set_reg),
 	__ATTR(focus, 0666, NULL, mt9p111_set_focus),
+	__ATTR(flash, 0666, NULL, mt9p111_set_flash),	
 };
 
 
@@ -601,9 +621,9 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 
 	sensor->on = on;
 	
-	/* Make sure power on */
-	if (camera_plat->pwdn)
+	if (camera_plat->pwdn){
 		camera_plat->pwdn(on?0:1);
+	}
 
 
 	return 0;
@@ -726,6 +746,8 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	int ret = 0;
 	struct sensor_data *sensor = s->priv;
 	struct v4l2_fract *timeperframe = &a->parm.capture.timeperframe;
+	pr_debug("In mt9p111:ioctl_s_parm %d\n",
+		 a->type);
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -836,6 +858,11 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 				vc->value = ret;
 				ret=0;
 			}
+			break;
+		}
+	case V4L2_CID_MXC_FLASH:
+		{
+			ledtrig_camera_flash(LED_FULL);
 			break;
 		}
 	case V4L2_CID_BRIGHTNESS:
@@ -1066,7 +1093,7 @@ static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 static int ioctl_dev_init(struct v4l2_int_device *s)
 {
 	struct sensor_data *sensor = s->priv;
-	int ret;
+	int ret=0;
 	//ret = ov5640_init_mode();
 	ret=mt9p111_int_reset(sensor->i2c_client);
 	
@@ -1130,6 +1157,7 @@ static struct v4l2_int_device mtp9111_int_device = {
 	},
 };
 
+
 /*!
  * ov5640 I2C probe function
  *
@@ -1139,7 +1167,7 @@ static struct v4l2_int_device mtp9111_int_device = {
 static int mt9p111_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
-	int retval,ret;
+	int ret;
 	struct fsl_mxc_camera_platform_data *plat_data = client->dev.platform_data;
 	int i;
 
@@ -1150,10 +1178,11 @@ static int mt9p111_probe(struct i2c_client *client,
 	mt9p111_data.csi = plat_data->csi;
 
 	mt9p111_data.i2c_client = client;
-	mt9p111_data.pix.pixelformat = V4L2_PIX_FMT_UYVY;//V4L2_PIX_FMT_YUYV;
+	mt9p111_data.pix.pixelformat = V4L2_PIX_FMT_UYVY;
 	mt9p111_data.pix.width = 640;
 	mt9p111_data.pix.height = 480;
-	mt9p111_data.streamcap.capability = 0;
+	mt9p111_data.streamcap.capability = V4L2_MODE_HIGHQUALITY |
+					   V4L2_CAP_TIMEPERFRAME;
 	mt9p111_data.streamcap.capturemode = 0;
 	mt9p111_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	mt9p111_data.streamcap.timeperframe.numerator = 1;
@@ -1162,36 +1191,42 @@ static int mt9p111_probe(struct i2c_client *client,
 	if (plat_data->io_init)
 		plat_data->io_init();
 
+	if (plat_data->mclk_on)
+		plat_data->mclk_on(1);
+	
 	if (plat_data->pwdn)
 		plat_data->pwdn(0);	
 
-	if (plat_data->mclk_on)
-		plat_data->mclk_on(1);
 	ret = mt9p111_detect(client);
 
-	if(ret<0)
+	if(ret)
 	{
-		pr_warn("MT9P111 not found!!\n");
-		retval = -ENODEV;
+		dev_warn(&client->dev,"MT9P111 not found!!\n");
 		goto err;
 	}
 	camera_plat = plat_data;
 
 	mtp9111_int_device.priv = &mt9p111_data;
-	retval = v4l2_int_device_register(&mtp9111_int_device);
+
+	led_trigger_register_simple(plat_data->trigger_led_flash?
+		plat_data->trigger_led_flash:"camera",
+		&ledtrig_flash);
+
+
+	ret = v4l2_int_device_register(&mtp9111_int_device);
 	for (i=0; i<ARRAY_SIZE(static_attrs); i++)
 	{
 		ret = device_create_file(&client->dev, &static_attrs[i]);
 		if (ret) printk("camera: failed creating device file\n");
-	}	
+	}
 
-	pr_info("camera mtp9111 is found\n");
+	dev_info(&client->dev,"camera mtp9111 is found\n");
 err:
-	if (plat_data->mclk_on)
-		plat_data->mclk_on(0);
 	if (plat_data->pwdn)
 		plat_data->pwdn(1);	
-	return retval;
+	if (plat_data->mclk_on)
+		plat_data->mclk_on(0);
+	return ret;
 }
 
 /*!
@@ -1202,6 +1237,11 @@ err:
  */
 static int mt9p111_remove(struct i2c_client *client)
 {
+	struct fsl_mxc_camera_platform_data *plat_data = client->dev.platform_data;
+	
+	if(plat_data->trigger_led_flash){
+		led_trigger_unregister_simple(ledtrig_flash);
+	}
 	v4l2_int_device_unregister(&mtp9111_int_device);
 
 

@@ -294,11 +294,14 @@ struct fsl_mxc_hdmi_core_platform_data {
 	int disp_id;
 };
 
+#define MXC_CAMERA_FLAG_POWER_UP_SEQUENCE_MCLK_FIRST 0x1
+#define MXC_CAMERA_FLAG_POWER_DOWN_SEQUENCE_POWER_FIRST 0x2
 struct fsl_mxc_capture_platform_data {
 	int csi;
 	int ipu;
 	u8 mclk_source;
 	u8 is_mipi;
+	u32 flag;
 };
 
 
@@ -307,6 +310,7 @@ struct fsl_mxc_camera_platform_data {
 	char *io_regulator;
 	char *analog_regulator;
 	char *gpo_regulator;
+	const char* trigger_led_flash;
 	u32 mclk;
 	u8 mclk_source;
 	u32 csi;
