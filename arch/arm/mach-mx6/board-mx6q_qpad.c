@@ -999,7 +999,7 @@ static int __init imx6q_init_audio(void)
 		//init proc interface 
 		{
 			struct proc_dir_entry *entry;			
-			entry = create_proc_entry("driver/uartswitcher", 0/*default mode*/, NULL);
+			entry = create_proc_entry("driver/uartswitcher", S_IFREG | S_IRUGO | S_IWUGO/*default mode*/, NULL);
 			if (entry) {
 				entry->read_proc = read_uartswitcher;
 				entry->write_proc = write_uartswitcher;
@@ -1514,6 +1514,10 @@ static void __init mx6_qpad_board_init(void)
 
 	
 	if(eBootModeCharger!=android_bootmode){
+		//patch for TP y axis inverted
+		if(BOARD_QPAD_REVB==mx6_board_rev()){
+			ft5x0x_data.y_inverted=1;
+		}
 		i2c_register_board_info(0, mxc_i2c0_board_info,
 				ARRAY_SIZE(mxc_i2c0_board_info));
 		i2c_register_board_info(1, mxc_i2c1_board_info,
