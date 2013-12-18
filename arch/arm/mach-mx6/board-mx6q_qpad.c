@@ -1392,14 +1392,12 @@ static int __init board_misc_init(void){
 	gpio_free(QPAD_SENSOR_RST);
 
 
-	#warning "FIXME:use GPIO19 or RGMII_RXC for fl_en on v2"
 	if(BOARD_QPAD_REVA==mx6_board_rev()){
 		fl_pwren = IMX_GPIO_NR(3,31);
 		fl_en = IMX_GPIO_NR(3,22);
 	}else {
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_RGMII_RXC__GPIO_6_30);
 		fl_pwren = IMX_GPIO_NR(3,31);
-		fl_en = IMX_GPIO_NR(4,5);//IMX_GPIO_NR(6,30)
+		fl_en = IMX_GPIO_NR(4,5);
 		
 	}
 	eup2471_enable(0);
