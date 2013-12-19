@@ -159,6 +159,8 @@
 //SDHC
 #define QPAD_SD2_CD			IMX_GPIO_NR(2, 0)
 
+//SmartCard Reader
+#define QPAD_SMARTCARD_PWR_EN IMX_GPIO_NR(7,12)
 
 
 #define NFC_VEN			IMX_GPIO_NR(1,17)
@@ -1338,6 +1340,38 @@ static int __init modem_init(void){
 }
 
 
+
+static void smartcard_reader_power(int on){
+	gpio_set_value(QPAD_SMARTCARD_PWR_EN,on?1:0);
+}
+static int read_smartcard(char *page, char **start,
+			     off_t off, int count,
+			     int *eof, void *data)
+{
+	return sprintf(page, "echo 1 > smartcard -->enable smartcard reader power\r\n"
+						 "echo 0 > smartcard -->disable smartcard read power\r\n"
+						 "\n");
+}
+
+static int write_smartcard(struct file *file, const char *buffer,
+                      unsigned long count, void *data) 
+{
+	char kbuf[256];
+	int action;
+
+	if (count >= 256)
+		return -EINVAL;
+	if (copy_from_user(kbuf, buffer, count))
+		return -EFAULT;
+
+	action = (int)simple_strtoul(kbuf, NULL, 10);
+	smartcard_reader_power(action);
+	
+    return count;
+}
+
+
+
 static int __init board_misc_init(void){
 	int ret;
 	if(BOARD_QPAD_REVA==mx6_board_rev()){
@@ -1403,6 +1437,25 @@ static int __init board_misc_init(void){
 	eup2471_enable(0);
 	eup2471_flash(0);
 
+	//for v2,smartcard reader power enable support
+	if(BOARD_QPAD_REVA<mx6_board_rev()){
+		struct proc_dir_entry *entry;
+		mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_17__GPIO_7_12);
+		
+		ret = gpio_request(QPAD_SMARTCARD_PWR_EN, "SmartCardPwr");
+		if (ret) {
+			pr_err("failed to get GPIO SmartCardPwr %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(QPAD_SMARTCARD_PWR_EN,0);
+		entry = create_proc_entry("driver/smartcard", S_IFREG | S_IRUGO | S_IWUGO, NULL);
+		if (entry) {
+			entry->read_proc = read_smartcard;
+			entry->write_proc = write_smartcard;
+		}
+		
+	}
 	return 0;
 }
 
