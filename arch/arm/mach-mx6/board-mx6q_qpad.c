@@ -1418,6 +1418,7 @@ static int write_barcode(struct file *file, const char *buffer,
 					gpio_set_value(QPAD_QRE_TRIG,0);
 				}else {
 					gpio_set_value(QPAD_QRE_TRIG,1);
+					msleep(10);
 					gpio_set_value(QPAD_QRE_TRIG,0);
 					msleep(10);
 				}
