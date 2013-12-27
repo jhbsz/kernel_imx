@@ -137,8 +137,11 @@
 #define QPAD_AUDIO_HEADPHONE_DET		IMX_GPIO_NR(3, 21)
 
 //QR Engine
+#define QPAD_QRE_PWR		IMX_GPIO_NR(1, 7)
 #define QPAD_QRE_RST		IMX_GPIO_NR(6, 31)
 #define QPAD_QRE_TRIG		IMX_GPIO_NR(3, 30)
+#define QPAD_QRE_WAKE		IMX_GPIO_NR(6, 31)
+#define QPAD_QRE_STATE		IMX_GPIO_NR(2, 25)
 
 //FLASHLIGHT
 #define QPAD_FL_PWR_EN		IMX_GPIO_NR(4, 5)
@@ -1370,10 +1373,75 @@ static int write_smartcard(struct file *file, const char *buffer,
     return count;
 }
 
+static int read_barcode(char *page, char **start,
+			     off_t off, int count,
+			     int *eof, void *data)
+{
+	return sprintf(page, "echo 'power [On|off]' > barcode -->enable/disable barcode engine power\r\n"
+						 "echo 'trig [on|off|Once]' > barcode -->trigger hardware pin\r\n"
+ 						 "echo 'wake [on|off|Once]' > barcode -->wake up module\r\n"
+ 						 "command without sub command is default sub command with capital prefix\r\n"
+						 "cat barcode -->display current barcode engine status\r\n"
+						 "\n"
+						 "power[%s]wake[%s]trig[%s]state[%s]\r\n"
+						 "\n",
+						 gpio_get_value(QPAD_QRE_PWR)?"high":"low",
+						 gpio_get_value(QPAD_QRE_WAKE)?"high":"low",
+						 gpio_get_value(QPAD_QRE_TRIG)?"high":"low",
+						 gpio_get_value(QPAD_QRE_STATE)?"high":"low");
+}
+
+static int write_barcode(struct file *file, const char *buffer,
+                      unsigned long count, void *data) 
+{
+	char kbuf[256];
+	char func[48]={0};
+	char state[48]={0};
+
+	if (count >= 256)
+		return -EINVAL;
+	if (copy_from_user(kbuf, buffer, count))
+		return -EFAULT;
+
+
+    sscanf(kbuf,"%s %s",func,state);
+	if(func[0]){
+		if(!strcmp(func,"power")){
+			int on=1;
+			if(!strcmp(state,"off"))
+				on=0;			
+			gpio_set_value(QPAD_QRE_PWR,on?0:1);			
+		}else if(!strcmp(func,"trig")){
+				if(!strcmp(state,"on")){
+					gpio_set_value(QPAD_QRE_TRIG,1);
+				}else if(!strcmp(state,"off")){
+					gpio_set_value(QPAD_QRE_TRIG,0);
+				}else {
+					gpio_set_value(QPAD_QRE_TRIG,1);
+					gpio_set_value(QPAD_QRE_TRIG,0);
+					msleep(10);
+				}
+		}else if(!strcmp(func,"wake")){
+				if(!strcmp(state,"on")){
+					gpio_set_value(QPAD_QRE_WAKE,1);
+				}else if(!strcmp(state,"off")){
+					gpio_set_value(QPAD_QRE_WAKE,0);
+				}else {
+					gpio_set_value(QPAD_QRE_TRIG,1);
+					msleep(10);
+					gpio_set_value(QPAD_QRE_TRIG,0);
+				}
+		}
+	}
+
+	
+    return count;
+}
 
 
 static int __init board_misc_init(void){
-	int ret;
+	int ret;	
+	struct proc_dir_entry *entry;
 	if(BOARD_QPAD_REVA==mx6_board_rev()){
 		//QR Engine 
 		//Set Reset On,Trigger Off
@@ -1397,19 +1465,48 @@ static int __init board_misc_init(void){
 		gpio_direction_output(QPAD_QRE_TRIG,1);
 		gpio_free(QPAD_QRE_TRIG);
 	}else if(BOARD_QPAD_REVA<mx6_board_rev()){
-		#warning "FIXME:bringup minde barcode engine"
-		int qr_trig = IMX_GPIO_NR(3,30);
-		int qr_wake = IMX_GPIO_NR(6,31);
-		int qr_pwn = IMX_GPIO_NR(2,25);
-		int qr_pwr_en = IMX_GPIO_NR(1,7);
+		int qr_trig = QPAD_QRE_TRIG;
+		int qr_wake = QPAD_QRE_WAKE;
+		int qr_state = QPAD_QRE_STATE;
+		int qr_pwr_en = QPAD_QRE_PWR;
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_barcode_pads_v2,ARRAY_SIZE(mx6q_qpad_barcode_pads_v2));
-		gpio_request(qr_pwr_en, "qr_pwr_en");
-		gpio_direction_output(qr_pwr_en,0);
-		gpio_free(qr_pwr_en);
-		//suppress compiler warning
-		if(qr_trig){}
-		if(qr_wake){}
-		if(qr_pwn){}
+		ret = gpio_request(qr_pwr_en, "BarcodePwr");
+		if (ret) {
+			pr_err("failed to get GPIO BarcodePwr %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(qr_pwr_en,1);
+		ret = gpio_request(qr_wake, "BarcodeWake");
+		if (ret) {
+			pr_err("failed to get GPIO BarcodeWake %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(qr_wake,0);
+		
+		ret = gpio_request(qr_trig, "BarcodeTrig");
+		if (ret) {
+			pr_err("failed to get GPIO BarcodeTrig %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_output(qr_trig,1);
+		
+		ret = gpio_request(qr_state, "BarcodeState");
+		if (ret) {
+			pr_err("failed to get GPIO BarcodeState %d\n",
+				ret);
+			return -EINVAL;
+		}
+		gpio_direction_input(qr_state);
+		
+		entry = create_proc_entry("driver/barcode", S_IFREG | S_IRUGO | S_IWUGO, NULL);
+		if (entry) {
+			entry->read_proc = read_barcode;
+			entry->write_proc = write_barcode;
+		}
+
 	}
 
 	//Sensor ,FXO8700 driver don't use interrupt but using polling
@@ -1439,7 +1536,6 @@ static int __init board_misc_init(void){
 
 	//for v2,smartcard reader power enable support
 	if(BOARD_QPAD_REVA<mx6_board_rev()){
-		struct proc_dir_entry *entry;
 		mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_17__GPIO_7_12);
 		
 		ret = gpio_request(QPAD_SMARTCARD_PWR_EN, "SmartCardPwr");
