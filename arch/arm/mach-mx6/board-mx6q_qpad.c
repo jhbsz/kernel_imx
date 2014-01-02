@@ -1428,9 +1428,9 @@ static int write_barcode(struct file *file, const char *buffer,
 				}else if(!strcmp(state,"off")){
 					gpio_set_value(QPAD_QRE_WAKE,0);
 				}else {
-					gpio_set_value(QPAD_QRE_TRIG,1);
+					gpio_set_value(QPAD_QRE_WAKE,1);
 					msleep(10);
-					gpio_set_value(QPAD_QRE_TRIG,0);
+					gpio_set_value(QPAD_QRE_WAKE,0);
 				}
 		}
 	}
