@@ -1440,6 +1440,14 @@ static int write_barcode(struct file *file, const char *buffer,
 }
 
 
+static int read_board_revision(char *page, char **start,
+			     off_t off, int count,
+			     int *eof, void *data)
+{
+	return sprintf(page, "v%d",mx6_board_rev());
+}
+
+
 static int __init board_misc_init(void){
 	int ret;	
 	struct proc_dir_entry *entry;
@@ -1553,6 +1561,12 @@ static int __init board_misc_init(void){
 		}
 		
 	}
+	
+	entry = create_proc_entry("boardrev", S_IFREG | S_IRUGO | S_IWUSR, NULL);
+	if (entry) {
+		entry->read_proc = read_board_revision;
+	}
+	
 	return 0;
 }
 
