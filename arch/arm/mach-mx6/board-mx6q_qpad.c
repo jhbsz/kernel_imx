@@ -1285,18 +1285,14 @@ static int wlan_bt_power_change(int status)
 			gpio_direction_output(QPAD_WIFI_PDN,1);
 			gpio_free(QPAD_WIFI_PDN);
 			msleep(10);
-			#if 0
 			ret = gpio_request(QPAD_WIFI_RST, "wifi-rst");
 			if (ret) {
 				pr_err("failed to get GPIO wifi-rst: %d\n",
 					ret);
 				return -EINVAL;
 			}
-			gpio_direction_output(QPAD_WIFI_RST,0);
-			msleep(1);
 			gpio_direction_output(QPAD_WIFI_RST,1);
 			gpio_free(QPAD_WIFI_RST);
-			#endif
 		}
 		else {
 			//always put wifi chip into reset state to save power???
@@ -1308,6 +1304,15 @@ static int wlan_bt_power_change(int status)
 			}
 			gpio_direction_output(QPAD_WIFI_PDN,0);
 			gpio_free(QPAD_WIFI_PDN);
+
+			ret = gpio_request(QPAD_WIFI_RST, "wifi-rst");
+			if (ret) {
+				pr_err("failed to get GPIO wifi-rst: %d\n",
+					ret);
+				return -EINVAL;
+			}
+			gpio_direction_output(QPAD_WIFI_RST,0);
+			gpio_free(QPAD_WIFI_RST);
 			
 		}
 
