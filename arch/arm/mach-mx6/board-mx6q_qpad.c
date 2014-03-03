@@ -836,10 +836,25 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 
 static void qpad_suspend_enter(void)
 {
+	iomux_v3_cfg_t suspend_pads[] = {
+		MX6Q_PAD_KEY_COL1__GPIO_4_8,
+		MX6Q_PAD_KEY_ROW1__GPIO_4_9,
+		MX6Q_PAD_EIM_D26__GPIO_3_26,
+		MX6Q_PAD_EIM_D27__GPIO_3_27,
+	};
+	mxc_iomux_v3_setup_multiple_pads(suspend_pads,ARRAY_SIZE(suspend_pads));
 }
 
 static void qpad_suspend_exit(void)
 {
+	iomux_v3_cfg_t resume_pads[] = {
+		MX6Q_PAD_KEY_COL1__UART5_TXD,
+		MX6Q_PAD_KEY_ROW1__UART5_RXD,
+		MX6Q_PAD_EIM_D26__UART2_TXD,
+		MX6Q_PAD_EIM_D27__UART2_RXD,
+	};
+	mxc_iomux_v3_setup_multiple_pads(resume_pads,ARRAY_SIZE(resume_pads));
+
 }
 static const struct pm_platform_data qpad_pm_data __initconst = {
 	.name = "imx_pm",
