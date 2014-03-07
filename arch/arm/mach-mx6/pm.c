@@ -391,6 +391,22 @@ static int mx6_suspend_enter(suspend_state_t state)
 			restore_gic_dist_state(0, &gds);
 			restore_gic_cpu_state(0, &gcs);
 		}
+
+		wake_irq_isr[0] = __raw_readl(gpc_base +
+		GPC_ISR1_OFFSET) & gpc_wake_irq[0];
+		wake_irq_isr[1] = __raw_readl(gpc_base +
+		GPC_ISR2_OFFSET) & gpc_wake_irq[1];
+		wake_irq_isr[2] = __raw_readl(gpc_base +
+		GPC_ISR3_OFFSET) & gpc_wake_irq[2];
+		wake_irq_isr[3] = __raw_readl(gpc_base +
+		GPC_ISR4_OFFSET) & gpc_wake_irq[3];
+		if (wake_irq_isr[0] | wake_irq_isr[1] |
+		wake_irq_isr[2] | wake_irq_isr[3]) {
+		printk(KERN_INFO "system resumed because of wakeup irq!\n");
+		printk(KERN_INFO "wake_irq_isr[0-3]: 0x%x, 0x%x, 0x%x, 0x%x\n",
+			wake_irq_isr[0], wake_irq_isr[1],
+			wake_irq_isr[2], wake_irq_isr[3]);
+		}
 		if (state == PM_SUSPEND_MEM || (cpu_is_mx6sl())) {
 			usb_power_up_handler();
 			disp_power_up();
