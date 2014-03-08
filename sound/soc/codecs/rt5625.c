@@ -951,10 +951,10 @@ static int rt5625_set_aec_mode(struct snd_kcontrol *kcontrol,
 	int mode;
 
 	mode = rt5625_read(codec, RT5625_VIRTUAL_MISC_FUNC);
-	if (ucontrol->value.integer.value[0] != 0) {
+//	if (ucontrol->value.integer.value[0] != 0) {
 		if ((mode & 0x03) == ucontrol->value.integer.value[0])
 			return 0;
-	}
+//	}
 
 	mode &= 0xfffc;
 	mode |= ucontrol->value.integer.value[0];
