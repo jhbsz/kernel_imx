@@ -1224,7 +1224,7 @@ static int mt9p111_probe(struct i2c_client *client,
 	mt9p111_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	mt9p111_data.streamcap.timeperframe.numerator = 1;
 
-	rtconf.flashbrightness = 200;
+	rtconf.flashbrightness = 120;
 
 	//init 
 	if (plat_data->io_init)
