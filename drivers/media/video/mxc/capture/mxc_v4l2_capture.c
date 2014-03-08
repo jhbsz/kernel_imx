@@ -1239,6 +1239,14 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 	case V4L2_CID_MXC_FLASH:
 #ifdef CONFIG_MXC_IPU_V1
 		ipu_csi_flash_strobe(true);
+#else
+		if (cam->sensor) {
+			ret = vidioc_int_s_ctrl(cam->sensor, c);
+		} else {
+			pr_err("ERROR: v4l2 capture: slave not found!\n");
+			ret = -ENODEV;
+		}
+		
 #endif
 		break;
 	case V4L2_CID_MXC_AUTOFOCUS:

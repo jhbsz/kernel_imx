@@ -43,6 +43,15 @@
 /* Debug MT9P111 register Read/Write */
 //#define MT9P111_DEBUG
 
+typedef struct sensor_runtime_conf{
+	unsigned char flashbrightness;
+	unsigned char autoflash;
+
+	//3A
+	unsigned char autowb;
+	unsigned char autoexposure;
+	unsigned char autofocus;
+}SENSOR_RTCONF;
 
 #define MIN_FPS 5
 #define MAX_FPS 30
@@ -60,6 +69,9 @@ static int mt9p111_framerates[] = {
 	[mt9p111_30_fps] = 30,
 	[mt9p111_5_fps] = 5
 };
+
+static SENSOR_RTCONF rtconf;
+
 
 /*!
  * Maintains the information on the current state of the sesor.
@@ -537,6 +549,25 @@ static ssize_t mt9p111_set_focus(struct device *dev,
 	return count;
 }
 
+static ssize_t mt9p111_set_flashbrightness(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int brightness;
+	int ret;
+
+	ret = sscanf(buf, "%d", &brightness);
+	if (ret == 1)
+	{
+		if(brightness>255)
+			brightness = 255;
+		if(brightness<0)
+			brightness = 0;
+		rtconf.flashbrightness = brightness;
+	}
+
+	return count;
+}
+
 static ssize_t mt9p111_set_flash(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -557,6 +588,8 @@ static struct device_attribute static_attrs[] = {
 	__ATTR(reg, 0666, mt9p111_get_reg, mt9p111_set_reg),
 	__ATTR(focus, 0666, NULL, mt9p111_set_focus),
 	__ATTR(flash, 0666, NULL, mt9p111_set_flash),	
+	__ATTR(brightness, 0666, NULL, mt9p111_set_flashbrightness),	
+	
 };
 
 
@@ -860,11 +893,6 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 			}
 			break;
 		}
-	case V4L2_CID_MXC_FLASH:
-		{
-			ledtrig_camera_flash(LED_FULL);
-			break;
-		}
 	case V4L2_CID_BRIGHTNESS:
 		vc->value = mt9p111_data.brightness;
 		break;
@@ -919,6 +947,15 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 				retval=mt9p111_stop_focus(mt9p111_data.i2c_client);
 			break;
 		}
+	case V4L2_CID_MXC_FLASH:
+	{
+		rtconf.autoflash = vc->value;
+		switch(rtconf.autoflash){
+			default: case 0:ledtrig_camera_flash(0);break;
+			case 1: case 2:ledtrig_camera_flash(rtconf.flashbrightness);break;
+		}
+		break;
+	}	
 	case V4L2_CID_BRIGHTNESS:
 		break;
 	case V4L2_CID_CONTRAST:
@@ -1186,6 +1223,8 @@ static int mt9p111_probe(struct i2c_client *client,
 	mt9p111_data.streamcap.capturemode = 0;
 	mt9p111_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	mt9p111_data.streamcap.timeperframe.numerator = 1;
+
+	rtconf.flashbrightness = 200;
 
 	//init 
 	if (plat_data->io_init)
