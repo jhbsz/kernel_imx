@@ -95,6 +95,11 @@
 #define BOARD_QPAD_REVC 0x3
 
 
+typedef struct peripheral_power_state{
+	unsigned int barcode:1;
+	unsigned int smartcard:1;
+}PERIPHERAL_POWER_STATE_T;
+
 #define QPAD_PFUZE_INT		IMX_GPIO_NR(7, 13)
 
 
@@ -235,6 +240,7 @@ extern char *gp_reg_id;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
 
+static PERIPHERAL_POWER_STATE_T pps;
 
 /*Micro SD*/
 static const struct esdhc_platform_data qpad_sd2_data __initconst = {
@@ -269,6 +275,38 @@ static const struct anatop_thermal_platform_data
 	qpad_anatop_thermal_data __initconst = {
 		.name = "anatop_thermal",
 };
+
+static void qpad_uart_io_switch(int uart_idx/*0 based*/,int switch2uart)
+{
+	iomux_v3_cfg_t uart_gpio_pads[] = {
+		MX6Q_PAD_CSI0_DAT10__GPIO_5_28,
+		MX6Q_PAD_CSI0_DAT11__GPIO_5_29,
+		MX6Q_PAD_EIM_D26__GPIO_3_26,
+		MX6Q_PAD_EIM_D27__GPIO_3_27,
+		MX6Q_PAD_EIM_D24__GPIO_3_24,
+		MX6Q_PAD_EIM_D25__GPIO_3_25,
+		MX6Q_PAD_KEY_COL0__GPIO_4_6,
+		MX6Q_PAD_KEY_ROW0__GPIO_4_7,		
+		MX6Q_PAD_KEY_COL1__GPIO_4_8,
+		MX6Q_PAD_KEY_ROW1__GPIO_4_9,
+	};
+	iomux_v3_cfg_t uart_func_pads[] = {
+		MX6Q_PAD_CSI0_DAT10__UART1_TXD,
+		MX6Q_PAD_CSI0_DAT11__UART1_RXD,
+		MX6Q_PAD_EIM_D26__UART2_TXD,
+		MX6Q_PAD_EIM_D27__UART2_RXD,
+		MX6Q_PAD_EIM_D24__UART3_TXD,
+		MX6Q_PAD_EIM_D25__UART3_RXD,
+		MX6Q_PAD_KEY_COL0__UART4_TXD,
+		MX6Q_PAD_KEY_ROW0__UART4_RXD,
+		MX6Q_PAD_KEY_COL1__UART5_TXD,
+		MX6Q_PAD_KEY_ROW1__UART5_RXD,
+	};
+	iomux_v3_cfg_t* io_pads_cfg = switch2uart?&uart_func_pads[uart_idx*2]:&uart_gpio_pads[uart_idx*2];
+	mxc_iomux_v3_setup_multiple_pads(io_pads_cfg,2/*fixed 2 pins*/);
+}
+
+
 
 static struct pwm_device       *pwm_uart_mod=NULL; ;
 static int pwm_uart_mod_enable=1;
@@ -836,25 +874,14 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 
 static void qpad_suspend_enter(void)
 {
-	iomux_v3_cfg_t suspend_pads[] = {
-		MX6Q_PAD_KEY_COL1__GPIO_4_8,
-		MX6Q_PAD_KEY_ROW1__GPIO_4_9,
-		MX6Q_PAD_EIM_D26__GPIO_3_26,
-		MX6Q_PAD_EIM_D27__GPIO_3_27,
-	};
-	mxc_iomux_v3_setup_multiple_pads(suspend_pads,ARRAY_SIZE(suspend_pads));
+	if(pps.barcode)	qpad_uart_io_switch(1,0);
+	if(pps.smartcard) qpad_uart_io_switch(4,0);
 }
 
 static void qpad_suspend_exit(void)
 {
-	iomux_v3_cfg_t resume_pads[] = {
-		MX6Q_PAD_KEY_COL1__UART5_TXD,
-		MX6Q_PAD_KEY_ROW1__UART5_RXD,
-		MX6Q_PAD_EIM_D26__UART2_TXD,
-		MX6Q_PAD_EIM_D27__UART2_RXD,
-	};
-	mxc_iomux_v3_setup_multiple_pads(resume_pads,ARRAY_SIZE(resume_pads));
-
+	if(pps.barcode)	qpad_uart_io_switch(1,1);
+	if(pps.smartcard) qpad_uart_io_switch(4,1);
 }
 static const struct pm_platform_data qpad_pm_data __initconst = {
 	.name = "imx_pm",
@@ -1368,6 +1395,8 @@ static int __init modem_init(void){
 
 static void smartcard_reader_power(int on){
 	gpio_set_value(QPAD_SMARTCARD_PWR_EN,on?1:0);
+	pps.smartcard=on?1:0;
+	qpad_uart_io_switch(4,on);
 }
 static int read_smartcard(char *page, char **start,
 			     off_t off, int count,
@@ -1432,7 +1461,9 @@ static int write_barcode(struct file *file, const char *buffer,
 			int on=1;
 			if(!strcmp(state,"off"))
 				on=0;			
-			gpio_set_value(QPAD_QRE_PWR,on?0:1);			
+			gpio_set_value(QPAD_QRE_PWR,on?0:1);		
+			pps.barcode = on?1:0;
+			qpad_uart_io_switch(1,on?1:0);
 		}else if(!strcmp(func,"trig")){
 				if(!strcmp(state,"on")){
 					gpio_set_value(QPAD_QRE_TRIG,1);
@@ -1508,6 +1539,8 @@ static int __init board_misc_init(void){
 			return -EINVAL;
 		}
 		gpio_direction_output(qr_pwr_en,1);
+		//default state is power off ,to fix current leak issue,switch uart to io mode
+		qpad_uart_io_switch(1,0);
 		ret = gpio_request(qr_wake, "BarcodeWake");
 		if (ret) {
 			pr_err("failed to get GPIO BarcodeWake %d\n",
@@ -1575,7 +1608,9 @@ static int __init board_misc_init(void){
 				ret);
 			return -EINVAL;
 		}
-		gpio_direction_output(QPAD_SMARTCARD_PWR_EN,0);
+		gpio_direction_output(QPAD_SMARTCARD_PWR_EN,0);		
+		//default state is power off ,to fix current leak issue,switch uart to io mode
+		//qpad_uart_io_switch(4,0);
 		entry = create_proc_entry("driver/smartcard", S_IFREG | S_IRUGO | S_IWUGO, NULL);
 		if (entry) {
 			entry->read_proc = read_smartcard;
