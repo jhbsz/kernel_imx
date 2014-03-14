@@ -168,17 +168,17 @@ static const struct snd_soc_dapm_widget imx_dapm_widgets[] = {
 /* imx machine connections to the codec pins */
 static const struct snd_soc_dapm_route audio_map[] = {
 	/* headphone connected to HPL, HPR */
-	{"Headphone Jack", NULL, "HPL"},
-	{"Headphone Jack", NULL, "HPR"},
+	{"Headphone Jack", NULL, "HPL Out PGA"},
+	{"Headphone Jack", NULL, "HPR Out PGA"},
 
 	/* ext speaker connected to SPKL, SPKR */
-	{"Ext Speaker", NULL, "SPKL"},
-	{"Ext Speaker", NULL, "SPKR"},
+	{"Ext Speaker", NULL, "SPKL Out PGA"},
+	{"Ext Speaker", NULL, "SPKR Out PGA"},
 
 	/* ----input ------------------- */
 	/* Mic Jack --> MIC_IN (with automatic bias) */
-	{"Mic2", NULL, "Headset Mic"},
-	{"Mic1", NULL, "Main Mic"},
+	{"Mic2 Boost", NULL, "Headset Mic"},
+	{"Mic1 Boost", NULL, "Main Mic"},
 
 };
 

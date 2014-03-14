@@ -1054,15 +1054,8 @@ static int spk_pga_event(struct snd_soc_dapm_widget *w,
 			 struct snd_kcontrol *k, int event)
 {
 	struct snd_soc_codec *codec = w->codec;
-	int val;
 
 	pr_debug("enter %s\n", __func__);
-
-	val = rt5625_read(codec, RT5625_VIRTUAL_MISC_FUNC);
-	val = (val & (0x3 << 4)) >> 4;
-	pr_debug("%s: val = %d, event = %d\n", __func__, val, event);
-	//if (val != 0x3 && !val)
-	//	return 0;
 
 	switch (event) {
 
