@@ -59,17 +59,6 @@ static struct snd_soc_card snd_soc_card_imx;
 static struct snd_soc_codec *gcodec;
 static struct imx_priv card_priv;
 static struct snd_soc_jack imx_hp_jack;
-static struct snd_soc_jack_pin imx_hp_jack_pins[] = {
-	{
-		.pin = "Headphone Jack",
-		.mask = SND_JACK_HEADPHONE,
-	},	
-	{
-		.pin = "Ext Speaker",
-		.mask = SND_JACK_HEADPHONE,
-		.invert = 1,
-	},
-};
 static struct snd_soc_jack_gpio imx_hp_jack_gpio = {
 	.name = "headphone detect",
 	.report = SND_JACK_HEADPHONE,
@@ -244,7 +233,8 @@ static int hp_jack_status_check(void)
 	if (gpio_is_valid(plat->hp_gpio)) {
 		int state=0;
 		priv->hp_status = gpio_get_value(plat->hp_gpio);
-		#if 0
+		//only auto connect while in non android os
+		#ifndef CONFIG_ANDROID
 		/* if headphone is inserted, disable speaker */
 		if (priv->hp_status != plat->hp_active_low)
 			snd_soc_dapm_nc_pin(&gcodec->dapm, "Ext Speaker");
@@ -335,10 +325,6 @@ static int imx_rt5625_init(struct snd_soc_pcm_runtime *rtd)
 		ret = snd_soc_jack_new(codec, "Headphone Jack", SND_JACK_HEADPHONE,
 				&imx_hp_jack);
 		if(ret) goto error;
-		ret = snd_soc_jack_add_pins(&imx_hp_jack,
-					ARRAY_SIZE(imx_hp_jack_pins),
-					imx_hp_jack_pins);
-		if(ret) goto error;
 		ret = snd_soc_jack_add_gpios(&imx_hp_jack,
 					1, &imx_hp_jack_gpio);
 		if(ret) goto error;
@@ -351,15 +337,6 @@ static int imx_rt5625_init(struct snd_soc_pcm_runtime *rtd)
 		}
 
 		priv->hp_status = gpio_get_value(plat->hp_gpio);
-
-		#if 0
-
-		/* if headphone is inserted, disable speaker */
-		if (priv->hp_status != plat->hp_active_low)
-			snd_soc_dapm_nc_pin(&codec->dapm, "Ext Speaker");
-		else
-			snd_soc_dapm_enable_pin(&codec->dapm, "Ext Speaker");
-		#endif
 		
 	}
 

@@ -887,14 +887,14 @@ static void hp_depop_mode2(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
 		PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL,
 		PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL);
-	snd_soc_write(codec, RT5625_MISC_CTRL, HP_DEPOP_MODE2_EN);
-	schedule_timeout_uninterruptible(msecs_to_jiffies(500));
+	snd_soc_update_bits(codec, RT5625_MISC_CTRL, HP_DEPOP_MODE2_EN,HP_DEPOP_MODE2_EN);
+	msleep(300);
 	snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
 		PWR_HP_OUT_ENH_AMP | PWR_HP_OUT_AMP,
 		PWR_HP_OUT_ENH_AMP | PWR_HP_OUT_AMP);
+	snd_soc_update_bits(codec, RT5625_MISC_CTRL, HP_DEPOP_MODE2_EN,0);	
 }
 
-/* enable depop function for mute/unmute */
 static void hp_mute_unmute_depop(struct snd_soc_codec *codec,int mute)
 {
  	if(mute) {
@@ -905,8 +905,9 @@ static void hp_mute_unmute_depop(struct snd_soc_codec *codec,int mute)
 		snd_soc_update_bits(codec, RT5625_HP_OUT_VOL,
 			M_HP_L | M_HP_R,
 			M_HP_L | M_HP_R);
-		mdelay(50);
-		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1, PWR_SOFTGEN_EN, 0);
+		msleep(30);
+		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
+			PWR_SOFTGEN_EN, 0);
 	} else {
 		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
 			PWR_SOFTGEN_EN, PWR_SOFTGEN_EN);
@@ -914,7 +915,7 @@ static void hp_mute_unmute_depop(struct snd_soc_codec *codec,int mute)
 			HP_R_M_UM_DEPOP_EN | HP_L_M_UM_DEPOP_EN);
 		snd_soc_update_bits(codec,RT5625_HP_OUT_VOL,
 			M_HP_L | M_HP_R, 0);
-		mdelay(50);
+		msleep(30);
 	}
 }
 
@@ -1054,14 +1055,9 @@ static int spk_pga_event(struct snd_soc_dapm_widget *w,
 			 struct snd_kcontrol *k, int event)
 {
 	struct snd_soc_codec *codec = w->codec;
-
-	pr_debug("enter %s\n", __func__);
-
 	switch (event) {
-
 	case SND_SOC_DAPM_POST_PMU:
-		pr_debug("after virtual spk power up!\n");
-
+		{
 		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
 				  PWR_SPK_L_OUT_VOL |
 				  PWR_SPK_R_OUT_VOL,
@@ -1073,11 +1069,10 @@ static int spk_pga_event(struct snd_soc_dapm_widget *w,
 		/* power on spk amp */
 		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
 				  PWR_AMP_POWER, PWR_AMP_POWER);
+		}
 		break;
-
 	case SND_SOC_DAPM_POST_PMD:
-		pr_debug("aftet virtual spk power down!\n");
-
+		{
 		/* power off spk amp */
 		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
 				  PWR_AMP_POWER,0);
@@ -1087,9 +1082,7 @@ static int spk_pga_event(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
 				  PWR_SPK_L_OUT_VOL |
 				  PWR_SPK_R_OUT_VOL,0);
-		break;
-
-	default:
+		}
 		break;
 	}
 
@@ -1103,25 +1096,27 @@ static int hp_pga_event(struct snd_soc_dapm_widget *w,
 	struct snd_soc_codec *codec = w->codec;
 
 	switch (event) {
-		default: return 0;
 		case SND_SOC_DAPM_PRE_PMD:
 		{
 			hp_mute_unmute_depop(codec,1);
 			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
 			PWR_HP_OUT_AMP | PWR_HP_OUT_ENH_AMP, 0);
-		snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
+			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
 			PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL, 0);
-		break;
 		}
 		break;
 		case SND_SOC_DAPM_POST_PMU:	
 		{
-			hp_depop_mode2(codec);
+			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD1,
+				PWR_HP_OUT_ENH_AMP | PWR_HP_OUT_AMP,
+				PWR_HP_OUT_ENH_AMP | PWR_HP_OUT_AMP);
+			snd_soc_update_bits(codec, RT5625_PWR_MANAG_ADD3,
+				PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL,
+				PWR_HP_R_OUT_VOL | PWR_HP_L_OUT_VOL);
 			hp_mute_unmute_depop(codec,0);
 			
 		}
 		break;
-
 	}
 
 	return 0;
@@ -2154,6 +2149,9 @@ static int rt5625_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, RT5625_PWR_MANAG_ADD1, PWR_MAIN_BIAS);
 	snd_soc_write(codec, RT5625_PWR_MANAG_ADD2, PWR_MIXER_VREF);
 	rt5625_reg_init(codec);
+
+
+	hp_depop_mode2(codec);
 
 	
 

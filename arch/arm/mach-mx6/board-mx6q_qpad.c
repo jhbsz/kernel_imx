@@ -335,7 +335,7 @@ void uart_modulation_enable(int en){
 static struct imxuart_platform_data mx6_uart4_pdata __initdata = {
        .flags      = IMXUART_MODULATION|IMXUART_CON_DISABLE,
        .modulation_enable = uart_modulation_enable,
-       .transceiver_delay = 2000,
+       .transceiver_delay = 5000,
 
 };
 static struct imxuart_platform_data mx6_uart_pdata __initdata = {
