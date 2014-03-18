@@ -256,7 +256,7 @@ static const struct esdhc_platform_data qpad_sd2_data __initconst = {
 /*WIFI SDIO*/
 struct wake_lock wlan_wakelock;
 static irqreturn_t wlan_wakup_handler(int irq, void *data){
-	wake_lock_timeout(&wlan_wakelock, HZ * 10);
+	wake_lock_timeout(&wlan_wakelock, HZ * 5);
 	return IRQ_HANDLED;
 }
 static int wlan_wakeup_add(void){
@@ -264,16 +264,19 @@ static int wlan_wakeup_add(void){
 	ret = gpio_request(QPAD_WIFI_WAKEUP,"wifi-wakeup");
 	gpio_direction_input(QPAD_WIFI_WAKEUP);
 	ret = request_any_context_irq(gpio_to_irq(QPAD_WIFI_WAKEUP), wlan_wakup_handler,
-		IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING ,
+		IRQF_NO_SUSPEND|IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING ,
 		"wlan wakeap", 0);
 	if (ret) {
 		pr_warning("Request wlan wakeup failed %d\n", ret);
 	}else {
 		enable_irq_wake(gpio_to_irq(QPAD_WIFI_WAKEUP));
 	}
+	printk("%s\n",__func__);
 	return ret;
 }
 static int wlan_wakeup_remove(void){
+	printk("%s\n",__func__);
+	disable_irq_wake(gpio_to_irq(QPAD_WIFI_WAKEUP));
 	free_irq(gpio_to_irq(QPAD_WIFI_WAKEUP),0);
 	return 0;
 }
