@@ -110,6 +110,20 @@ static u32 ccm_analog_pll3_480;
 static u32 ccm_anadig_ana_misc2;
 static bool usb_vbus_wakeup_enabled;
 
+static const char* irq_names[]={
+	//63~32
+	"iomuxc","dap","sdma","vpu","snvs","ipu","ipu1","ipu2","ipu2","gpu3d","gpu2d","gpu2d","vpu","apb-dma","eim","bch",
+	"gpmi","dtcp","vdoa","snvs","snvs-sec","csu","sdhc1","sdhc2","sdhc3","sdhc4","uart1","uart2","uart3","uart4","uart5","cspi1",
+	//95~64
+	"cspi2","cspi3","cspi4","cspi5","i2c1","i2c2","i2c3","sata","usbh1","usbh2","usbh3","usbotg","utmi0","utim1","ssi1","ssi2",
+	"ssi3","temp","asrc","esai","spdif","mlb150","pmu","gpt","epit1","epit2","gpio1-7","gpio1-6","gpio1-5","gpio1-4","gpio1-3","gpio1-2",
+	//127~96
+	"gpio1-1","gpio1-0","gpio1-0-15","gpio1-16-31","gpio2-0-15","gpio2-16-31","gpio3-0-15","gpio3-16-31","gpio4-0-15","gpio4-16-31","gpio5-0-15","gpio5-16-31","gpio6-0-15","gpio6-16-31","gpio7-0-15","gpio7-16-31",
+	"wdog1","wdog2","kpp","pwm1","pwm2","pwm3","pwm4","ccm1","ccm2","gpc","reserved","src","cpu-l2","cpu-parity","cpu-perf","cpu-cti",
+	//159~128
+	"src-wdg","reserved","reserved","reserved","mipi-csi1","mipi-csi2","mipi-dsi","mipi-hsi","sjc","caam0","caam1","reserved","asc1","asc2","can1","can2",
+	"reserved","reserved","reserved","hdmi-m","hdmi-cec","mlb150-2","enet","enet-1588","pcie1","pcie2","pcie3","pcie4","dcic1","dcic2","mlb150-3","pmu2",
+};
 /*
  * The USB VBUS wakeup should be disabled to avoid vbus wake system
  * up due to vbus comparator is closed at weak 2p5 mode.
@@ -314,16 +328,16 @@ static int mx6_suspend_enter(suspend_state_t state)
 	if(state == PM_SUSPEND_MEM || state == PM_SUSPEND_STANDBY){		
 		printk(KERN_INFO "wakeup sources!\n");
 		for_each_set_bit(i, (unsigned long*)&gpc_wake_irq[0], 32){
-			printk("%d ",i+32);
+			printk("%s ",irq_names[i]);
 		}
 		for_each_set_bit(i, (unsigned long*)&gpc_wake_irq[1], 32){
-			printk("%d ",i+64);
+			printk("%s ",irq_names[i+32]);
 		}
 		for_each_set_bit(i, (unsigned long*)&gpc_wake_irq[2], 32){
-			printk("%d ",i+96);
+			printk("%s ",irq_names[i+64]);
 		}
 		for_each_set_bit(i, (unsigned long*)&gpc_wake_irq[3], 32){
-			printk("%d ",i+128);
+			printk("%s ",irq_names[i+96]);
 		}
 		printk("\n");
 	}
@@ -421,16 +435,16 @@ static int mx6_suspend_enter(suspend_state_t state)
 		wake_irq_isr[2] | wake_irq_isr[3]) {
 			printk(KERN_INFO "waken up by!\n");
 			for_each_set_bit(i, &wake_irq_isr[0], 32){
-				printk("%d ",i+32);
+				printk("%s ",irq_names[i]);
 			}
 			for_each_set_bit(i, &wake_irq_isr[1], 32){
-				printk("%d ",i+64);
+				printk("%s ",irq_names[i+32]);
 			}
 			for_each_set_bit(i, &wake_irq_isr[2], 32){
-				printk("%d ",i+96);
+				printk("%s ",irq_names[i+64]);
 			}
 			for_each_set_bit(i, &wake_irq_isr[3], 32){
-				printk("%d ",i+128);
+				printk("%s ",irq_names[i+96]);
 			}
 			printk("\n");
 		}
