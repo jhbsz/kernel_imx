@@ -1310,6 +1310,9 @@ static void mx6_snvs_poweroff(void)
 	__set_switch_linux_flag(mx6_snvs_base);
 	
 	value = readl(mx6_snvs_base + SNVS_LPCR);
+	//clear alarm enable and wakeup enable
+	value &=~0xA;
+	printk("SNVS_LPCR=0x%x\n",value);
 	/*set TOP and DP_EN bit*/
 	writel(value | 0x60, mx6_snvs_base + SNVS_LPCR);
 }
