@@ -165,7 +165,6 @@ typedef struct peripheral_power_state{
 //WiFi
 #define QPAD_WIFI_RST		IMX_GPIO_NR(7, 8)
 #define QPAD_WIFI_PDN		IMX_GPIO_NR(6, 11)
-#define QPAD_WIFI_WAKEUP	IMX_GPIO_NR(7, 5)
 
 //SDHC
 #define QPAD_SD2_CD			IMX_GPIO_NR(2, 0)
@@ -254,35 +253,10 @@ static const struct esdhc_platform_data qpad_sd2_data __initconst = {
 };
 
 /*WIFI SDIO*/
-struct wake_lock wlan_wakelock;
-static irqreturn_t wlan_wakup_handler(int irq, void *data){
-	wake_lock_timeout(&wlan_wakelock, HZ * 5);
-	return IRQ_HANDLED;
-}
-static int wlan_wakeup_add(void){
-	int ret;
-	ret = gpio_request(QPAD_WIFI_WAKEUP,"wifi-wakeup");
-	gpio_direction_input(QPAD_WIFI_WAKEUP);
-	ret = request_any_context_irq(gpio_to_irq(QPAD_WIFI_WAKEUP), wlan_wakup_handler,
-		IRQF_NO_SUSPEND|IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING ,
-		"wlan wakeap", 0);
-	if (ret) {
-		pr_warning("Request wlan wakeup failed %d\n", ret);
-	}else {
-		enable_irq_wake(gpio_to_irq(QPAD_WIFI_WAKEUP));
-	}
-	printk("%s\n",__func__);
-	return ret;
-}
-static int wlan_wakeup_remove(void){
-	printk("%s\n",__func__);
-	disable_irq_wake(gpio_to_irq(QPAD_WIFI_WAKEUP));
-	free_irq(gpio_to_irq(QPAD_WIFI_WAKEUP),0);
-	return 0;
-}
 static struct sdhci_host* wlan_sdhc;
 static int wlan_host_init_cb(struct sdhci_host* host){
 	wlan_sdhc = host;
+	enable_irq_wake(host->irq);
 	return 0;
 }
 static const struct esdhc_platform_data qpad_sd3_data __initconst= {
@@ -909,31 +883,16 @@ static struct imx_vout_mem vout_mem __initdata = {
 	.res_msize = 0,
 };
 
-static iomux_v3_cfg_t mmc_wifi_wakeup_pads[] = {
-	MX6Q_PAD_SD3_DAT1__GPIO_7_5,
-};
-iomux_v3_cfg_t mmc_wifi_function_pads[] = {
-	MX6Q_PAD_SD3_DAT1__USDHC3_DAT1_50MHZ
-};
-
 static void qpad_suspend_enter(void)
 {
 	if(pps.barcode)	qpad_uart_io_switch(1,0);
 	if(pps.smartcard) qpad_uart_io_switch(4,0);
-	if(pps.wlan) {
-		mxc_iomux_v3_setup_multiple_pads(mmc_wifi_wakeup_pads,1);
-		wlan_wakeup_add();
-	}
 }
 
 static void qpad_suspend_exit(void)
 {
 	if(pps.barcode)	qpad_uart_io_switch(1,1);
 	if(pps.smartcard) qpad_uart_io_switch(4,1);
-	if(pps.wlan){
-		mxc_iomux_v3_setup_multiple_pads(mmc_wifi_function_pads,1);
-		wlan_wakeup_remove();
-	}
 }
 static const struct pm_platform_data qpad_pm_data __initconst = {
 	.name = "imx_pm",
@@ -1226,19 +1185,26 @@ static struct platform_device qpad_button_device = {
 static void __init imx6q_add_device_buttons(void)
 {
 	if(BOARD_QPAD_REVA<mx6_board_rev()){		
-		static iomux_v3_cfg_t mx6q_qpad_keypad[] = {
-			NEW_PAD_CTRL(MX6Q_PAD_GPIO_2__GPIO_1_2,MX6Q_KEYPAD_PAD_CTRL),
-			NEW_PAD_CTRL(MX6Q_PAD_GPIO_4__GPIO_1_4,MX6Q_KEYPAD_PAD_CTRL),
-			NEW_PAD_CTRL(MX6Q_PAD_GPIO_5__GPIO_1_5,MX6Q_KEYPAD_PAD_CTRL),
+		iomux_v3_cfg_t mx6q_qpad_keypad[] = {
+			NEW_PAD_CTRL(MX6Q_PAD_GPIO_2__GPIO_1_2,MX6Q_GENERIC_PAD_CTRL),
+			NEW_PAD_CTRL(MX6Q_PAD_GPIO_4__GPIO_1_4,MX6Q_GENERIC_PAD_CTRL),
+			NEW_PAD_CTRL(MX6Q_PAD_GPIO_5__GPIO_1_5,MX6Q_GENERIC_PAD_CTRL),
 		};
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_keypad,ARRAY_SIZE(mx6q_qpad_keypad));
 		platform_device_add_data(&qpad_button_device,
 				&qpad_button_v2_data,
 				sizeof(qpad_button_v2_data));		
 	}else {
+		iomux_v3_cfg_t mx6q_qpad_keypad[] = {
+			NEW_PAD_CTRL(MX6Q_PAD_EIM_DA9__GPIO_3_9,MX6Q_KEYPAD_PAD_CTRL),	
+			NEW_PAD_CTRL(MX6Q_PAD_EIM_DA10__GPIO_3_10,MX6Q_KEYPAD_PAD_CTRL),
+			NEW_PAD_CTRL(MX6Q_PAD_EIM_DA11__GPIO_3_11,MX6Q_KEYPAD_PAD_CTRL),
+		};
+		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_keypad,ARRAY_SIZE(mx6q_qpad_keypad));
 		platform_device_add_data(&qpad_button_device,
 				&qpad_button_data,
-				sizeof(qpad_button_data));	}
+				sizeof(qpad_button_data));
+	}
 
 	platform_device_register(&qpad_button_device);
 }
@@ -1386,8 +1352,6 @@ static int wlan_bt_power_change(int status)
 			}
 			gpio_direction_output(QPAD_WIFI_RST,1);
 			gpio_free(QPAD_WIFI_RST);
-
-			pps.wlan=1;
 		}
 		else {
 			//always put wifi chip into reset state to save power???
@@ -1408,8 +1372,6 @@ static int wlan_bt_power_change(int status)
 			}
 			gpio_direction_output(QPAD_WIFI_RST,0);
 			gpio_free(QPAD_WIFI_RST);
-			pps.wlan=0;
-			
 		}
 
 	if(wlan_sdhc&&wlan_sdhc->mmc){
@@ -1836,7 +1798,6 @@ static void __init mx6_qpad_board_init(void)
 	if(eBootModeCharger!=android_bootmode){
 		
 		mxc_register_device(&wlan_bt_rfkill, &wlan_bt_rfkill_data);
-		wake_lock_init(&wlan_wakelock, WAKE_LOCK_SUSPEND, "wlan wakelock");
 		imx6q_add_sdhci_usdhc_imx(1, &qpad_sd2_data);
 		imx6q_add_sdhci_usdhc_imx(2, &qpad_sd3_data);
 
