@@ -923,7 +923,7 @@ struct imx_vout_mem {
 };
 
 static struct imx_vout_mem vout_mem __initdata = {
-	.res_msize = 0,
+	.res_msize = SZ_128M,
 };
 
 static void qpad_suspend_prepare(void){
