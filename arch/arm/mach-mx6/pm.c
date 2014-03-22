@@ -477,7 +477,20 @@ static int mx6_suspend_prepare(void)
 		printk(KERN_ERR "%s: failed to disable 3p0 regulator Err: %d\n",
 							__func__, ret);
 	}
+	if (pm_data && pm_data->suspend_prepare)
+		pm_data->suspend_prepare();
 	return 0;
+}
+
+
+/*
+ * Called when the system has just left a sleep state, right after
+  *  the nonboot CPUs have been enabled and before device drivers' early
+  *  resume callbacks are executed.
+ */
+void mx6_suspend_wake(void){
+	if (pm_data && pm_data->suspend_wake)
+		pm_data->suspend_wake();
 }
 
 /*
@@ -512,6 +525,7 @@ struct platform_suspend_ops mx6_suspend_ops = {
 	.begin = mx6_suspend_begin,
 	.prepare = mx6_suspend_prepare,
 	.enter = mx6_suspend_enter,
+	.wake = mx6_suspend_wake,
 	.finish = mx6_suspend_finish,
 };
 

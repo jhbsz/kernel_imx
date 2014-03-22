@@ -25,7 +25,9 @@
 
 struct pm_platform_data {
 	char *name;
+	void (*suspend_prepare)(void);
 	void (*suspend_enter) (void);
 	void (*suspend_exit) (void);
+	void (*suspend_wake)(void);
 };
 #endif /* __ASM_ARCH_IMX_PM_H */
