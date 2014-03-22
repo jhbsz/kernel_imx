@@ -1408,6 +1408,7 @@ static int wlan_bt_power_change(int status)
 			gpio_direction_output(QPAD_WIFI_RST,1);
 			gpio_free(QPAD_WIFI_RST);
 			pps.wlan = 1;
+			msleep(200);
 		}
 		else {
 			//always put wifi chip into reset state to save power???
