@@ -261,41 +261,47 @@ static iomux_v3_cfg_t wlan_wakeup_pads_func[] = {
 	MX6Q_PAD_SD3_DAT1__USDHC3_DAT1_50MHZ,
 };
 static iomux_v3_cfg_t wlan_wakeup_pads_io[] = {
-	MX6Q_PAD_SD3_DAT1__GPIO_7_5,
+	NEW_PAD_CTRL(MX6Q_PAD_SD3_DAT1__GPIO_7_5,MX6Q_GENERIC_PAD_CTRL),
 };
 
 static irqreturn_t wlan_wakup_handler(int irq, void *data){
-	   printk("wlan wakeup\n");
-	   wake_lock_timeout(&wlan_wakelock, HZ * 5);
+	   wake_lock_timeout(&wlan_wakelock, HZ * 2);
        return IRQ_HANDLED;
 }
 static int wlan_wakeup_add(void){
-       int ret;
+       int ret=0;
 	   if(!wlan_wakeup_init){
 	       gpio_request(QPAD_WIFI_WAKEUP,"wifi-wakeup");
 	       gpio_direction_input(QPAD_WIFI_WAKEUP);
 		   wake_lock_init(&wlan_wakelock , WAKE_LOCK_SUSPEND, "wlan wakelock");
 		   wlan_wakeup_init++;
 	   }
-	   //switch to gpio mode
-	   mxc_iomux_v3_setup_multiple_pads(wlan_wakeup_pads_io,1);
-       ret = request_any_context_irq(gpio_to_irq(QPAD_WIFI_WAKEUP), wlan_wakup_handler,
-               IRQF_NO_SUSPEND|IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING ,
-               "wlan wakeap", 0);
-       if (ret) {
-               pr_warning("Request wlan wakeup failed %d\n", ret);
-       }else {
-               enable_irq_wake(gpio_to_irq(QPAD_WIFI_WAKEUP));
-       }
-       printk("%s\n",__func__);
+	   //we can't use both edge trigger ,otherwise GPC will be waken up immediately and we 
+	   //will enter an infinite loop
+	   ret = request_any_context_irq(gpio_to_irq(QPAD_WIFI_WAKEUP), wlan_wakup_handler,
+			   IRQF_NO_SUSPEND|IRQF_TRIGGER_FALLING ,
+			   "wlan wakeap", 0);
+	   if (ret) {
+			   pr_warning("Request wlan wakeup failed %d\n", ret);
+	   }else {
+			   enable_irq_wake(gpio_to_irq(QPAD_WIFI_WAKEUP));
+	   }
        return ret;
 }
+static int wlan_wakeup_enable(void){
+	//switch to gpio mode
+	mxc_iomux_v3_setup_multiple_pads(wlan_wakeup_pads_io,1);
+	return 0;
+}
+
+static int wlan_wakeup_disable(void){
+	mxc_iomux_v3_setup_multiple_pads(wlan_wakeup_pads_func,1);
+	return 0;
+}
 static int wlan_wakeup_remove(void){
-       printk("%s\n",__func__);
-       disable_irq_wake(gpio_to_irq(QPAD_WIFI_WAKEUP));
-       free_irq(gpio_to_irq(QPAD_WIFI_WAKEUP),0);
-	   mxc_iomux_v3_setup_multiple_pads(wlan_wakeup_pads_func,1);
-       return 0;
+	disable_irq_wake(gpio_to_irq(QPAD_WIFI_WAKEUP));
+	free_irq(gpio_to_irq(QPAD_WIFI_WAKEUP),0);
+	return 0;
 }
 
 static int wlan_host_init_cb(struct sdhci_host* host){
@@ -937,12 +943,14 @@ static void qpad_suspend_enter(void)
 {
 	if(pps.barcode)	qpad_uart_io_switch(1,0);
 	if(pps.smartcard) qpad_uart_io_switch(4,0);
+	if(pps.wlan) wlan_wakeup_enable();
 }
 
 static void qpad_suspend_exit(void)
 {
 	if(pps.barcode)	qpad_uart_io_switch(1,1);
 	if(pps.smartcard) qpad_uart_io_switch(4,1);
+	if(pps.wlan) wlan_wakeup_disable();
 }
 static const struct pm_platform_data qpad_pm_data __initconst = {
 	.name = "imx_pm",
