@@ -306,7 +306,6 @@ static int wlan_wakeup_remove(void){
 
 static int wlan_host_init_cb(struct sdhci_host* host){
 	wlan_sdhc = host;
-	//enable_irq_wake(host->irq);
 	return 0;
 }
 static const struct esdhc_platform_data qpad_sd3_data __initconst= {
