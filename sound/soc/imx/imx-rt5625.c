@@ -340,6 +340,10 @@ static int imx_rt5625_init(struct snd_soc_pcm_runtime *rtd)
 		
 	}
 
+	snd_soc_dapm_nc_pin(&codec->dapm,"HPL");
+	snd_soc_dapm_nc_pin(&codec->dapm,"HPR");
+	snd_soc_dapm_nc_pin(&codec->dapm,"SPKL");
+	snd_soc_dapm_nc_pin(&codec->dapm,"SPKR");
 	snd_soc_dapm_enable_pin(&codec->dapm, "Ext Speaker");
 	snd_soc_dapm_enable_pin(&codec->dapm, "Headphone Jack");
 	snd_soc_dapm_sync(&codec->dapm);
