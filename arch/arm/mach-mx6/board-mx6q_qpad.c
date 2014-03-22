@@ -275,6 +275,7 @@ static int wlan_wakeup_add(void){
 	       gpio_request(QPAD_WIFI_WAKEUP,"wifi-wakeup");
 	       gpio_direction_input(QPAD_WIFI_WAKEUP);
 		   wake_lock_init(&wlan_wakelock , WAKE_LOCK_SUSPEND, "wlan wakelock");
+		   wlan_wakeup_init++;
 	   }
 	   //switch to gpio mode
 	   mxc_iomux_v3_setup_multiple_pads(wlan_wakeup_pads_io,1);
