@@ -940,14 +940,14 @@ static void qpad_suspend_wake(void){
 }
 static void qpad_suspend_enter(void)
 {
-	if(pps.barcode)	qpad_uart_io_switch(1,0);
-	if(pps.smartcard) qpad_uart_io_switch(4,0);
+	qpad_uart_io_switch(1,0);
+	qpad_uart_io_switch(4,0);
 	if(pps.wlan) wlan_wakeup_enable();
 }
 
 static void qpad_suspend_exit(void)
 {
-	if(pps.barcode)	qpad_uart_io_switch(1,1);
+	if(pps.barcode) qpad_uart_io_switch(1,1);
 	if(pps.smartcard) qpad_uart_io_switch(4,1);
 	if(pps.wlan) wlan_wakeup_disable();
 }
@@ -1477,7 +1477,7 @@ static int __init modem_init(void){
 static void smartcard_reader_power(int on){
 	gpio_set_value(QPAD_SMARTCARD_PWR_EN,on?1:0);
 	pps.smartcard=on?1:0;
-	qpad_uart_io_switch(4,on);
+	qpad_uart_io_switch(4,pps.smartcard);
 }
 static int read_smartcard(char *page, char **start,
 			     off_t off, int count,
@@ -1544,7 +1544,7 @@ static int write_barcode(struct file *file, const char *buffer,
 				on=0;			
 			gpio_set_value(QPAD_QRE_PWR,on?0:1);		
 			pps.barcode = on?1:0;
-			qpad_uart_io_switch(1,on?1:0);
+			qpad_uart_io_switch(1,pps.barcode);
 		}else if(!strcmp(func,"trig")){
 				if(!strcmp(state,"on")){
 					gpio_set_value(QPAD_QRE_TRIG,1);
@@ -1621,7 +1621,8 @@ static int __init board_misc_init(void){
 		}
 		gpio_direction_output(qr_pwr_en,1);
 		//default state is power off ,to fix current leak issue,switch uart to io mode
-		qpad_uart_io_switch(1,0);
+		pps.barcode=0;
+		qpad_uart_io_switch(1,pps.barcode);
 		ret = gpio_request(qr_wake, "BarcodeWake");
 		if (ret) {
 			pr_err("failed to get GPIO BarcodeWake %d\n",
@@ -1689,9 +1690,10 @@ static int __init board_misc_init(void){
 				ret);
 			return -EINVAL;
 		}
+		pps.smartcard=0;
 		gpio_direction_output(QPAD_SMARTCARD_PWR_EN,0);		
 		//default state is power off ,to fix current leak issue,switch uart to io mode
-		//qpad_uart_io_switch(4,0);
+		qpad_uart_io_switch(4,pps.smartcard);
 		entry = create_proc_entry("driver/smartcard", S_IFREG | S_IRUGO | S_IWUGO, NULL);
 		if (entry) {
 			entry->read_proc = read_smartcard;
