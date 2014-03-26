@@ -5440,6 +5440,10 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		pll3_pfd_540M.disable(&pll3_pfd_540M);
 		pll3_usb_otg_main_clk.disable(&pll3_usb_otg_main_clk);
 	}
+#else
+	pll3_pfd_540M.enable(&pll3_pfd_540M);
+	pll3_usb_otg_main_clk.enable(&pll3_usb_otg_main_clk);
+
 #endif
 #endif
 	pll4_audio_main_clk.disable(&pll4_audio_main_clk);
@@ -5595,9 +5599,9 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		 * default, so we need to enable the clocks to
 		 * keep the display running.
 		 */
-		//if(machine_is_mx6q_qpad())
+		if(machine_is_mx6q_qpad())
 			ccgr3 |= 3 << MXC_CCM_CCGRx_CG8_OFFSET; //mipi
-		//else
+		else
 			ccgr3 |= 3 << MXC_CCM_CCGRx_CG7_OFFSET;//ldb
 		#endif
 		__raw_writel(ccgr3,MXC_CCM_CCGR3);
