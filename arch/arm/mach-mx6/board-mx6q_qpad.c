@@ -920,6 +920,7 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 		.mclk_source = 0,
 		.is_mipi = 0,
 		.flag = MXC_CAMERA_FLAG_POWER_UP_SEQUENCE_MCLK_FIRST|MXC_CAMERA_FLAG_POWER_DOWN_SEQUENCE_POWER_FIRST,
+		.reserved_mem_size = SZ_128M,
 	}
 };
 
@@ -1761,6 +1762,7 @@ static void __init mx6_qpad_board_init(void)
 	int i;
 	int ret;
 	struct platform_device *voutdev;
+	struct platform_device *capdev;
 
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_pads,
@@ -1814,8 +1816,22 @@ static void __init mx6_qpad_board_init(void)
 					    (DMA_MEMORY_MAP |
 					     DMA_MEMORY_EXCLUSIVE));
 	}
-	imx6q_add_v4l2_capture(0, &capture_data[0]);
+	capdev = imx6q_add_v4l2_capture(0, &capture_data[0]);
 	imx6q_add_imx_snvs_rtc();
+	if (capture_data[0].reserved_mem_size && capdev) {
+		int dma = dma_declare_coherent_memory(&capdev->dev,
+						capture_data[0].reserved_mem_base,
+						capture_data[0].reserved_mem_base,
+						capture_data[0].reserved_mem_size,
+						DMA_MEMORY_MAP | DMA_MEMORY_EXCLUSIVE);
+		if ((dma & DMA_MEMORY_MAP) && !capdev->dev.dma_mask) {
+			capdev->dev.dma_mask =
+				kmalloc(sizeof(*capdev->dev.dma_mask), GFP_KERNEL);
+			if (capdev->dev.dma_mask)
+				*capdev->dev.dma_mask = DMA_BIT_MASK(32);
+			capdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
+		}
+	}
 
 	imx6q_add_imx_caam();
 
@@ -2022,6 +2038,13 @@ static void __init mx6q_qpad_reserve(void)
 		memblock_remove(phys, vout_mem.res_msize);
 		vout_mem.res_mbase = phys;
 	}
+	if (capture_data[0].reserved_mem_size) {
+		phys = memblock_alloc_base(capture_data[0].reserved_mem_size,
+					   SZ_4K, SZ_1G);
+		memblock_remove(phys, capture_data[0].reserved_mem_size);
+		capture_data[0].reserved_mem_base = phys;
+	}
+
 }
 
 /*

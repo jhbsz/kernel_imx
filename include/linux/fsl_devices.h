@@ -302,6 +302,8 @@ struct fsl_mxc_capture_platform_data {
 	u8 mclk_source;
 	u8 is_mipi;
 	u32 flag;
+	resource_size_t reserved_mem_base;
+	resource_size_t reserved_mem_size;
 };
 
 

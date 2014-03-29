@@ -219,7 +219,7 @@ static int mxc_free_frame_buf(cam_data *cam)
 
 	for (i = 0; i < FRAME_NUM; i++) {
 		if (cam->frame[i].vaddress != 0) {
-			dma_free_coherent(0, cam->frame[i].buffer.length,
+			dma_free_coherent(&cam->pdev->dev, cam->frame[i].buffer.length,
 					  cam->frame[i].vaddress,
 					  cam->frame[i].paddress);
 			cam->frame[i].vaddress = 0;
@@ -246,7 +246,7 @@ static int mxc_allocate_frame_buf(cam_data *cam, int count)
 
 	for (i = 0; i < count; i++) {
 		cam->frame[i].vaddress =
-		    dma_alloc_coherent(0,
+		    dma_alloc_coherent(&cam->pdev->dev,
 				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
 				       &cam->frame[i].paddress,
 				       GFP_DMA | GFP_KERNEL);
@@ -1835,12 +1835,12 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 	if (cam->overlay_on == true)
 		stop_preview(cam);
 
-	v_address[0] = dma_alloc_coherent(0,
+	v_address[0] = dma_alloc_coherent(&cam->pdev->dev,
 				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
 				       &cam->still_buf[0],
 				       GFP_DMA | GFP_KERNEL);
 
-	v_address[1] = dma_alloc_coherent(0,
+	v_address[1] = dma_alloc_coherent(&cam->pdev->dev,
 				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
 				       &cam->still_buf[1],
 				       GFP_DMA | GFP_KERNEL);
@@ -1878,10 +1878,10 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 
       exit0:
 	if (v_address[0] != 0)
-		dma_free_coherent(0, cam->v2f.fmt.pix.sizeimage, v_address[0],
+		dma_free_coherent(&cam->pdev->dev, cam->v2f.fmt.pix.sizeimage, v_address[0],
 				  cam->still_buf[0]);
 	if (v_address[1] != 0)
-		dma_free_coherent(0, cam->v2f.fmt.pix.sizeimage, v_address[1],
+		dma_free_coherent(&cam->pdev->dev, cam->v2f.fmt.pix.sizeimage, v_address[1],
 				  cam->still_buf[1]);
 
 	cam->still_buf[0] = cam->still_buf[1] = 0;
@@ -2623,6 +2623,8 @@ static void init_camera_struct(cam_data *cam, struct platform_device *pdev)
 	pr_debug("In MVC: init_camera_struct\n");
 	/* Default everything to 0 */
 	memset(cam, 0, sizeof(cam_data));
+
+	cam->pdev = pdev;
 
 	cam->ipu = ipu_get_soc(pdata->ipu);
 	if (cam->ipu == NULL)

@@ -215,6 +215,8 @@ typedef struct _cam_data {
 	int sensor_index;
 	void *ipu;
 
+	struct platform_device *pdev;
+
 	/* v4l2 buf elements related to PxP DMA */
 	struct completion pxp_tx_cmpl;
 	struct pxp_channel *pxp_chan;
