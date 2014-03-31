@@ -96,6 +96,8 @@
 #define BOARD_QPAD_REVC 0x3
 
 
+#define FT5X0X_XY_PATCH
+
 typedef struct peripheral_power_state{
 	unsigned int barcode:1;
 	unsigned int smartcard:1;
@@ -1970,10 +1972,12 @@ static void __init mx6_qpad_board_init(void)
 
 	
 	if(eBootModeCharger!=android_bootmode){
+		#ifdef FT5X0X_XY_PATCH
 		//patch for TP y axis inverted
 		if(BOARD_QPAD_REVB==mx6_board_rev()){
 			ft5x0x_data.y_inverted=1;
 		}
+		#endif
 		i2c_register_board_info(0, mxc_i2c0_board_info,
 				ARRAY_SIZE(mxc_i2c0_board_info));
 		i2c_register_board_info(1, mxc_i2c1_board_info,
