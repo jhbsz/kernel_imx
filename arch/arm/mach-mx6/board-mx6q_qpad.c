@@ -1270,14 +1270,42 @@ static void __init imx6q_add_device_gpio_leds(void)
 	.wakeup		= wake,					\
 	.debounce_interval = debounce,				\
 }
+#define GPIO_BUTTON2(gpio_num, ev_code, act_low, descr, wake, debounce,callback)	\
+{								\
+	.gpio		= gpio_num,				\
+	.type		= EV_KEY,				\
+	.code		= ev_code,				\
+	.active_low	= act_low,				\
+	.desc		= "btn " descr,				\
+	.wakeup		= wake,					\
+	.debounce_interval = debounce,				\
+	.event_callback = callback, \
+}
 
+
+//to fix powerbutton force powered off may trigger rtc alarm event not clear issue
+static void mx6_snvs_fixup(void);
+static void snvs_fixup_work(struct work_struct *work){
+	mx6_snvs_fixup();
+}
+
+static DECLARE_DELAYED_WORK(snvs_work, snvs_fixup_work);
+
+static void gpio_key_event(unsigned int code,int value){
+	if(KEY_POWER==code){
+		if(value)
+			schedule_delayed_work(&snvs_work,msecs_to_jiffies(4000));
+		else
+			cancel_delayed_work_sync(&snvs_work);
+	}
+}
 static struct gpio_keys_button qpad_buttons[] = {
 	GPIO_BUTTON(GPIO_KEY_MENU, KEY_MENU, 1, "menu", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_HOME, KEY_HOME, 1, "home", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_BACK, KEY_BACK, 1, "back", 1, 1),	
 	GPIO_BUTTON(GPIO_KEY_F1, KEY_F1, 1, "F1", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_F2, KEY_F2, 1, "F2", 1, 1),
-	GPIO_BUTTON(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1),	
+	GPIO_BUTTON2(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1,gpio_key_event),
 };
 
 static struct gpio_keys_platform_data qpad_button_data = {
@@ -1291,7 +1319,7 @@ static struct gpio_keys_button qpad_buttons_v2[] = {
 	GPIO_BUTTON(IMX_GPIO_NR(1,5), KEY_BACK, 1, "back", 1, 1),	
 	GPIO_BUTTON(GPIO_KEY_F1, KEY_F1, 1, "F1", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_F2, KEY_F2, 1, "F2", 1, 1),
-	GPIO_BUTTON(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1),	
+	GPIO_BUTTON2(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1,gpio_key_event),
 };
 
 static struct gpio_keys_platform_data qpad_button_v2_data = {
@@ -1442,6 +1470,16 @@ static void __set_switch_linux_flag(void __iomem * snvs_base)
 	writel(reg, snvs_base + SNVS_LPGPR);
 }
 
+static void mx6_snvs_fixup(void)
+{
+#define SNVS_LPCR 0x38
+	void __iomem *mx6_snvs_base =  MX6_IO_ADDRESS(MX6Q_SNVS_BASE_ADDR);
+	u32 value;
+	value = readl(mx6_snvs_base + SNVS_LPCR);
+	//clear alarm enable and wakeup enable
+	value &=~0xA;
+	writel(value, mx6_snvs_base + SNVS_LPCR);
+}
 
 static void mx6_snvs_poweroff(void)
 {

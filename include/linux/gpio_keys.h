@@ -1,6 +1,8 @@
 #ifndef _GPIO_KEYS_H
 #define _GPIO_KEYS_H
 
+typedef void (*gpio_key_event_callback)(unsigned int code,int value);
+
 struct gpio_keys_button {
 	/* Configuration parameters */
 	unsigned int code;	/* input event code (KEY_*, SW_*) */
@@ -12,6 +14,8 @@ struct gpio_keys_button {
 	int debounce_interval;	/* debounce ticks interval in msecs */
 	bool can_disable;
 	int value;		/* axis value for EV_ABS */
+
+	gpio_key_event_callback event_callback;
 };
 
 struct gpio_keys_platform_data {
