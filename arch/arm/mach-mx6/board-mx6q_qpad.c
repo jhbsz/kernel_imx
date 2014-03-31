@@ -178,15 +178,25 @@ typedef struct peripheral_power_state{
 #define NFC_IRQ			IMX_GPIO_NR(6,17)
 #define NFC_UPE			IMX_GPIO_NR(1,19)
 
-static iomux_v3_cfg_t nfc_pads[] = {
+static iomux_v3_cfg_t mx6q_nfc_pads[] = {
 	NEW_PAD_CTRL(MX6Q_PAD_SD1_DAT1__GPIO_1_17,MX6Q_GENERIC_PAD_CTRL),/*ven*/
 	MX6Q_PAD_SD3_DAT7__GPIO_6_17,/*int*/
 	NEW_PAD_CTRL(MX6Q_PAD_SD1_DAT2__GPIO_1_19,MX6Q_GENERIC_PAD_CTRL),/*upgrade*/
 };
+static iomux_v3_cfg_t mx6dl_nfc_pads[] = {
+	NEW_PAD_CTRL(MX6DL_PAD_SD1_DAT1__GPIO_1_17,MX6DL_GENERIC_PAD_CTRL),/*ven*/
+	MX6DL_PAD_SD3_DAT7__GPIO_6_17,/*int*/
+	NEW_PAD_CTRL(MX6DL_PAD_SD1_DAT2__GPIO_1_19,MX6DL_GENERIC_PAD_CTRL),/*upgrade*/
+};
 static int __init nfc_init(void)
 {
-	mxc_iomux_v3_setup_multiple_pads(nfc_pads,
-		ARRAY_SIZE(nfc_pads));
+	if (cpu_is_mx6q())
+		mxc_iomux_v3_setup_multiple_pads(mx6q_nfc_pads,
+			ARRAY_SIZE(mx6q_nfc_pads));
+	else if (cpu_is_mx6dl())
+		mxc_iomux_v3_setup_multiple_pads(mx6dl_nfc_pads,
+			ARRAY_SIZE(mx6dl_nfc_pads));
+
 	return generic_add_device_pn544(0,NFC_IRQ,NFC_VEN,NFC_UPE);
 }
 
@@ -257,11 +267,19 @@ static const struct esdhc_platform_data qpad_sd2_data __initconst = {
 static struct sdhci_host* wlan_sdhc;
 static int wlan_wakeup_init=0;
 struct wake_lock wlan_wakelock;
-static iomux_v3_cfg_t wlan_wakeup_pads_func[] = {
+
+static iomux_v3_cfg_t mx6q_wlan_wakeup_pads_func[] = {
 	MX6Q_PAD_SD3_DAT1__USDHC3_DAT1_50MHZ,
 };
-static iomux_v3_cfg_t wlan_wakeup_pads_io[] = {
+static iomux_v3_cfg_t mx6dl_wlan_wakeup_pads_func[] = {
+	MX6DL_PAD_SD3_DAT1__USDHC3_DAT1_50MHZ,
+};
+
+static iomux_v3_cfg_t mx6q_wlan_wakeup_pads_io[] = {
 	NEW_PAD_CTRL(MX6Q_PAD_SD3_DAT1__GPIO_7_5,MX6Q_GENERIC_PAD_CTRL),
+};
+static iomux_v3_cfg_t mx6dl_wlan_wakeup_pads_io[] = {
+	NEW_PAD_CTRL(MX6DL_PAD_SD3_DAT1__GPIO_7_5, MX6DL_GENERIC_PAD_CTRL),
 };
 
 static irqreturn_t wlan_wakup_handler(int irq, void *data){
@@ -290,14 +308,22 @@ static int wlan_wakeup_add(void){
 }
 static int wlan_wakeup_enable(void){
 	//switch to gpio mode
-	mxc_iomux_v3_setup_multiple_pads(wlan_wakeup_pads_io,1);
+	if (cpu_is_mx6q())
+		mxc_iomux_v3_setup_multiple_pads(mx6q_wlan_wakeup_pads_io,1);
+	else if(cpu_is_mx6dl())
+		mxc_iomux_v3_setup_multiple_pads(mx6dl_wlan_wakeup_pads_io,1);
 	return 0;
 }
 
-static int wlan_wakeup_disable(void){
-	mxc_iomux_v3_setup_multiple_pads(wlan_wakeup_pads_func,1);
+static int wlan_wakeup_disable(void)
+{
+	if (cpu_is_mx6q())
+		mxc_iomux_v3_setup_multiple_pads(mx6q_wlan_wakeup_pads_func,1);
+	else if(cpu_is_mx6dl())
+		mxc_iomux_v3_setup_multiple_pads(mx6dl_wlan_wakeup_pads_func,1);
 	return 0;
 }
+
 static int wlan_wakeup_remove(void){
 	disable_irq_wake(gpio_to_irq(QPAD_WIFI_WAKEUP));
 	free_irq(gpio_to_irq(QPAD_WIFI_WAKEUP),0);
@@ -330,7 +356,7 @@ static const struct anatop_thermal_platform_data
 
 static void qpad_uart_io_switch(int uart_idx/*0 based*/,int switch2uart)
 {
-	iomux_v3_cfg_t uart_gpio_pads[] = {
+	iomux_v3_cfg_t mx6q_uart_gpio_pads[] = {
 		MX6Q_PAD_CSI0_DAT10__GPIO_5_28,
 		MX6Q_PAD_CSI0_DAT11__GPIO_5_29,
 		MX6Q_PAD_EIM_D26__GPIO_3_26,
@@ -342,7 +368,7 @@ static void qpad_uart_io_switch(int uart_idx/*0 based*/,int switch2uart)
 		MX6Q_PAD_KEY_COL1__GPIO_4_8,
 		MX6Q_PAD_KEY_ROW1__GPIO_4_9,
 	};
-	iomux_v3_cfg_t uart_func_pads[] = {
+	iomux_v3_cfg_t mx6q_uart_func_pads[] = {
 		MX6Q_PAD_CSI0_DAT10__UART1_TXD,
 		MX6Q_PAD_CSI0_DAT11__UART1_RXD,
 		MX6Q_PAD_EIM_D26__UART2_TXD,
@@ -354,7 +380,35 @@ static void qpad_uart_io_switch(int uart_idx/*0 based*/,int switch2uart)
 		MX6Q_PAD_KEY_COL1__UART5_TXD,
 		MX6Q_PAD_KEY_ROW1__UART5_RXD,
 	};
-	iomux_v3_cfg_t* io_pads_cfg = switch2uart?&uart_func_pads[uart_idx*2]:&uart_gpio_pads[uart_idx*2];
+	
+	iomux_v3_cfg_t mx6dl_uart_gpio_pads[] = {
+		MX6DL_PAD_CSI0_DAT10__GPIO_5_28,
+		MX6DL_PAD_CSI0_DAT11__GPIO_5_29,
+		MX6DL_PAD_EIM_D26__GPIO_3_26,
+		MX6DL_PAD_EIM_D27__GPIO_3_27,
+		MX6DL_PAD_EIM_D24__GPIO_3_24,
+		MX6DL_PAD_EIM_D25__GPIO_3_25,
+		MX6DL_PAD_KEY_COL0__GPIO_4_6,
+		MX6DL_PAD_KEY_ROW0__GPIO_4_7,		
+		MX6DL_PAD_KEY_COL1__GPIO_4_8,
+		MX6DL_PAD_KEY_ROW1__GPIO_4_9,
+	};
+	iomux_v3_cfg_t mx6dl_uart_func_pads[] = {
+		MX6DL_PAD_CSI0_DAT10__UART1_TXD,
+		MX6DL_PAD_CSI0_DAT11__UART1_RXD,
+		MX6DL_PAD_EIM_D26__UART2_TXD,
+		MX6DL_PAD_EIM_D27__UART2_RXD,
+		MX6DL_PAD_EIM_D24__UART3_TXD,
+		MX6DL_PAD_EIM_D25__UART3_RXD,
+		MX6DL_PAD_KEY_COL0__UART4_TXD,
+		MX6DL_PAD_KEY_ROW0__UART4_RXD,
+		MX6DL_PAD_KEY_COL1__UART5_TXD,
+		MX6DL_PAD_KEY_ROW1__UART5_RXD,
+	};
+	
+	iomux_v3_cfg_t* io_pads_cfg = switch2uart ? &mx6q_uart_func_pads[uart_idx*2] : &mx6q_uart_gpio_pads[uart_idx*2];
+	if(cpu_is_mx6dl())
+		io_pads_cfg = switch2uart ? &mx6dl_uart_func_pads[uart_idx*2] : &mx6dl_uart_gpio_pads[uart_idx*2];
 	mxc_iomux_v3_setup_multiple_pads(io_pads_cfg,2/*fixed 2 pins*/);
 }
 
@@ -879,7 +933,11 @@ static struct qpower_pdata qp = {
 
 static int __init qpad_power_init(void){
 	if(BOARD_QPAD_REVA<mx6_board_rev()){
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D16__GPIO_3_16);
+		if (cpu_is_mx6q())
+			mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D16__GPIO_3_16);
+		else if (cpu_is_mx6dl())
+			mxc_iomux_v3_setup_pad(MX6DL_PAD_EIM_D16__GPIO_3_16);
+
 		qbp.alert = IMX_GPIO_NR(3,16);
 	}
 	imx_add_platform_device("qpower", -1,
@@ -1094,7 +1152,13 @@ static int __init imx6q_init_audio(void)
 
 	//uart switcher support on v2
 	if(BOARD_QPAD_REVA<mx6_board_rev()){
-		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_hp_uart_switcher_pads_v2,ARRAY_SIZE(mx6q_qpad_hp_uart_switcher_pads_v2));
+		if (cpu_is_mx6q())
+			mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_hp_uart_switcher_pads_v2,
+				ARRAY_SIZE(mx6q_qpad_hp_uart_switcher_pads_v2));
+		else if (cpu_is_mx6dl()) {
+			mxc_iomux_v3_setup_multiple_pads(mx6dl_qpad_hp_uart_switcher_pads_v2,
+				ARRAY_SIZE(mx6dl_qpad_hp_uart_switcher_pads_v2));
+		}
 		rt5625_data.headphone_switch=headphone_switch;
 
 		
@@ -1250,7 +1314,16 @@ static void __init imx6q_add_device_buttons(void)
 			NEW_PAD_CTRL(MX6Q_PAD_GPIO_4__GPIO_1_4,MX6Q_GENERIC_PAD_CTRL),
 			NEW_PAD_CTRL(MX6Q_PAD_GPIO_5__GPIO_1_5,MX6Q_GENERIC_PAD_CTRL),
 		};
-		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_keypad,ARRAY_SIZE(mx6q_qpad_keypad));
+		iomux_v3_cfg_t mx6dl_qpad_keypad[] = {
+			NEW_PAD_CTRL(MX6DL_PAD_GPIO_2__GPIO_1_2,MX6DL_GENERIC_PAD_CTRL),
+			NEW_PAD_CTRL(MX6DL_PAD_GPIO_4__GPIO_1_4,MX6DL_GENERIC_PAD_CTRL),
+			NEW_PAD_CTRL(MX6DL_PAD_GPIO_5__GPIO_1_5,MX6DL_GENERIC_PAD_CTRL),
+		};
+		if(cpu_is_mx6q())
+			mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_keypad,ARRAY_SIZE(mx6q_qpad_keypad));
+		else if(cpu_is_mx6dl())
+			mxc_iomux_v3_setup_multiple_pads(mx6dl_qpad_keypad,ARRAY_SIZE(mx6dl_qpad_keypad));
+		
 		platform_device_add_data(&qpad_button_device,
 				&qpad_button_v2_data,
 				sizeof(qpad_button_v2_data));		
@@ -1260,7 +1333,16 @@ static void __init imx6q_add_device_buttons(void)
 			NEW_PAD_CTRL(MX6Q_PAD_EIM_DA10__GPIO_3_10,MX6Q_KEYPAD_PAD_CTRL),
 			NEW_PAD_CTRL(MX6Q_PAD_EIM_DA11__GPIO_3_11,MX6Q_KEYPAD_PAD_CTRL),
 		};
-		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_keypad,ARRAY_SIZE(mx6q_qpad_keypad));
+		iomux_v3_cfg_t mx6dl_qpad_keypad[] = {
+			NEW_PAD_CTRL(MX6DL_PAD_EIM_DA9__GPIO_3_9,MX6DL_KEYPAD_PAD_CTRL),	
+			NEW_PAD_CTRL(MX6DL_PAD_EIM_DA10__GPIO_3_10,MX6DL_KEYPAD_PAD_CTRL),
+			NEW_PAD_CTRL(MX6DL_PAD_EIM_DA11__GPIO_3_11,MX6DL_KEYPAD_PAD_CTRL),
+		};
+		if(cpu_is_mx6q())
+			mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_keypad,ARRAY_SIZE(mx6q_qpad_keypad));
+		else if(cpu_is_mx6dl())
+			mxc_iomux_v3_setup_multiple_pads(mx6dl_qpad_keypad,ARRAY_SIZE(mx6dl_qpad_keypad));
+		
 		platform_device_add_data(&qpad_button_device,
 				&qpad_button_data,
 				sizeof(qpad_button_data));
@@ -1613,7 +1695,14 @@ static int __init board_misc_init(void){
 		int qr_wake = QPAD_QRE_WAKE;
 		int qr_state = QPAD_QRE_STATE;
 		int qr_pwr_en = QPAD_QRE_PWR;
-		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_barcode_pads_v2,ARRAY_SIZE(mx6q_qpad_barcode_pads_v2));
+		
+		if (cpu_is_mx6q())
+			mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_barcode_pads_v2,
+				ARRAY_SIZE(mx6q_qpad_barcode_pads_v2));
+		else if (cpu_is_mx6dl()) {
+			mxc_iomux_v3_setup_multiple_pads(mx6dl_qpad_barcode_pads_v2,
+				ARRAY_SIZE(mx6dl_qpad_barcode_pads_v2));
+		}
 		ret = gpio_request(qr_pwr_en, "BarcodePwr");
 		if (ret) {
 			pr_err("failed to get GPIO BarcodePwr %d\n",
