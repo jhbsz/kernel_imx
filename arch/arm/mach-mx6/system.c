@@ -538,6 +538,13 @@ static int _mxs_reset_block(void __iomem *hwreg, int just_enable)
 /*BOOT_CFG1[7..4] = 0x3 Boot from Serial ROM (I2C/SPI)*/
 
 #ifdef CONFIG_MXC_REBOOT_MFGMODE
+#define MXC_REBOOT_MFGMODE    (1 << 15)
+/* Because currently machine reset is implemented by watchdog which
+will kill mfgmode switch through ROM detection.
+    Now we pass a special flag to bootloader in SNVS_LPGPR which can
+    reboot to mfg mode properly.
+
+*/
 void do_switch_mfgmode(void)
 {
 	u32 reg;
@@ -555,6 +562,12 @@ void do_switch_mfgmode(void)
 	reg |= PERSIST_WATCHDOG_RESET_BOOT;
 	__raw_writel(reg, SRC_BASE_ADDR + SRC_GPR10);
 
+
+	//add mfg mode flag
+	reg = __raw_readl(MX6Q_SNVS_BASE_ADDR + SNVS_LPGPR);
+	reg |= MXC_REBOOT_MFGMODE;
+	__raw_writel(reg, MX6Q_SNVS_BASE_ADDR + SNVS_LPGPR);
+
 }
 
 void mxc_clear_mfgmode(void)
@@ -568,6 +581,12 @@ void mxc_clear_mfgmode(void)
 	reg = __raw_readl(SRC_BASE_ADDR + SRC_GPR10);
 	reg &= ~PERSIST_WATCHDOG_RESET_BOOT;
 	__raw_writel(reg, SRC_BASE_ADDR + SRC_GPR10);
+
+	//clear mfg mode flag
+	//add mfg mode flag
+	reg = __raw_readl(MX6Q_SNVS_BASE_ADDR + SNVS_LPGPR);
+	reg &= ~MXC_REBOOT_MFGMODE;
+	__raw_writel(reg, MX6Q_SNVS_BASE_ADDR + SNVS_LPGPR);
 }
 #endif
 
