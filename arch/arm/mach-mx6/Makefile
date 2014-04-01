@@ -17,6 +17,7 @@ obj-$(CONFIG_MACH_MX6Q_SABREAUTO) += board-mx6q_sabreauto.o mx6q_sabreauto_pmic_
 obj-$(CONFIG_MACH_MX6Q_HDMIDONGLE) += board-mx6q_hdmidongle.o mx6q_hdmidongle_pmic_wm831x.o
 obj-$(CONFIG_MACH_MX6Q_SPARKAUTO) += board-mx6q_sparkauto.o mx6q_sabresd_pmic_pfuze100.o
 obj-$(CONFIG_MACH_MX6Q_QPAD) += board-mx6q_qpad.o mx6q_qpad_pmic_pfuze100.o
+obj-$(CONFIG_MACH_MX6Q_TDH) += board-mx6q_tdh.o mx6q_tdh_pmic_pfuze100.o
 obj-$(CONFIG_SMP) += plat_hotplug.o platsmp.o headsmp.o
 obj-$(CONFIG_LOCAL_TIMERS) += localtimer.o
 obj-$(CONFIG_IMX_PCIE) += pcie.o
