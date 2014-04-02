@@ -99,8 +99,6 @@
 #define FT5X0X_XY_PATCH
 
 typedef struct peripheral_power_state{
-	unsigned int barcode:1;
-	unsigned int smartcard:1;
 	unsigned int wlan:1;
 }PERIPHERAL_POWER_STATE_T;
 
@@ -108,28 +106,20 @@ typedef struct peripheral_power_state{
 
 
 #define TDH_CHARGE_DOK_B	IMX_GPIO_NR(2, 24)
-#define TDH_CHARGE_UOK_B	IMX_GPIO_NR(3, 17)
 #define TDH_CHARGE_CHG_1_B	IMX_GPIO_NR(3, 23)
 #define TDH_CHARGE_FLT_1_B	IMX_GPIO_NR(5, 2)
-#define TDH_BATTERY_ALERT	IMX_GPIO_NR(4, 14)
-#define TDH_BATTERY_DET	IMX_GPIO_NR(4, 11)
+#define TDH_BATTERY_ALERT	IMX_GPIO_NR(3, 16)
 
 #define TDH_CSI0_PWDN		IMX_GPIO_NR(1, 16)
 #define TDH_CSI0_RST		IMX_GPIO_NR(5, 20)
 #define TDH_CSI0_POWER		IMX_GPIO_NR(2, 7)
 
-
-#define TDH_W1_IO			IMX_GPIO_NR(3, 28)
-
-
 #define GPIO_KEY_POWER		IMX_GPIO_NR(3,29)
-#define GPIO_KEY_MENU		IMX_GPIO_NR(3,9)
-#define GPIO_KEY_HOME		IMX_GPIO_NR(3,10)
-#define GPIO_KEY_BACK		IMX_GPIO_NR(3,11)
-#define GPIO_KEY_F1			IMX_GPIO_NR(6,9)
-#define GPIO_KEY_F2			IMX_GPIO_NR(6,10)
-
-#define TDH_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
+#define GPIO_KEY_VOLUP		IMX_GPIO_NR(6,10)
+#define GPIO_KEY_VOLDOWN	IMX_GPIO_NR(6,9)
+#define GPIO_KEY_PTT		IMX_GPIO_NR(4,10)
+#define GPIO_KEY_HOT1		IMX_GPIO_NR(4,14)
+#define GPIO_KEY_HOT2		IMX_GPIO_NR(4,11)
 
 #define TDH_DISP_PWR_EN		IMX_GPIO_NR(2, 6)
 #define TDH_DISP_BL_PWR_EN	IMX_GPIO_NR(4, 15)
@@ -141,28 +131,18 @@ typedef struct peripheral_power_state{
 #define TDH_MODEM_WAKEMODEM	IMX_GPIO_NR(2, 5)
 #define TDH_MODEM_WAKEAP		IMX_GPIO_NR(1, 18)
 
-#define TDH_AUDIO_RST					IMX_GPIO_NR(7, 11)
-#define TDH_AUDIO_INT					IMX_GPIO_NR(1, 20)
-#define TDH_AUDIO_HEADPHONE_DET		IMX_GPIO_NR(3, 21)
+#define TDH_AUDIO_INT				IMX_GPIO_NR(1, 20)
+#define TDH_AUDIO_HEADPHONE_DET		IMX_GPIO_NR(7, 12)
 
-//QR Engine
-#define TDH_QRE_PWR		IMX_GPIO_NR(1, 7)
-#define TDH_QRE_RST		IMX_GPIO_NR(6, 31)
-#define TDH_QRE_TRIG		IMX_GPIO_NR(3, 30)
-#define TDH_QRE_WAKE		IMX_GPIO_NR(6, 31)
-#define TDH_QRE_STATE		IMX_GPIO_NR(2, 25)
 
 //FLASHLIGHT
-#define TDH_FL_PWR_EN		IMX_GPIO_NR(4, 5)
+#define TDH_FL_PWR_EN		IMX_GPIO_NR(3, 22)
 #define TDH_FL_EN			IMX_GPIO_NR(3, 31)
 
 //Touch Panel
 #define TDH_TP_PWR_EN		IMX_GPIO_NR(2, 28)
 #define TDH_TP_RST			IMX_GPIO_NR(6, 8)
 #define TDH_TP_IRQ			IMX_GPIO_NR(6, 7)
-
-//Sensor
-#define TDH_SENSOR_RST		IMX_GPIO_NR(2, 23)
 
 //WiFi
 #define TDH_WIFI_RST		IMX_GPIO_NR(7, 8)
@@ -172,36 +152,8 @@ typedef struct peripheral_power_state{
 //SDHC
 #define TDH_SD2_CD			IMX_GPIO_NR(2, 0)
 
-//SmartCard Reader
-#define TDH_SMARTCARD_PWR_EN IMX_GPIO_NR(7,12)
-
-
-#define NFC_VEN			IMX_GPIO_NR(1,17)
-#define NFC_IRQ			IMX_GPIO_NR(6,17)
-#define NFC_UPE			IMX_GPIO_NR(1,19)
-
-static iomux_v3_cfg_t mx6q_nfc_pads[] = {
-	NEW_PAD_CTRL(MX6Q_PAD_SD1_DAT1__GPIO_1_17,MX6Q_GENERIC_PAD_CTRL),/*ven*/
-	MX6Q_PAD_SD3_DAT7__GPIO_6_17,/*int*/
-	NEW_PAD_CTRL(MX6Q_PAD_SD1_DAT2__GPIO_1_19,MX6Q_GENERIC_PAD_CTRL),/*upgrade*/
-};
-static iomux_v3_cfg_t mx6dl_nfc_pads[] = {
-	NEW_PAD_CTRL(MX6DL_PAD_SD1_DAT1__GPIO_1_17,MX6DL_GENERIC_PAD_CTRL),/*ven*/
-	MX6DL_PAD_SD3_DAT7__GPIO_6_17,/*int*/
-	NEW_PAD_CTRL(MX6DL_PAD_SD1_DAT2__GPIO_1_19,MX6DL_GENERIC_PAD_CTRL),/*upgrade*/
-};
-static int __init nfc_init(void)
-{
-	if (cpu_is_mx6q())
-		mxc_iomux_v3_setup_multiple_pads(mx6q_nfc_pads,
-			ARRAY_SIZE(mx6q_nfc_pads));
-	else if (cpu_is_mx6dl())
-		mxc_iomux_v3_setup_multiple_pads(mx6dl_nfc_pads,
-			ARRAY_SIZE(mx6dl_nfc_pads));
-
-	return generic_add_device_pn544(0,NFC_IRQ,NFC_VEN,NFC_UPE);
-}
-
+//USB 
+#define TDH_USB_HUB_RST		IMX_GPIO_NR(1, 2)
 enum {
  eBootModeNormal=0,
  eBootModeRecovery,
@@ -356,96 +308,6 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
-static void tdh_uart_io_switch(int uart_idx/*0 based*/,int switch2uart)
-{
-	iomux_v3_cfg_t mx6q_uart_gpio_pads[] = {
-		MX6Q_PAD_CSI0_DAT10__GPIO_5_28,
-		MX6Q_PAD_CSI0_DAT11__GPIO_5_29,
-		MX6Q_PAD_EIM_D26__GPIO_3_26,
-		MX6Q_PAD_EIM_D27__GPIO_3_27,
-		MX6Q_PAD_EIM_D24__GPIO_3_24,
-		MX6Q_PAD_EIM_D25__GPIO_3_25,
-		MX6Q_PAD_KEY_COL0__GPIO_4_6,
-		MX6Q_PAD_KEY_ROW0__GPIO_4_7,		
-		MX6Q_PAD_KEY_COL1__GPIO_4_8,
-		MX6Q_PAD_KEY_ROW1__GPIO_4_9,
-	};
-	iomux_v3_cfg_t mx6q_uart_func_pads[] = {
-		MX6Q_PAD_CSI0_DAT10__UART1_TXD,
-		MX6Q_PAD_CSI0_DAT11__UART1_RXD,
-		MX6Q_PAD_EIM_D26__UART2_TXD,
-		MX6Q_PAD_EIM_D27__UART2_RXD,
-		MX6Q_PAD_EIM_D24__UART3_TXD,
-		MX6Q_PAD_EIM_D25__UART3_RXD,
-		MX6Q_PAD_KEY_COL0__UART4_TXD,
-		MX6Q_PAD_KEY_ROW0__UART4_RXD,
-		MX6Q_PAD_KEY_COL1__UART5_TXD,
-		MX6Q_PAD_KEY_ROW1__UART5_RXD,
-	};
-	
-	iomux_v3_cfg_t mx6dl_uart_gpio_pads[] = {
-		MX6DL_PAD_CSI0_DAT10__GPIO_5_28,
-		MX6DL_PAD_CSI0_DAT11__GPIO_5_29,
-		MX6DL_PAD_EIM_D26__GPIO_3_26,
-		MX6DL_PAD_EIM_D27__GPIO_3_27,
-		MX6DL_PAD_EIM_D24__GPIO_3_24,
-		MX6DL_PAD_EIM_D25__GPIO_3_25,
-		MX6DL_PAD_KEY_COL0__GPIO_4_6,
-		MX6DL_PAD_KEY_ROW0__GPIO_4_7,		
-		MX6DL_PAD_KEY_COL1__GPIO_4_8,
-		MX6DL_PAD_KEY_ROW1__GPIO_4_9,
-	};
-	iomux_v3_cfg_t mx6dl_uart_func_pads[] = {
-		MX6DL_PAD_CSI0_DAT10__UART1_TXD,
-		MX6DL_PAD_CSI0_DAT11__UART1_RXD,
-		MX6DL_PAD_EIM_D26__UART2_TXD,
-		MX6DL_PAD_EIM_D27__UART2_RXD,
-		MX6DL_PAD_EIM_D24__UART3_TXD,
-		MX6DL_PAD_EIM_D25__UART3_RXD,
-		MX6DL_PAD_KEY_COL0__UART4_TXD,
-		MX6DL_PAD_KEY_ROW0__UART4_RXD,
-		MX6DL_PAD_KEY_COL1__UART5_TXD,
-		MX6DL_PAD_KEY_ROW1__UART5_RXD,
-	};
-	
-	iomux_v3_cfg_t* io_pads_cfg = switch2uart ? &mx6q_uart_func_pads[uart_idx*2] : &mx6q_uart_gpio_pads[uart_idx*2];
-	if(cpu_is_mx6dl())
-		io_pads_cfg = switch2uart ? &mx6dl_uart_func_pads[uart_idx*2] : &mx6dl_uart_gpio_pads[uart_idx*2];
-	mxc_iomux_v3_setup_multiple_pads(io_pads_cfg,2/*fixed 2 pins*/);
-}
-
-
-
-static struct pwm_device       *pwm_uart_mod=NULL; ;
-static int pwm_uart_mod_enable=1;
-module_param_named(uart_modulation, pwm_uart_mod_enable, int, S_IRUGO | S_IWUSR | S_IWGRP);
-void uart_modulation_enable(int en){
-       if(!pwm_uart_mod){
-               pwm_uart_mod = pwm_request(1, "IRC");
-       }
-       if(pwm_uart_mod&&pwm_uart_mod_enable){
-               if(en){
-                       pwm_config(pwm_uart_mod, 13158, 26315/*38kHz*/);
-                       pwm_enable(pwm_uart_mod);  
-               }else{
-                       pwm_config(pwm_uart_mod, 0, 26315);
-                       pwm_disable(pwm_uart_mod);              
-               }
-               
-       }
-       
-}
-
-/*
- * IMX-78,For Infrared modulation communication,we need using half duplex,Never enable DMA mode since 
- * IMX serial driver does not support half duplex mode in DMA mode.
- */
-static struct imxuart_platform_data mx6_uart4_pdata __initdata = {
-       .flags      = IMXUART_MODULATION|IMXUART_CON_DISABLE,
-       .modulation_enable = uart_modulation_enable,
-       .transceiver_delay = 5000,
-
-};
 static struct imxuart_platform_data mx6_uart_pdata __initdata = {
        .flags      = IMXUART_CON_DISABLE,
 };
@@ -457,7 +319,7 @@ static inline void mx6q_tdh_init_uart(void)
 	imx6q_add_imx_uart(0, &mx6_uart_pdata);	
 	imx6q_add_imx_uart(1, &mx6_uart_pdata);
 	imx6q_add_imx_uart(2, &mx6_uart_pdata);
-	imx6q_add_imx_uart(3, &mx6_uart4_pdata);
+	imx6q_add_imx_uart(3, &mx6_uart_pdata);
 	imx6q_add_imx_uart(4, &mx6_uart_pdata);	
 }
 
@@ -510,17 +372,6 @@ static void mx6q_csi0_io_init(void)
 		camera_regulator = NULL;
 	}else {
 		regulator_enable(camera_regulator);
-	}
-
-	if(BOARD_TDH_REVA==mx6_board_rev()){
-		iomux_v3_cfg_t csi0_power = MX6Q_PAD_NANDF_D7__GPIO_2_7;/*camera 2.8v and 1.8v enable*/
-		mxc_iomux_v3_setup_pad(csi0_power);
-		if (gpio_request(cam_pwr_en, "cam-pen")) {
-			printk(KERN_ERR "Request GPIO failed,"
-					"gpio: %d \n", cam_pwr_en);
-		}else {		
-			gpio_direction_output(cam_pwr_en, 0);			
-		}
 	}
 
 	if (gpio_request(cam_rst, "cam-rst")) {
@@ -739,49 +590,25 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.addr	= 0x37,
 		.platform_data = &eup2471_pdata,
 	},	
-	{
-		.type	= "fxos8700",
-		.addr	= 0x1E,
-	},
 };
 
 
-static void tdh_usbotg_vbus_v1(bool on){
-	if(on){}
-}
 
 static void tdh_usbotg_vbus(bool on)
 {
-	int otg_pwren = TDH_USB_OTG_PWR;
-	if (on)
-		gpio_set_value(otg_pwren, 1);
-	else
-		gpio_set_value(otg_pwren, 0);
-
+	pr_warn("no otg host vbus power switch feature on tdh\n");
 }
 
 static void tdh_host1_vbus(bool on)
 {
-	//dummy function since we don't have any usb hub
+	pr_warn("no host1 vbus power switch feature on tdh\n");
 }
 
 static void __init imx6q_tdh_init_usb(void)
 {
 	int ret = 0;
 
-	if(BOARD_TDH_REVA<mx6_board_rev()){
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL4__USBOH3_USBOTG_OC);
-		/* disable external charger detect,
-		 * or it will affect signal quality at dp .
-		 */
-		ret = gpio_request(TDH_USB_OTG_PWR, "otg-vbus");
-		if (ret) {
-			pr_err("failed to get GPIO otg-vbus: %d\n",
-				ret);
-			return;
-		}
-		gpio_direction_output(TDH_USB_OTG_PWR, 0);
-	}	
+	//NO OC input
 
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
 	/*
@@ -791,10 +618,7 @@ static void __init imx6q_tdh_init_usb(void)
 	 * 1: GPIO_1 as USB_OTG_ID
 	 */
 	mxc_iomux_set_gpr_register(1, 13, 1, 1);
-	if(BOARD_TDH_REVA==mx6_board_rev())
-		mx6_set_otghost_vbus_func(tdh_usbotg_vbus_v1);
-	else
-		mx6_set_otghost_vbus_func(tdh_usbotg_vbus);
+	mx6_set_otghost_vbus_func(tdh_usbotg_vbus);
 	mx6_set_host1_vbus_func(tdh_host1_vbus);
 
 }
@@ -915,17 +739,12 @@ static struct qpower_battery_pdata qbp = {
 };
 static struct qpower_charger_pdata qcp = {
 	.dok = TDH_CHARGE_DOK_B,
-	.uok = TDH_CHARGE_UOK_B,
 	.chg = TDH_CHARGE_CHG_1_B,
 	.flt = TDH_CHARGE_FLT_1_B,	
 	.dcm_always_high = true,
-	.dc_valid = false,
-	.usb_valid = true,//true,
+	.dc_valid = true,
+	.usb_valid = false,
 	.feature_flag = QPOWER_CHARGER_FEATURE_SHORT_MODE,
-	//for battery detection
-	.det = TDH_BATTERY_DET,
-	.bat_det_active = 0,
-	
 };
 static struct qpower_pdata qp = {
 	.bp = &qbp,
@@ -934,14 +753,12 @@ static struct qpower_pdata qp = {
 };
 
 static int __init tdh_power_init(void){
-	if(BOARD_TDH_REVA<mx6_board_rev()){
-		if (cpu_is_mx6q())
-			mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D16__GPIO_3_16);
-		else if (cpu_is_mx6dl())
-			mxc_iomux_v3_setup_pad(MX6DL_PAD_EIM_D16__GPIO_3_16);
+	if (cpu_is_mx6q())
+		mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D16__GPIO_3_16);
+	else if (cpu_is_mx6dl())
+		mxc_iomux_v3_setup_pad(MX6DL_PAD_EIM_D16__GPIO_3_16);
 
-		qbp.alert = IMX_GPIO_NR(3,16);
-	}
+	qbp.alert = IMX_GPIO_NR(3,16);
 	imx_add_platform_device("qpower", -1,
 			NULL, 0, &qp, sizeof(qp));
 	return 0;
@@ -1001,15 +818,11 @@ static void tdh_suspend_wake(void){
 }
 static void tdh_suspend_enter(void)
 {
-	tdh_uart_io_switch(1,0);
-	tdh_uart_io_switch(4,0);
 	if(pps.wlan) wlan_wakeup_enable();
 }
 
 static void tdh_suspend_exit(void)
 {
-	if(pps.barcode) tdh_uart_io_switch(1,1);
-	if(pps.smartcard) tdh_uart_io_switch(4,1);
 	if(pps.wlan) wlan_wakeup_disable();
 }
 static const struct pm_platform_data tdh_pm_data __initconst = {
@@ -1066,75 +879,6 @@ static struct mxc_audio_platform_data rt5625_data = {
 };
 
 
-//
-//mode: 0->default headphone ,1->uart mode
-//
-#define UART_SWITCH_SELECT_IN1 IMX_GPIO_NR(6,14) /*Default low->hp,high->uart*/
-#define UART_SWITCH_SELECT_IN2 IMX_GPIO_NR(3,19) /*Default High->hp,low->uart ,power control ,be careful*/
-
-static int uart_switch_granted=0;
-static int headphone_switch_to_mode(int mode){
-	if(!mode){
-		gpio_set_value(UART_SWITCH_SELECT_IN2,1);		
-		gpio_set_value(UART_SWITCH_SELECT_IN1,0);
-	}else {
-		if(!uart_switch_granted){
-			printk(KERN_WARNING "uart switcher not granted\n");
-		}else {
-			gpio_set_value(UART_SWITCH_SELECT_IN1,1);
-			gpio_set_value(UART_SWITCH_SELECT_IN2,0);				
-		}
-	}
-	return mode;
-}
-static int headphone_switch(int state){
-	//switch state changed,	
-	/*
-	 *	state meaning
-	 *	0: no headset plug in
-	 *	1: headset with microphone plugged
-	 *	2: headset without microphone plugged
-	*/
-	if(!state){
-		//can't switch hardware to uart
-		headphone_switch_to_mode(0);
-		uart_switch_granted=0;
-	}else if(state){
-		headphone_switch_to_mode(0);
-		uart_switch_granted++;
-		printk(KERN_WARNING "FIXME:hp state->1 or state->2\n");		
-	}
-	return 0;
-}
-
-static int read_uartswitcher(char *page, char **start,
-			     off_t off, int count,
-			     int *eof, void *data)
-{
-	return sprintf(page, "uart_switch_granted : %s\r\n"
-						 "echo 1 > uartswitcher -->switch to uart mode\r\n"
-						 "echo 0 > uartswitcher -->switch to hp mode\r\n"
-						 "\n",
-                      uart_switch_granted?"yes":"no");
-}
-
-static int write_uartswitcher (struct file *file, const char *buffer,
-                      unsigned long count, void *data) 
-{
-	char kbuf[256];
-	int action;
-
-	if (count >= 256)
-		return -EINVAL;
-	if (copy_from_user(kbuf, buffer, count))
-		return -EFAULT;
-
-	action = (int)simple_strtoul(kbuf, NULL, 10);
-	headphone_switch_to_mode(action);
-	
-    return count;
-}
-
 
 static int __init imx6q_init_audio(void)
 {
@@ -1151,58 +895,6 @@ static int __init imx6q_init_audio(void)
 		clk_set_rate(clko2, rate);
 		clk_put(clko2);
 	}
-
-	//uart switcher support on v2
-	if(BOARD_TDH_REVA<mx6_board_rev()){
-		if (cpu_is_mx6q())
-			mxc_iomux_v3_setup_multiple_pads(mx6q_tdh_hp_uart_switcher_pads_v2,
-				ARRAY_SIZE(mx6q_tdh_hp_uart_switcher_pads_v2));
-		else if (cpu_is_mx6dl()) {
-			mxc_iomux_v3_setup_multiple_pads(mx6dl_tdh_hp_uart_switcher_pads_v2,
-				ARRAY_SIZE(mx6dl_tdh_hp_uart_switcher_pads_v2));
-		}
-		rt5625_data.headphone_switch=headphone_switch;
-
-		
-		ret = gpio_request(UART_SWITCH_SELECT_IN1, "UART_SWITCH_SELECT_IN1");
-		if (ret) {
-			pr_err("failed to get GPIO UART_SWITCH_SELECT_IN2: %d\n",
-				ret);
-			return -EINVAL;
-		}
-		gpio_direction_output(UART_SWITCH_SELECT_IN1, 0);
-		ret = gpio_request(UART_SWITCH_SELECT_IN2, "UART_SWITCH_SELECT_IN2");
-		if (ret) {
-			pr_err("failed to get GPIO UART_SWITCH_SELECT_IN2: %d\n",
-				ret);
-			return -EINVAL;
-		}
-		gpio_direction_output(UART_SWITCH_SELECT_IN2, 1);
-
-
-		//init proc interface 
-		{
-			struct proc_dir_entry *entry;			
-			entry = create_proc_entry("driver/uartswitcher", S_IFREG | S_IRUGO | S_IWUGO/*default mode*/, NULL);
-			if (entry) {
-				entry->read_proc = read_uartswitcher;
-				entry->write_proc = write_uartswitcher;
-			}
-		}
-		
-	}
-
-	//reset audio codec
-	ret = gpio_request(TDH_AUDIO_RST, "audio-rst");
-	if (ret) {
-		pr_err("failed to get GPIO audio-rst: %d\n",
-			ret);
-		return -EINVAL;
-	}
-	gpio_direction_output(TDH_AUDIO_RST, 0);
-	mdelay(5);
-	gpio_direction_output(TDH_AUDIO_RST, 1);
-
 	
 	ret = gpio_request(TDH_AUDIO_HEADPHONE_DET, "hp_jack");
 	if (ret) {
@@ -1301,32 +993,20 @@ static void gpio_key_event(unsigned int code,int value){
 			cancel_delayed_work_sync(&snvs_work);
 	}
 }
+
+#warning "FIXME:define PTT/HOT1/HOT2 key values"
 static struct gpio_keys_button tdh_buttons[] = {
-	GPIO_BUTTON(GPIO_KEY_MENU, KEY_MENU, 1, "menu", 1, 1),
-	GPIO_BUTTON(GPIO_KEY_HOME, KEY_HOME, 1, "home", 1, 1),
-	GPIO_BUTTON(GPIO_KEY_BACK, KEY_BACK, 1, "back", 1, 1),	
-	GPIO_BUTTON(GPIO_KEY_F1, KEY_F1, 1, "F1", 1, 1),
-	GPIO_BUTTON(GPIO_KEY_F2, KEY_F2, 1, "F2", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_VOLUP, KEY_VOLUMEUP, 1, "vol+", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_VOLDOWN, KEY_VOLUMEDOWN, 1, "vol-", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_PTT, KEY_F10, 1, "ptt", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_HOT1, KEY_F11, 1, "HOT1", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_HOT2, KEY_F12, 1, "HOT2", 1, 1),
 	GPIO_BUTTON2(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1,gpio_key_event),
 };
 
 static struct gpio_keys_platform_data tdh_button_data = {
 	.buttons	= tdh_buttons,
 	.nbuttons	= ARRAY_SIZE(tdh_buttons),
-};
-
-static struct gpio_keys_button tdh_buttons_v2[] = {
-	GPIO_BUTTON(IMX_GPIO_NR(1,2), KEY_MENU, 1, "menu", 1, 1),
-	GPIO_BUTTON(IMX_GPIO_NR(1,4), KEY_HOME, 1, "home", 1, 1),
-	GPIO_BUTTON(IMX_GPIO_NR(1,5), KEY_BACK, 1, "back", 1, 1),	
-	GPIO_BUTTON(GPIO_KEY_F1, KEY_F1, 1, "F1", 1, 1),
-	GPIO_BUTTON(GPIO_KEY_F2, KEY_F2, 1, "F2", 1, 1),
-	GPIO_BUTTON2(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1,gpio_key_event),
-};
-
-static struct gpio_keys_platform_data tdh_button_v2_data = {
-	.buttons	= tdh_buttons_v2,
-	.nbuttons	= ARRAY_SIZE(tdh_buttons_v2),
 };
 
 
@@ -1338,45 +1018,9 @@ static struct platform_device tdh_button_device = {
 
 static void __init imx6q_add_device_buttons(void)
 {
-	if(BOARD_TDH_REVA<mx6_board_rev()){		
-		iomux_v3_cfg_t mx6q_tdh_keypad[] = {
-			NEW_PAD_CTRL(MX6Q_PAD_GPIO_2__GPIO_1_2,MX6Q_GENERIC_PAD_CTRL),
-			NEW_PAD_CTRL(MX6Q_PAD_GPIO_4__GPIO_1_4,MX6Q_GENERIC_PAD_CTRL),
-			NEW_PAD_CTRL(MX6Q_PAD_GPIO_5__GPIO_1_5,MX6Q_GENERIC_PAD_CTRL),
-		};
-		iomux_v3_cfg_t mx6dl_tdh_keypad[] = {
-			NEW_PAD_CTRL(MX6DL_PAD_GPIO_2__GPIO_1_2,MX6DL_GENERIC_PAD_CTRL),
-			NEW_PAD_CTRL(MX6DL_PAD_GPIO_4__GPIO_1_4,MX6DL_GENERIC_PAD_CTRL),
-			NEW_PAD_CTRL(MX6DL_PAD_GPIO_5__GPIO_1_5,MX6DL_GENERIC_PAD_CTRL),
-		};
-		if(cpu_is_mx6q())
-			mxc_iomux_v3_setup_multiple_pads(mx6q_tdh_keypad,ARRAY_SIZE(mx6q_tdh_keypad));
-		else if(cpu_is_mx6dl())
-			mxc_iomux_v3_setup_multiple_pads(mx6dl_tdh_keypad,ARRAY_SIZE(mx6dl_tdh_keypad));
-		
-		platform_device_add_data(&tdh_button_device,
-				&tdh_button_v2_data,
-				sizeof(tdh_button_v2_data));		
-	}else {
-		iomux_v3_cfg_t mx6q_tdh_keypad[] = {
-			NEW_PAD_CTRL(MX6Q_PAD_EIM_DA9__GPIO_3_9,MX6Q_KEYPAD_PAD_CTRL),	
-			NEW_PAD_CTRL(MX6Q_PAD_EIM_DA10__GPIO_3_10,MX6Q_KEYPAD_PAD_CTRL),
-			NEW_PAD_CTRL(MX6Q_PAD_EIM_DA11__GPIO_3_11,MX6Q_KEYPAD_PAD_CTRL),
-		};
-		iomux_v3_cfg_t mx6dl_tdh_keypad[] = {
-			NEW_PAD_CTRL(MX6DL_PAD_EIM_DA9__GPIO_3_9,MX6DL_KEYPAD_PAD_CTRL),	
-			NEW_PAD_CTRL(MX6DL_PAD_EIM_DA10__GPIO_3_10,MX6DL_KEYPAD_PAD_CTRL),
-			NEW_PAD_CTRL(MX6DL_PAD_EIM_DA11__GPIO_3_11,MX6DL_KEYPAD_PAD_CTRL),
-		};
-		if(cpu_is_mx6q())
-			mxc_iomux_v3_setup_multiple_pads(mx6q_tdh_keypad,ARRAY_SIZE(mx6q_tdh_keypad));
-		else if(cpu_is_mx6dl())
-			mxc_iomux_v3_setup_multiple_pads(mx6dl_tdh_keypad,ARRAY_SIZE(mx6dl_tdh_keypad));
-		
-		platform_device_add_data(&tdh_button_device,
-				&tdh_button_data,
-				sizeof(tdh_button_data));
-	}
+	platform_device_add_data(&tdh_button_device,
+			&tdh_button_data,
+			sizeof(tdh_button_data));
 
 	platform_device_register(&tdh_button_device);
 }
@@ -1595,108 +1239,6 @@ static int __init modem_init(void){
 	return 0;
 }
 
-
-
-static void smartcard_reader_power(int on){
-	gpio_set_value(TDH_SMARTCARD_PWR_EN,on?1:0);
-	pps.smartcard=on?1:0;
-	tdh_uart_io_switch(4,pps.smartcard);
-}
-static int read_smartcard(char *page, char **start,
-			     off_t off, int count,
-			     int *eof, void *data)
-{
-	return sprintf(page, "echo 1 > smartcard -->enable smartcard reader power\r\n"
-						 "echo 0 > smartcard -->disable smartcard read power\r\n"
-						 "\n");
-}
-
-static int write_smartcard(struct file *file, const char *buffer,
-                      unsigned long count, void *data) 
-{
-	char kbuf[256];
-	int action;
-
-	if (count >= 256)
-		return -EINVAL;
-	if (copy_from_user(kbuf, buffer, count))
-		return -EFAULT;
-
-	action = (int)simple_strtoul(kbuf, NULL, 10);
-	smartcard_reader_power(action);
-	
-    return count;
-}
-
-static int read_barcode(char *page, char **start,
-			     off_t off, int count,
-			     int *eof, void *data)
-{
-	return sprintf(page, "echo 'power [On|off]' > barcode -->enable/disable barcode engine power\r\n"
-						 "echo 'trig [on|off|Once]' > barcode -->trigger hardware pin\r\n"
- 						 "echo 'wake [on|off|Once]' > barcode -->wake up module\r\n"
- 						 "command without sub command is default sub command with capital prefix\r\n"
-						 "cat barcode -->display current barcode engine status\r\n"
-						 "\n"
-						 "power[%s]wake[%s]trig[%s]state[%s]\r\n"
-						 "\n",
-						 gpio_get_value(TDH_QRE_PWR)?"high":"low",
-						 gpio_get_value(TDH_QRE_WAKE)?"high":"low",
-						 gpio_get_value(TDH_QRE_TRIG)?"high":"low",
-						 gpio_get_value(TDH_QRE_STATE)?"high":"low");
-}
-
-static int write_barcode(struct file *file, const char *buffer,
-                      unsigned long count, void *data) 
-{
-	char kbuf[256];
-	char func[48]={0};
-	char state[48]={0};
-
-	if (count >= 256)
-		return -EINVAL;
-	if (copy_from_user(kbuf, buffer, count))
-		return -EFAULT;
-
-
-    sscanf(kbuf,"%s %s",func,state);
-	if(func[0]){
-		if(!strcmp(func,"power")){
-			int on=1;
-			if(!strcmp(state,"off"))
-				on=0;			
-			gpio_set_value(TDH_QRE_PWR,on?0:1);		
-			pps.barcode = on?1:0;
-			tdh_uart_io_switch(1,pps.barcode);
-		}else if(!strcmp(func,"trig")){
-				if(!strcmp(state,"on")){
-					gpio_set_value(TDH_QRE_TRIG,1);
-				}else if(!strcmp(state,"off")){
-					gpio_set_value(TDH_QRE_TRIG,0);
-				}else {
-					gpio_set_value(TDH_QRE_TRIG,1);
-					msleep(10);
-					gpio_set_value(TDH_QRE_TRIG,0);
-					msleep(10);
-				}
-		}else if(!strcmp(func,"wake")){
-				if(!strcmp(state,"on")){
-					gpio_set_value(TDH_QRE_WAKE,1);
-				}else if(!strcmp(state,"off")){
-					gpio_set_value(TDH_QRE_WAKE,0);
-				}else {
-					gpio_set_value(TDH_QRE_WAKE,1);
-					msleep(10);
-					gpio_set_value(TDH_QRE_WAKE,0);
-				}
-		}
-	}
-
-	
-    return count;
-}
-
-
 static int read_board_revision(char *page, char **start,
 			     off_t off, int count,
 			     int *eof, void *data)
@@ -1706,131 +1248,9 @@ static int read_board_revision(char *page, char **start,
 
 
 static int __init board_misc_init(void){
-	int ret;	
 	struct proc_dir_entry *entry;
-	if(BOARD_TDH_REVA==mx6_board_rev()){
-		//QR Engine 
-		//Set Reset On,Trigger Off
-		ret = gpio_request(TDH_QRE_RST, "qre-rst");
-		if (ret) {
-			pr_err("failed to get GPIO qre-rst: %d\n",
-				ret);
-			return -EINVAL;
-		}
-		gpio_direction_output(TDH_QRE_RST,0);
-		mdelay(5);
-		gpio_direction_output(TDH_QRE_RST,1);
-		gpio_free(TDH_QRE_RST);
-
-		ret = gpio_request(TDH_QRE_TRIG, "qre-trig");
-		if (ret) {
-			pr_err("failed to get GPIO qre-trig: %d\n",
-				ret);
-			return -EINVAL;
-		}
-		gpio_direction_output(TDH_QRE_TRIG,1);
-		gpio_free(TDH_QRE_TRIG);
-	}else if(BOARD_TDH_REVA<mx6_board_rev()){
-		int qr_trig = TDH_QRE_TRIG;
-		int qr_wake = TDH_QRE_WAKE;
-		int qr_state = TDH_QRE_STATE;
-		int qr_pwr_en = TDH_QRE_PWR;
-		
-		if (cpu_is_mx6q())
-			mxc_iomux_v3_setup_multiple_pads(mx6q_tdh_barcode_pads_v2,
-				ARRAY_SIZE(mx6q_tdh_barcode_pads_v2));
-		else if (cpu_is_mx6dl()) {
-			mxc_iomux_v3_setup_multiple_pads(mx6dl_tdh_barcode_pads_v2,
-				ARRAY_SIZE(mx6dl_tdh_barcode_pads_v2));
-		}
-		ret = gpio_request(qr_pwr_en, "BarcodePwr");
-		if (ret) {
-			pr_err("failed to get GPIO BarcodePwr %d\n",
-				ret);
-			return -EINVAL;
-		}
-		gpio_direction_output(qr_pwr_en,1);
-		//default state is power off ,to fix current leak issue,switch uart to io mode
-		pps.barcode=0;
-		tdh_uart_io_switch(1,pps.barcode);
-		ret = gpio_request(qr_wake, "BarcodeWake");
-		if (ret) {
-			pr_err("failed to get GPIO BarcodeWake %d\n",
-				ret);
-			return -EINVAL;
-		}
-		gpio_direction_output(qr_wake,0);
-		
-		ret = gpio_request(qr_trig, "BarcodeTrig");
-		if (ret) {
-			pr_err("failed to get GPIO BarcodeTrig %d\n",
-				ret);
-			return -EINVAL;
-		}
-		gpio_direction_output(qr_trig,1);
-		
-		ret = gpio_request(qr_state, "BarcodeState");
-		if (ret) {
-			pr_err("failed to get GPIO BarcodeState %d\n",
-				ret);
-			return -EINVAL;
-		}
-		gpio_direction_input(qr_state);
-		
-		entry = create_proc_entry("driver/barcode", S_IFREG | S_IRUGO | S_IWUGO, NULL);
-		if (entry) {
-			entry->read_proc = read_barcode;
-			entry->write_proc = write_barcode;
-		}
-
-	}
-
-	//Sensor ,FXO8700 driver don't use interrupt but using polling
-	//default RST is high ,and no power control
-	ret = gpio_request(TDH_SENSOR_RST, "sensor-rst");
-	if (ret) {
-		pr_err("failed to get GPIO sensor-pwr: %d\n",
-			ret);
-		return -EINVAL;
-	}
-	gpio_direction_output(TDH_SENSOR_RST,1);
-	mdelay(5);
-	gpio_direction_output(TDH_SENSOR_RST,0);
-	gpio_free(TDH_SENSOR_RST);
-
-
-	if(BOARD_TDH_REVA==mx6_board_rev()){
-		fl_pwren = IMX_GPIO_NR(3,31);
-		fl_en = IMX_GPIO_NR(3,22);
-	}else {
-		fl_pwren = IMX_GPIO_NR(3,31);
-		fl_en = IMX_GPIO_NR(4,5);
-		
-	}
 	eup2471_enable(0);
 	eup2471_flash(0);
-
-	//for v2,smartcard reader power enable support
-	if(BOARD_TDH_REVA<mx6_board_rev()){
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_17__GPIO_7_12);
-		
-		ret = gpio_request(TDH_SMARTCARD_PWR_EN, "SmartCardPwr");
-		if (ret) {
-			pr_err("failed to get GPIO SmartCardPwr %d\n",
-				ret);
-			return -EINVAL;
-		}
-		pps.smartcard=0;
-		gpio_direction_output(TDH_SMARTCARD_PWR_EN,0);		
-		//default state is power off ,to fix current leak issue,switch uart to io mode
-		tdh_uart_io_switch(4,pps.smartcard);
-		entry = create_proc_entry("driver/smartcard", S_IFREG | S_IRUGO | S_IWUGO, NULL);
-		if (entry) {
-			entry->read_proc = read_smartcard;
-			entry->write_proc = write_smartcard;
-		}
-		
-	}
 	
 	entry = create_proc_entry("boardrev", S_IFREG | S_IRUGO | S_IWUSR, NULL);
 	if (entry) {
@@ -2028,10 +1448,6 @@ static void __init mx6_tdh_board_init(void)
 	imx6q_add_asrc(&imx_asrc_data);
 
 	imx6q_add_mxc_pwm(0);
-	imx6q_add_mxc_pwm(1);
-	//For fast boot
-	/*imx6q_add_mxc_pwm(2);
-	imx6q_add_mxc_pwm(3);*/
 	imx6q_add_mxc_pwm_backlight(0, &mx6_tdh_pwm_backlight_data);
 
 	//For fast boot
@@ -2073,11 +1489,7 @@ static void __init mx6_tdh_board_init(void)
 		
 	}
 	if(eBootModeCharger!=android_bootmode){
-		nfc_init();
-
 		modem_init();
-
-		generic_add_w1(TDH_W1_IO);
 	}
 
 	board_misc_init();

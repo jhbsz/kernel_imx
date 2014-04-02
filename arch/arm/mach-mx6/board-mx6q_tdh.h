@@ -43,16 +43,20 @@ static iomux_v3_cfg_t mx6q_tdh_pads[] = {
 	/* CCM  */
 	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* Clock output 1: Camera MCLK */
 	MX6Q_PAD_NANDF_CS2__CCM_CLKO2,	/* Clock output 2: Audio Codec MCLK*/
-	MX6Q_PAD_GPIO_8__ANATOP_ANATOP_32K_OUT,/*32K Reference clock output*/
+	MX6Q_PAD_GPIO_8__ANATOP_ANATOP_32K_OUT,/*32K Reference clock output for Bluetooth sleep*/
+	MX6Q_PAD_RGMII_TXC__ANATOP_ANATOP_24M_OUT,/*24MHz Referrence clock output for USB HUB*/
 
 
 	/* PMIC */
 	MX6Q_PAD_GPIO_18__GPIO_7_13,	/*PMIC INT*/
 	MX6Q_PAD_GPIO_9__WDOG1_WDOG_B,	/*Watchdog output to reset system*/
 
-	/* SW4 , SW5 & SW1 */
-	MX6Q_PAD_NANDF_WP_B__GPIO_6_9,	/* FUN1,QR_SCAN_EN1*/
-	MX6Q_PAD_NANDF_RB0__GPIO_6_10,	/* FUN2,QR_SCAN_EN2*/
+	/* SWITCHES */
+	MX6Q_PAD_KEY_COL4__GPIO_4_14,	/*HOT KEY1*/
+	MX6Q_PAD_KEY_ROW2__GPIO_4_11,	/*HOT KEY2*/
+	MX6Q_PAD_KEY_COL2__GPIO_4_10,	/*PTT*/
+	MX6Q_PAD_NANDF_WP_B__GPIO_6_9,	/*VOL-*/
+	MX6Q_PAD_NANDF_RB0__GPIO_6_10,	/*VOL+*/
 	MX6Q_PAD_EIM_D29__GPIO_3_29,	/* PWR BUTTON*/
 
 
@@ -75,7 +79,7 @@ static iomux_v3_cfg_t mx6q_tdh_pads[] = {
 	
 	/* PWM */
 	MX6Q_PAD_SD1_DAT3__PWM1_PWMO,		/* LCD_PWM*/
-	MX6Q_PAD_DISP0_DAT9__PWM2_PWMO,		/* Infrared Modulation PWM*/
+
 
 	/* UART */
 	MX6Q_PAD_CSI0_DAT10__UART1_TXD,
@@ -91,7 +95,6 @@ static iomux_v3_cfg_t mx6q_tdh_pads[] = {
 
 	/* USB OTG */
 	MX6Q_PAD_GPIO_1__USBOTG_ID,
-	MX6Q_PAD_EIM_D22__GPIO_3_22,
 
 	/* USDHC2 */
 	MX6Q_PAD_SD2_CLK__USDHC2_CLK,
@@ -127,22 +130,13 @@ static iomux_v3_cfg_t mx6q_tdh_pads[] = {
 	/* Charger&Battery */
 	MX6Q_PAD_EIM_A25__GPIO_5_2,  /* CHG_FLT1_B */
 	NEW_PAD_CTRL(MX6Q_PAD_EIM_D23__GPIO_3_23,PAD_CTL_PUE|PAD_CTL_HYS), /* CHG_STATUS1_B */
-	MX6Q_PAD_EIM_D17__GPIO_3_17,  /* UOK_B */
 	MX6Q_PAD_EIM_CS1__GPIO_2_24,   /* DOK_B */
-	MX6Q_PAD_KEY_COL4__GPIO_4_14,	/*Battery Alert IRQ*/
-	NEW_PAD_CTRL(MX6Q_PAD_KEY_ROW2__GPIO_4_11,PAD_CTL_DSE_DISABLE),	/*Batter Detection*/
+	MX6Q_PAD_EIM_D16__GPIO_3_16,	/*Battery Alert IRQ*/
 
 	/* Audio Codec */
-	MX6Q_PAD_EIM_D21__GPIO_3_21,		/* MICROPHONE_DET */
-	MX6Q_PAD_GPIO_16__GPIO_7_11,		/*AUDIO_RST_N*/
+	MX6Q_PAD_GPIO_17__GPIO_7_12,		/* MICROPHONE_DET */
 	MX6Q_PAD_SD1_CLK__GPIO_1_20,		/*AUDIO_INT*/
-	
-	/*Hardware Monitor*/
-	MX6Q_PAD_EIM_CS0__GPIO_2_23,		/*SENSOR_RST*/
 
-	/*QR Engine*/
-	NEW_PAD_CTRL(MX6Q_PAD_EIM_D30__GPIO_3_30,MX6Q_GENERIC_PAD_CTRL),		/*QR_TRIG*/
-	NEW_PAD_CTRL(MX6Q_PAD_EIM_BCLK__GPIO_6_31,MX6Q_GENERIC_PAD_CTRL),		/*MX6Q_PAD_EIM_DA8__GPIO_3_8,	change to BCLK because of confliction of BOOT_CFG*/		/*QR_RESET*/
 
 	/*Touch Panel*/
 	MX6Q_PAD_EIM_EB0__GPIO_2_28,		/*TP_PWR_EN*/
@@ -155,10 +149,7 @@ static iomux_v3_cfg_t mx6q_tdh_pads[] = {
 
 	/*FlashLight*/
 	MX6Q_PAD_EIM_D31__GPIO_3_31,		/*FL_PWR_EN*/
-	MX6Q_PAD_GPIO_19__GPIO_4_5,			/*FLASHLIGHT_EN*/
-	
-	/*W1*/
-	NEW_PAD_CTRL(MX6Q_PAD_EIM_D28__GPIO_3_28,NO_PAD_CTRL),		/*OneWire*/
+	MX6Q_PAD_EIM_D22__GPIO_3_22,		/*FLASHLIGHT_EN*/
 
 	/*WiFi*/
 	NEW_PAD_CTRL(MX6Q_PAD_SD3_RST__GPIO_7_8,MX6Q_WLAN_PAD_CTRL),			/*WiFi Reset*/
@@ -170,23 +161,10 @@ static iomux_v3_cfg_t mx6q_tdh_pads[] = {
 	MX6Q_PAD_NANDF_D4__GPIO_2_4,		/*3G_PWR*/
 	MX6Q_PAD_NANDF_D5__GPIO_2_5,		/*3GWakeModem*/
 	MX6Q_PAD_SD1_CMD__GPIO_1_18,		/*3GWakeAP*/
+
+	/*USB HUB*/
+	MX6Q_PAD_GPIO_2__GPIO_1_2,			/*USB HUB RSTn*/
 };
-
-static iomux_v3_cfg_t mx6q_tdh_barcode_pads_v2[] = {
-	MX6Q_PAD_EIM_D30__GPIO_3_30,	/*QR Trig*/
-	MX6Q_PAD_EIM_BCLK__GPIO_6_31,	/*QR Wake*/
-	MX6Q_PAD_EIM_OE__GPIO_2_25,		/*QR_PWN*/
-	MX6Q_PAD_GPIO_7__GPIO_1_7,		/*QR_PWR_EN*/
-};
-
-static iomux_v3_cfg_t mx6q_tdh_hp_uart_switcher_pads_v2[] = {
-	MX6Q_PAD_EIM_D19__GPIO_3_19,	/*SELECT_IN2*/
-	MX6Q_PAD_NANDF_CS1__GPIO_6_14,	/*SELECT_IN1*/	
-};
-
-
-
-
 
 
 static iomux_v3_cfg_t mx6q_tdh_csi0_sensor_pads[] = {

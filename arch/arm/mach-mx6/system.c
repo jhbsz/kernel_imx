@@ -659,6 +659,7 @@ void do_switch_linux(void)
 * 0x6 : HDMI Dongle
 * 0xA : SparkAuto
 * 0xB : QPad
+* 0xC : TDH
 */
 unsigned int mx6_board_id(void){
 	#define	HW_OCOTP_GP1 (0x00000660)
