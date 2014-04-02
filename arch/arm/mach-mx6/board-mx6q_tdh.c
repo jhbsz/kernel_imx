@@ -45,6 +45,8 @@
 #include <linux/fec.h>
 #include <linux/memblock.h>
 #include <linux/gpio.h>
+#include <linux/hrtimer.h>
+#include <linux/timed_output.h>
 #include <linux/ion.h>
 #include <linux/etherdevice.h>
 #include <linux/regulator/anatop-regulator.h>
@@ -57,6 +59,7 @@
 #include <sound/wm8962.h>
 #include <linux/mfd/mxc-hdmi-core.h>
 #include <linux/power/qpower.h>
+#include <linux/i2c/at24.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
 #include <mach/mxc_dvfs.h>
@@ -99,6 +102,7 @@
 #define FT5X0X_XY_PATCH
 
 typedef struct peripheral_power_state{
+	unsigned int sam:1;
 	unsigned int wlan:1;
 }PERIPHERAL_POWER_STATE_T;
 
@@ -112,7 +116,6 @@ typedef struct peripheral_power_state{
 
 #define TDH_CSI0_PWDN		IMX_GPIO_NR(1, 16)
 #define TDH_CSI0_RST		IMX_GPIO_NR(5, 20)
-#define TDH_CSI0_POWER		IMX_GPIO_NR(2, 7)
 
 #define GPIO_KEY_POWER		IMX_GPIO_NR(3,29)
 #define GPIO_KEY_VOLUP		IMX_GPIO_NR(6,10)
@@ -154,6 +157,13 @@ typedef struct peripheral_power_state{
 
 //USB 
 #define TDH_USB_HUB_RST		IMX_GPIO_NR(1, 2)
+
+//SAM
+#define TDH_SAM_PWR_EN		IMX_GPIO_NR(1, 5)
+
+//Motor 
+#define TDH_MOTOR_PWR_EN	IMX_GPIO_NR(1, 4)
+
 enum {
  eBootModeNormal=0,
  eBootModeRecovery,
@@ -308,6 +318,65 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
+static void qpad_uart_io_switch(int uart_idx/*0 based*/,int switch2uart)
+{
+	iomux_v3_cfg_t mx6q_uart_gpio_pads[] = {
+		MX6Q_PAD_CSI0_DAT10__GPIO_5_28,
+		MX6Q_PAD_CSI0_DAT11__GPIO_5_29,
+		MX6Q_PAD_EIM_D26__GPIO_3_26,
+		MX6Q_PAD_EIM_D27__GPIO_3_27,
+		MX6Q_PAD_EIM_D24__GPIO_3_24,
+		MX6Q_PAD_EIM_D25__GPIO_3_25,
+		MX6Q_PAD_KEY_COL0__GPIO_4_6,
+		MX6Q_PAD_KEY_ROW0__GPIO_4_7,		
+		MX6Q_PAD_KEY_COL1__GPIO_4_8,
+		MX6Q_PAD_KEY_ROW1__GPIO_4_9,
+	};
+	iomux_v3_cfg_t mx6q_uart_func_pads[] = {
+		MX6Q_PAD_CSI0_DAT10__UART1_TXD,
+		MX6Q_PAD_CSI0_DAT11__UART1_RXD,
+		MX6Q_PAD_EIM_D26__UART2_TXD,
+		MX6Q_PAD_EIM_D27__UART2_RXD,
+		MX6Q_PAD_EIM_D24__UART3_TXD,
+		MX6Q_PAD_EIM_D25__UART3_RXD,
+		MX6Q_PAD_KEY_COL0__UART4_TXD,
+		MX6Q_PAD_KEY_ROW0__UART4_RXD,
+		MX6Q_PAD_KEY_COL1__UART5_TXD,
+		MX6Q_PAD_KEY_ROW1__UART5_RXD,
+	};
+	
+	iomux_v3_cfg_t mx6dl_uart_gpio_pads[] = {
+		MX6DL_PAD_CSI0_DAT10__GPIO_5_28,
+		MX6DL_PAD_CSI0_DAT11__GPIO_5_29,
+		MX6DL_PAD_EIM_D26__GPIO_3_26,
+		MX6DL_PAD_EIM_D27__GPIO_3_27,
+		MX6DL_PAD_EIM_D24__GPIO_3_24,
+		MX6DL_PAD_EIM_D25__GPIO_3_25,
+		MX6DL_PAD_KEY_COL0__GPIO_4_6,
+		MX6DL_PAD_KEY_ROW0__GPIO_4_7,		
+		MX6DL_PAD_KEY_COL1__GPIO_4_8,
+		MX6DL_PAD_KEY_ROW1__GPIO_4_9,
+	};
+	iomux_v3_cfg_t mx6dl_uart_func_pads[] = {
+		MX6DL_PAD_CSI0_DAT10__UART1_TXD,
+		MX6DL_PAD_CSI0_DAT11__UART1_RXD,
+		MX6DL_PAD_EIM_D26__UART2_TXD,
+		MX6DL_PAD_EIM_D27__UART2_RXD,
+		MX6DL_PAD_EIM_D24__UART3_TXD,
+		MX6DL_PAD_EIM_D25__UART3_RXD,
+		MX6DL_PAD_KEY_COL0__UART4_TXD,
+		MX6DL_PAD_KEY_ROW0__UART4_RXD,
+		MX6DL_PAD_KEY_COL1__UART5_TXD,
+		MX6DL_PAD_KEY_ROW1__UART5_RXD,
+	};
+	
+	iomux_v3_cfg_t* io_pads_cfg = switch2uart ? &mx6q_uart_func_pads[uart_idx*2] : &mx6q_uart_gpio_pads[uart_idx*2];
+	if(cpu_is_mx6dl())
+		io_pads_cfg = switch2uart ? &mx6dl_uart_func_pads[uart_idx*2] : &mx6dl_uart_gpio_pads[uart_idx*2];
+	mxc_iomux_v3_setup_multiple_pads(io_pads_cfg,2/*fixed 2 pins*/);
+}
+
+
 static struct imxuart_platform_data mx6_uart_pdata __initdata = {
        .flags      = IMXUART_CON_DISABLE,
 };
@@ -349,7 +418,6 @@ static void mx6q_csi0_io_init(void)
 {	
 	int cam_pdn = TDH_CSI0_PWDN;
 	int cam_rst = TDH_CSI0_RST;
-	int cam_pwr_en = TDH_CSI0_POWER;	
 	struct clk *clko2 = clk_get(NULL, "clko2_clk");
 	struct clk *clko = clk_get(NULL, "clko_clk");
 	if(!IS_ERR(clko)&&!IS_ERR(clko2)){
@@ -559,6 +627,12 @@ static struct ft5x0x_ts_platform_data ft5x0x_data=
 };
 
 
+static struct at24_platform_data eeprom_data = {
+	.byte_len	= SZ_32K / 8,	
+	.page_size	= 32,	
+	.flags		= AT24_FLAG_ADDR16|AT24_FLAG_IRUGO,
+};
+
 
 static struct imxi2c_platform_data mx6q_i2c_data = {
 	.bitrate = 100000,
@@ -589,7 +663,11 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.type	= "eup2471",
 		.addr	= 0x37,
 		.platform_data = &eup2471_pdata,
-	},	
+	},
+	{
+		I2C_BOARD_INFO("at24", 0x54),
+		.platform_data	= &eeprom_data,	
+	},
 };
 
 
@@ -606,10 +684,7 @@ static void tdh_host1_vbus(bool on)
 
 static void __init imx6q_tdh_init_usb(void)
 {
-	int ret = 0;
-
 	//NO OC input
-
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
 	/*
 	 *
@@ -1226,6 +1301,95 @@ static struct imx_bt_rfkill_platform_data wlan_bt_rfkill_data = {
 
 
 
+static struct work_struct vibrator_work;
+static struct hrtimer vibe_timer;
+static spinlock_t vibe_lock;
+static int vibe_state;
+
+static void set_vibrator(int on)
+{
+	int gpio = TDH_MOTOR_PWR_EN;
+	if (gpio_request(gpio, "vibrator enable gpio")) {
+		printk(KERN_INFO "gpio %d request failed\n", gpio);
+		return;
+	}
+
+	if (on) 
+	{
+		gpio_direction_output(gpio, 1);
+	} 
+	else 
+	{
+		gpio_direction_output(gpio, 0);
+	}
+
+	gpio_free(gpio);
+
+}
+
+static void update_vibrator(struct work_struct *work)
+{
+      set_vibrator(vibe_state);
+}
+
+static void vibrator_enable(struct timed_output_dev *dev, int value)
+{
+      unsigned long   flags;
+
+      spin_lock_irqsave(&vibe_lock, flags);
+      hrtimer_cancel(&vibe_timer);
+
+      if (value == 0)
+              vibe_state = 0;
+      else {
+              value = (value > 15000 ? 15000 : value);
+			  printk("enable vibrator %d ms\n",value);
+              vibe_state = 1;
+              hrtimer_start(&vibe_timer,
+                      ktime_set(value / 1000, (value % 1000) * 1000000),
+                      HRTIMER_MODE_REL);
+      }
+      spin_unlock_irqrestore(&vibe_lock, flags);
+
+      schedule_work(&vibrator_work);
+}
+
+static int vibrator_get_time(struct timed_output_dev *dev)
+{
+      if (hrtimer_active(&vibe_timer)) {
+              ktime_t r = hrtimer_get_remaining(&vibe_timer);
+			  struct timeval t = ktime_to_timeval(r);
+              return t.tv_sec * 1000 + t.tv_usec / 1000;
+      } else
+              return 0;
+}
+
+static enum hrtimer_restart vibrator_timer_func(struct hrtimer *timer)
+{
+      vibe_state = 0;
+      schedule_work(&vibrator_work);
+      return HRTIMER_NORESTART;
+}
+
+static struct timed_output_dev vibrator = {
+      .name = "vibrator",
+      .get_time = vibrator_get_time,
+      .enable = vibrator_enable,
+};
+
+static void board_vibrator_init(void)
+{
+      INIT_WORK(&vibrator_work, update_vibrator);
+
+      spin_lock_init(&vibe_lock);
+      vibe_state = 0;
+      hrtimer_init(&vibe_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+      vibe_timer.function = vibrator_timer_func;
+
+      timed_output_dev_register(&vibrator);
+}
+
+
 #define MODEM_PIN_POWER TDH_MODEM_PWR
 #define MODEM_PIN_RESET TDH_MODEM_RST
 #define MODEM_PIN_ONOFF TDH_MODEM_ONOFF
@@ -1246,16 +1410,68 @@ static int read_board_revision(char *page, char **start,
 	return sprintf(page, "v%d",mx6_board_rev());
 }
 
+static void sam_power(int on){
+	gpio_set_value(TDH_SAM_PWR_EN,on?1:0);
+	pps.sam=on?1:0;
+	qpad_uart_io_switch(3,pps.sam);
+}
+static int read_sam(char *page, char **start,
+			     off_t off, int count,
+			     int *eof, void *data)
+{
+	return sprintf(page, "current sam state %s\n"
+						"echo 1 > sam -->enable sam reader power\r\n"
+						 "echo 0 > sam -->disable smartcard read power\r\n"
+						 "\n",pps.sam?"on":"off");
+}
+
+static int write_sam(struct file *file, const char *buffer,
+                      unsigned long count, void *data) 
+{
+	char kbuf[256];
+	int action;
+
+	if (count >= 256)
+		return -EINVAL;
+	if (copy_from_user(kbuf, buffer, count))
+		return -EFAULT;
+
+	action = (int)simple_strtoul(kbuf, NULL, 10);
+	sam_power(action);
+	
+    return count;
+}
+
 
 static int __init board_misc_init(void){
+	int ret;
 	struct proc_dir_entry *entry;
 	eup2471_enable(0);
 	eup2471_flash(0);
+
 	
+	ret = gpio_request(TDH_SAM_PWR_EN, "sam power");
+	if (ret) {
+		pr_err("failed to get GPIO SmartCardPwr %d\n",
+			ret);
+		return -EINVAL;
+	}
+	pps.sam=0;
+	gpio_direction_output(TDH_SAM_PWR_EN,0); 	
+	//default state is power off ,to fix current leak issue,switch uart to io mode
+	qpad_uart_io_switch(3,pps.sam);
+	entry = create_proc_entry("driver/sam", S_IFREG | S_IRUGO | S_IWUGO, NULL);
+	if (entry) {
+		entry->read_proc = read_sam;
+		entry->write_proc = write_sam;
+	}
+
 	entry = create_proc_entry("boardrev", S_IFREG | S_IRUGO | S_IWUSR, NULL);
 	if (entry) {
 		entry->read_proc = read_board_revision;
 	}
+
+	board_vibrator_init();
 	
 	return 0;
 }
