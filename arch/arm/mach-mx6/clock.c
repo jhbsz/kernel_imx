@@ -5528,7 +5528,7 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 
 	clk_set_parent(&ldb_di0_clk, &pll2_pfd_352M);
 	clk_set_parent(&ldb_di1_clk, &pll2_pfd_352M);
-	if(machine_is_mx6q_qpad()){
+	if(machine_is_mx6q_qpad()||machine_is_mx6q_tdh()){
 		clk_set_parent(&clko_clk, &pll4_audio_main_clk);
 		clk_set_parent(&clko2_clk, &osc_clk);
 	}else {
@@ -5539,7 +5539,7 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	clk_set_parent(&ssi2_clk, &pll4_audio_main_clk);
 	//for 44.1kHz
 	
-	if(machine_is_mx6q_qpad())
+	if(machine_is_mx6q_qpad()||machine_is_mx6q_tdh())
 		clk_set_rate(&ssi2_clk, 22579200);
 	else
 		clk_set_rate(&ssi2_clk, 11289600);
@@ -5599,7 +5599,7 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		 * default, so we need to enable the clocks to
 		 * keep the display running.
 		 */
-		if(machine_is_mx6q_qpad())
+		if(machine_is_mx6q_qpad()||machine_is_mx6q_tdh())
 			ccgr3 |= 3 << MXC_CCM_CCGRx_CG8_OFFSET; //mipi
 		else
 			ccgr3 |= 3 << MXC_CCM_CCGRx_CG7_OFFSET;//ldb
@@ -5619,6 +5619,8 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 			(3 << MXC_CCM_CCGRx_CG8_OFFSET) : 0) | /* pwm1_clk */
 			(machine_is_mx6q_qpad() ?
 			(3 << MXC_CCM_CCGRx_CG8_OFFSET) : 0) | /* pwm1_clk ,we also use pwm 1 to drive mipi lcd ,so we shoule enable ;add by allenyao*/
+			(machine_is_mx6q_tdh() ?
+			(3 << MXC_CCM_CCGRx_CG8_OFFSET) : 0) |
 #endif
 			1 << MXC_CCM_CCGRx_CG6_OFFSET |
 			1 << MXC_CCM_CCGRx_CG4_OFFSET, MXC_CCM_CCGR4);
