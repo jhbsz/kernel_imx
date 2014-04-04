@@ -727,6 +727,26 @@ static int fsl_otg_set_power(struct otg_transceiver *otg_p, unsigned mA)
 	return 0;
 }
 
+static int fsl_otg_vbus_detect(void){
+	int vbus_on=0;
+	unsigned long timeout;
+	fsl_otg_clk_gate(true);
+	/* Wait for vbus change  to B_SESSION_VALID complete */
+	timeout = jiffies + msecs_to_jiffies(500);
+	while ((le32_to_cpu(usb_dr_regs->otgsc)&OTGSC_STS_B_SESSION_VALID) != (1 << 11)) {
+		if (time_after(jiffies, timeout)) {
+			printk(KERN_INFO"otg detect vbus off!\n");
+			fsl_otg_clk_gate(false);
+			return vbus_on;
+		}
+		msleep(10);
+	}
+	printk(KERN_INFO"otg detect vbus on!\n");
+	vbus_on++;
+	fsl_otg_clk_gate(false);
+	return vbus_on;
+}
+
 /* Delayed pin detect interrupt processing.
  *
  * When the Mini-A cable is disconnected from the board,
@@ -784,7 +804,9 @@ static void fsl_otg_event(struct work_struct *work)
 		}
 		if (pdata->wake_up_enable)
 			pdata->wake_up_enable(pdata, false);
-		otg_drv_vbus(fsm, 1);
+		if(!fsl_otg_vbus_detect()){
+			otg_drv_vbus(fsm, 1);
+		}
 		fsl_otg_wait_stable_vbus(true);
 		b_session_irq_enable(false);
 		if (pdata->wake_up_enable)
@@ -909,6 +931,11 @@ irqreturn_t fsl_otg_isr(int irq, void *dev_id)
 			__cancel_delayed_work(&fotg->otg_event);
 			schedule_otg_work(&fotg->otg_event, msecs_to_jiffies(10));
 			ret = IRQ_HANDLED;
+		}else if(otg_int_src & OTGSC_INTSTS_B_SESSION_VALID){
+			if(work_busy(&fotg->otg_event.work)){
+				usb_dr_regs->otgsc = (usb_dr_regs->otgsc | cpu_to_le32(otg_sc & OTGSC_INTSTS_MASK));
+				ret = IRQ_HANDLED;
+			}
 		}
 	}
 
