@@ -1069,11 +1069,11 @@ static void gpio_key_event(unsigned int code,int value){
 	}
 }
 
-#warning "FIXME:define PTT/HOT1/HOT2 key values"
+
 static struct gpio_keys_button tdh_buttons[] = {
 	GPIO_BUTTON(GPIO_KEY_VOLUP, KEY_VOLUMEUP, 1, "vol+", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_VOLDOWN, KEY_VOLUMEDOWN, 1, "vol-", 1, 1),
-	GPIO_BUTTON(GPIO_KEY_PTT, KEY_F10, 1, "ptt", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_PTT, KEY_RADIO, 1, "ptt", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_HOT1, KEY_CHANNELUP, 1, "channel+", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_HOT2, KEY_CHANNELDOWN, 1, "channel-", 1, 1),
 	GPIO_BUTTON2(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1,gpio_key_event),
