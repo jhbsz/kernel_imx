@@ -644,7 +644,7 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 		I2C_BOARD_INFO("rt5625", 0x1f),
 	},
 	{
-		I2C_BOARD_INFO("mt9p111", 0x3c),
+		I2C_BOARD_INFO("HM5065", 0x10),
 		.platform_data = (void *)&camera_data,
 	},
 };
@@ -1074,8 +1074,8 @@ static struct gpio_keys_button tdh_buttons[] = {
 	GPIO_BUTTON(GPIO_KEY_VOLUP, KEY_VOLUMEUP, 1, "vol+", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_VOLDOWN, KEY_VOLUMEDOWN, 1, "vol-", 1, 1),
 	GPIO_BUTTON(GPIO_KEY_PTT, KEY_F10, 1, "ptt", 1, 1),
-	GPIO_BUTTON(GPIO_KEY_HOT1, KEY_F11, 1, "HOT1", 1, 1),
-	GPIO_BUTTON(GPIO_KEY_HOT2, KEY_F12, 1, "HOT2", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_HOT1, KEY_CHANNELUP, 1, "channel+", 1, 1),
+	GPIO_BUTTON(GPIO_KEY_HOT2, KEY_CHANNELDOWN, 1, "channel-", 1, 1),
 	GPIO_BUTTON2(GPIO_KEY_POWER, KEY_POWER, 1, "power", 1, 1,gpio_key_event),
 };
 

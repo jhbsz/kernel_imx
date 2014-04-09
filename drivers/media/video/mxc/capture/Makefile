@@ -26,6 +26,9 @@ obj-$(CONFIG_MXC_CAMERA_MICRON111) += mt9v111_camera.o
 mt9p111_camera-objs := mt9p111.o
 obj-$(CONFIG_MXC_CAMERA_MICRONP111) += mt9p111_camera.o
 
+hm5065_camera-objs := hm5065.o
+obj-$(CONFIG_MXC_CAMERA_HM5065) += hm5065_camera.o
+
 hv7161_camera-objs := hv7161.o
 obj-$(CONFIG_MXC_CAMERA_HV7161) += hv7161_camera.o
 
