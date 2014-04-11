@@ -929,7 +929,7 @@ irqreturn_t fsl_otg_isr(int irq, void *dev_id)
 			printk(KERN_DEBUG "ID int (ID is %d)\n", fotg->fsm.id);
 
 			__cancel_delayed_work(&fotg->otg_event);
-			schedule_otg_work(&fotg->otg_event, msecs_to_jiffies(10));
+			schedule_otg_work(&fotg->otg_event, fotg->fsm.id?msecs_to_jiffies(10):0);
 			ret = IRQ_HANDLED;
 		}else if(otg_int_src & OTGSC_INTSTS_B_SESSION_VALID){
 			if(work_busy(&fotg->otg_event.work)){
