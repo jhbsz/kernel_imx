@@ -654,10 +654,14 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 
 	sensor->on = on;
 	
+	if (camera_plat->mclk_on&&on)
+		camera_plat->mclk_on(1);
+
 	if (camera_plat->pwdn){
 		camera_plat->pwdn(on?0:1);
 	}
-
+	if (camera_plat->mclk_on&&!on)
+		camera_plat->mclk_on(0);
 
 	return 0;
 }
