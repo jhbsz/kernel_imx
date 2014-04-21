@@ -482,6 +482,7 @@ static void mx6q_csi0_mclk_on(int on){
 		if(mclk_on!=on) {
 			mclk_on = on;
 			if(on){
+				clk_set_rate(mclk, clk_round_rate(mclk, camera_data.mclk));
 				mxc_iomux_v3_setup_pad((cpu_is_mx6q())?csi0_mclk_pads_func[0]:csi0_mclk_pads_func[1]);
 				clk_enable(mclk);
 			}else {
@@ -508,6 +509,7 @@ static void mx6q_csi0_io_init(void)
 	int cam_pdn = QPAD_CSI0_PWDN;
 	int cam_rst = QPAD_CSI0_RST;
 	int cam_pwr_en = QPAD_CSI0_POWER;	
+	/*
 	struct clk *clko2 = clk_get(NULL, "clko2_clk");
 	struct clk *clko = clk_get(NULL, "clko_clk");
 	if(!IS_ERR(clko)&&!IS_ERR(clko2)){
@@ -515,7 +517,7 @@ static void mx6q_csi0_io_init(void)
 		clk_set_parent(clko, clko2);
 		clk_put(clko);
 		clk_put(clko2);
-	}
+	}*/
 
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_csi0_sensor_pads,
@@ -1166,7 +1168,7 @@ static int __init imx6q_init_audio(void)
 		pr_err("can't get clko2 clock.\n");
 	}
 	else {
-		rate = clk_round_rate(clko2, 24000000);
+		rate = clk_round_rate(clko2, 12000000);
 		rt5625_data.sysclk = rate;
 		clk_set_rate(clko2, rate);
 		clk_put(clko2);
