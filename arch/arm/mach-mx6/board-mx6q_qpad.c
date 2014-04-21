@@ -464,29 +464,19 @@ static inline void mx6q_qpad_init_uart(void)
 
 static struct fsl_mxc_camera_platform_data camera_data;
 static struct regulator* camera_regulator;
-static iomux_v3_cfg_t csi0_mclk_pads_func[] = {
-	MX6Q_PAD_GPIO_0__CCM_CLKO,
-	MX6DL_PAD_GPIO_0__CCM_CLKO,
-};
-static iomux_v3_cfg_t csi0_mclk_pads_io[] = {
-	MX6Q_PAD_GPIO_0__GPIO_1_0,
-	MX6DL_PAD_GPIO_0__GPIO_1_0,
-};
 
 static void mx6q_csi0_mclk_on(int on){
 	struct clk *mclk = clk_get(NULL, "clko_clk");
 	static bool mclk_on=0;
 
 	printk("%s camera mclk\n",on?"enable":"disable");
-	if(!IS_ERR(mclk)){		
+	if(!IS_ERR(mclk)){
 		if(mclk_on!=on) {
 			mclk_on = on;
 			if(on){
 				clk_set_rate(mclk, clk_round_rate(mclk, camera_data.mclk));
-				mxc_iomux_v3_setup_pad((cpu_is_mx6q())?csi0_mclk_pads_func[0]:csi0_mclk_pads_func[1]);
 				clk_enable(mclk);
 			}else {
-				mxc_iomux_v3_setup_pad((cpu_is_mx6q())?csi0_mclk_pads_io[0]:csi0_mclk_pads_io[1]);
 				clk_disable(mclk);
 			}
 		}
@@ -509,15 +499,6 @@ static void mx6q_csi0_io_init(void)
 	int cam_pdn = QPAD_CSI0_PWDN;
 	int cam_rst = QPAD_CSI0_RST;
 	int cam_pwr_en = QPAD_CSI0_POWER;	
-	/*
-	struct clk *clko2 = clk_get(NULL, "clko2_clk");
-	struct clk *clko = clk_get(NULL, "clko_clk");
-	if(!IS_ERR(clko)&&!IS_ERR(clko2)){
-		//share the same clk of clko and clko2
-		clk_set_parent(clko, clko2);
-		clk_put(clko);
-		clk_put(clko2);
-	}*/
 
 	if (cpu_is_mx6q())
 		mxc_iomux_v3_setup_multiple_pads(mx6q_qpad_csi0_sensor_pads,
