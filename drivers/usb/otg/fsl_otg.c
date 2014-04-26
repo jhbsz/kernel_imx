@@ -933,7 +933,7 @@ irqreturn_t fsl_otg_isr(int irq, void *dev_id)
 			ret = IRQ_HANDLED;
 		}else if(otg_int_src & OTGSC_INTSTS_B_SESSION_VALID){
 			if(work_busy(&fotg->otg_event.work)){
-				usb_dr_regs->otgsc = (usb_dr_regs->otgsc | cpu_to_le32(otg_sc & OTGSC_INTSTS_MASK));
+				usb_dr_regs->otgsc = (usb_dr_regs->otgsc | cpu_to_le32(OTGSC_INTSTS_B_SESSION_VALID));
 				ret = IRQ_HANDLED;
 			}
 		}

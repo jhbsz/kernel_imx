@@ -325,10 +325,13 @@ dr_wake_up_enable(struct fsl_udc *udc, bool enable)
 
 static inline void dr_clk_gate(bool on)
 {
+	static bool state_on=false;
 	struct fsl_usb2_platform_data *pdata = udc_controller->pdata;
 
 	if (!pdata || !pdata->usb_clock_for_pm)
 		return;
+	if(state_on==on) return;
+	state_on = on;
 	pdata->usb_clock_for_pm(on);
 	if (on)
 		reset_phy();
