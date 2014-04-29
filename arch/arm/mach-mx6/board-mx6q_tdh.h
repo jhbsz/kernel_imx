@@ -161,6 +161,8 @@ static iomux_v3_cfg_t mx6q_tdh_pads[] = {
 	MX6Q_PAD_NANDF_D4__GPIO_2_4,		/*3G_PWR*/
 	MX6Q_PAD_NANDF_D5__GPIO_2_5,		/*3GWakeModem*/
 	MX6Q_PAD_SD1_CMD__GPIO_1_18,		/*3GWakeAP*/
+	MX6Q_PAD_SD1_DAT1__GPIO_1_17,		/*3G CP sleep*/
+	MX6Q_PAD_SD1_DAT2__GPIO_1_19,		/*3G AP sleep*/
 
 	/*USB HUB*/
 	MX6Q_PAD_GPIO_2__GPIO_1_2,			/*USB HUB RSTn*/
