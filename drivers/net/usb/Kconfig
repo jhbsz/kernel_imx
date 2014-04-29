@@ -274,6 +274,14 @@ config USB_NET_MCS7830
 	  adapter based on the MosChip 7830 controller. This includes
 	  adapters marketed under the DeLOCK brand.
 
+config USB_NET_HW_CDC_DRIVER
+	tristate "HUAWEI USB CDC Ethernet driver for data card devices"
+	default n
+	depends on EXPERIMENTAL
+	help
+	  Choose this option if you're using a HUAWEI USB data card adapter
+	  adapter.This driver will create an interface name "ethX".
+
 config USB_NET_RNDIS_HOST
 	tristate "Host for RNDIS and ActiveSync devices (EXPERIMENTAL)"
 	depends on USB_USBNET && EXPERIMENTAL

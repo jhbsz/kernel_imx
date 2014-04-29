@@ -120,6 +120,18 @@ MODULE_PARM_DESC(quirks, "supplemental list of device IDs and their quirks");
 	.useTransport = use_transport,	\
 }
 
+#undef UNUSUAL_DEV_HW
+#define UNUSUAL_DEV_HW(id_vendor, id_product, bcdDeviceMin, bcdDeviceMax, \
+			bInterfaceClass, vendor_Name, product_Name, use_Protocol, use_Transport, \
+			init_Function, flags) \
+			{ \
+        		.vendorName = vendor_Name,	\
+        		.productName = product_Name,	\
+        		.useProtocol = use_Protocol,	\
+        		.useTransport = use_Transport,	\
+        		.initFunction = init_Function,	\
+			}
+
 static struct us_unusual_dev us_unusual_dev_list[] = {
 #	include "unusual_devs.h" 
 	{ }		/* Terminating entry */
@@ -128,6 +140,7 @@ static struct us_unusual_dev us_unusual_dev_list[] = {
 #undef UNUSUAL_DEV
 #undef COMPLIANT_DEV
 #undef USUAL_DEV
+#undef UNUSUAL_DEV_HW
 
 
 #ifdef CONFIG_PM	/* Minimal support for suspend and resume */

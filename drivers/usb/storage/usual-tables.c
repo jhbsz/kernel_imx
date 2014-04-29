@@ -46,6 +46,15 @@
 { USB_INTERFACE_INFO(USB_CLASS_MASS_STORAGE, useProto, useTrans), \
   .driver_info = ((useType)<<24) }
 
+#define UNUSUAL_DEV_HW(id_vendor, id_product, bcdDeviceMin, bcdDeviceMax, \
+			bIntClass, vendorName, productName, useProtocol, useTransport, \
+			initFunction, flags) \
+			{ .match_flags = (USB_DEVICE_ID_MATCH_DEVICE_AND_VERSION | USB_DEVICE_ID_MATCH_INT_CLASS), \
+			.idVendor = (id_vendor), .idProduct = (id_product), \
+			.bcdDevice_lo = (bcdDeviceMin), .bcdDevice_hi = (bcdDeviceMax), \
+			.bInterfaceClass = (bIntClass), \
+			.driver_info = (flags)|(1<<24)}
+
 struct usb_device_id usb_storage_usb_ids[] = {
 #	include "unusual_devs.h"
 	{ }		/* Terminating entry */
@@ -57,6 +66,7 @@ MODULE_DEVICE_TABLE(usb, usb_storage_usb_ids);
 #undef UNUSUAL_DEV
 #undef COMPLIANT_DEV
 #undef USUAL_DEV
+#undef UNUSUAL_DEV_HW
 
 
 /*
