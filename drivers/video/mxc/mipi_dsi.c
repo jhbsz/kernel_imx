@@ -552,6 +552,7 @@ void mipi_dsi_power_off(struct mxc_dispdrv_handle *disp)
 {
 	int err;
 	struct mipi_dsi_info *mipi_dsi = mxc_dispdrv_getdata(disp);
+	printk("%s\n",__func__);
 
 	if (mipi_dsi->dsi_power_on) {
 		mipi_dsi_set_mode(mipi_dsi, true);
@@ -652,22 +653,31 @@ int mipi_dsi_enable(struct mxc_dispdrv_handle *disp)
 {
 	int err;
 	struct mipi_dsi_info *mipi_dsi = mxc_dispdrv_getdata(disp);
-
 	if (!mipi_dsi->lcd_inited) {
+		int bypass=0;
+		struct mxc_display_extra_data ed={0};
+		mxc_dispdrv_get_extradata(disp,&ed);
+		if(ed.extra_flags&DISPLAY_EXTRA_FLAG_LATE_INIT){
+			ed.extra_flags&=~DISPLAY_EXTRA_FLAG_LATE_INIT;
+			mxc_dispdrv_set_extradata(disp,&ed);
+			bypass++;
+		}
 		err = clk_enable(mipi_dsi->dphy_clk);
 		if (err)
 			dev_err(&mipi_dsi->pdev->dev,
 				"clk_enable error:%d!\n", err);
-		mipi_dsi_enable_controller(mipi_dsi, true);
-		err = mipi_dsi->lcd_callback->mipi_lcd_setup(
-			mipi_dsi);
-		if (err < 0) {
-			dev_err(&mipi_dsi->pdev->dev,
-				"failed to init mipi lcd.");
-			clk_disable(mipi_dsi->dphy_clk);
-			return err;
+		if(!bypass){
+			mipi_dsi_enable_controller(mipi_dsi, true);
+			err = mipi_dsi->lcd_callback->mipi_lcd_setup(
+				mipi_dsi);
+			if (err < 0) {
+				dev_err(&mipi_dsi->pdev->dev,
+					"failed to init mipi lcd.");
+				clk_disable(mipi_dsi->dphy_clk);
+				return err;
+			}
+			mipi_dsi_set_mode(mipi_dsi, false);
 		}
-		mipi_dsi_set_mode(mipi_dsi, false);
 		mipi_dsi->dsi_power_on = 1;
 		mipi_dsi->lcd_inited = 1;
 	}
@@ -689,6 +699,7 @@ static int mipi_dsi_disp_init(struct mxc_dispdrv_handle *disp,
 	struct mipi_dsi_info		  *mipi_dsi;
 	struct mipi_dsi_platform_data *pdata;
 
+	printk("%s\n",__func__);
 	mipi_dsi = mxc_dispdrv_getdata(disp);
 	if (IS_ERR(mipi_dsi)) {
 		pr_err("failed to get dispdrv data\n");
@@ -909,6 +920,7 @@ static void mipi_dsi_disp_deinit(struct mxc_dispdrv_handle *disp)
 {
 	struct mipi_dsi_info    *mipi_dsi;
 	struct resource			*res;
+	printk("%s\n",__func__);
 
 	mipi_dsi = mxc_dispdrv_getdata(disp);
 	res = platform_get_resource(mipi_dsi->pdev, IORESOURCE_MEM, 0);

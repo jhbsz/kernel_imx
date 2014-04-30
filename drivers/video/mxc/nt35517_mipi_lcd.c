@@ -45,14 +45,12 @@ static struct fb_videomode nt35517_lcd_modedb[] = {
 static struct mipi_lcd_config lcd_config = {
 	.virtual_ch		= 0x0,
 	.data_lane_num  = 0x2,
-	.max_phy_clk    = 550,
+	.max_phy_clk    = 450,
 	.dpi_fmt		= MIPI_RGB888,
 };
 void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 		struct mipi_lcd_config **data)
 {
-	if (cpu_is_mx6dl())
-		nt35517_lcd_modedb[0].pixclock = 37037; /* 27M clock*/
 	*mode = &nt35517_lcd_modedb[0];
 	*size = ARRAY_SIZE(nt35517_lcd_modedb);
 	*data = &lcd_config;

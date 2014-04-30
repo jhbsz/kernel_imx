@@ -2058,6 +2058,13 @@ static int mxcfb_dispdrv_init(struct platform_device *pdev,
 		/* setting */
 		mxcfbi->ipu_id = setting.dev_id;
 		mxcfbi->ipu_di = setting.disp_id;
+
+		{
+			struct mxc_display_extra_data ed={0};
+			if(mxcfbi->late_init)
+				ed.extra_flags|=DISPLAY_EXTRA_FLAG_LATE_INIT;
+			mxc_dispdrv_set_extradata(mxcfbi->dispdrv,&ed);
+		}
 	}
 
 	return ret;

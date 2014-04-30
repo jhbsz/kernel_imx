@@ -47,6 +47,7 @@ struct mxc_dispdrv_entry {
 	struct mxc_dispdrv_driver *drv;
 	bool active;
 	void *priv;
+	struct mxc_display_extra_data ed;
 	struct list_head list;
 	struct device *dev;
 };
@@ -161,3 +162,26 @@ void *mxc_dispdrv_getdata(struct mxc_dispdrv_handle *handle)
 		return ERR_PTR(-EINVAL);
 }
 EXPORT_SYMBOL_GPL(mxc_dispdrv_getdata);
+
+
+int mxc_dispdrv_set_extradata(struct mxc_dispdrv_handle *handle,struct mxc_display_extra_data* extradata){
+	struct mxc_dispdrv_entry *entry = (struct mxc_dispdrv_entry *)handle;
+	if(!extradata) return -EINVAL;
+	if (entry) {
+		memcpy(&entry->ed,extradata,sizeof(struct mxc_display_extra_data));
+	} else
+		return -EINVAL;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(mxc_dispdrv_set_extradata);
+int mxc_dispdrv_get_extradata(struct mxc_dispdrv_handle *handle,struct mxc_display_extra_data* extradata){
+	struct mxc_dispdrv_entry *entry = (struct mxc_dispdrv_entry *)handle;
+	if(!extradata) return -EINVAL;
+	if (entry) {
+		memcpy(extradata,&entry->ed,sizeof(struct mxc_display_extra_data));
+	} else
+		return -EINVAL;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(mxc_dispdrv_get_extradata);
+

@@ -42,6 +42,13 @@ struct mxc_dispdrv_driver {
 	int (*setup) (struct mxc_dispdrv_handle *, struct fb_info *fbi);
 };
 
+
+struct mxc_display_extra_data{
+	#define DISPLAY_EXTRA_FLAG_LATE_INIT 0x1
+	unsigned int extra_flags;
+};
+
+
 struct mxc_dispdrv_handle *mxc_dispdrv_register(struct mxc_dispdrv_driver *drv);
 int mxc_dispdrv_unregister(struct mxc_dispdrv_handle *handle);
 struct mxc_dispdrv_handle *mxc_dispdrv_gethandle(char *name,
@@ -51,4 +58,9 @@ int mxc_dispdrv_setdata(struct mxc_dispdrv_handle *handle, void *data);
 void *mxc_dispdrv_getdata(struct mxc_dispdrv_handle *handle);
 void mxc_dispdrv_setdev(struct mxc_dispdrv_handle *drv_handle, struct device *dev);
 struct device *mxc_dispdrv_getdev(struct mxc_dispdrv_handle *drv_handle);
+
+int mxc_dispdrv_set_extradata(struct mxc_dispdrv_handle *handle,struct mxc_display_extra_data* extradata);
+int mxc_dispdrv_get_extradata(struct mxc_dispdrv_handle *handle,struct mxc_display_extra_data* extradata);
+
+
 #endif
