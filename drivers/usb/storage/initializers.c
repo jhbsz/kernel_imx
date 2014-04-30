@@ -104,3 +104,36 @@ int usb_stor_huawei_e220_init(struct us_data *us)
 	US_DEBUGP("Huawei mode set result is %d\n", result);
 	return 0;
 }
+int usb_stor_huawei_init(struct us_data *us)
+{
+    int result = 0;
+    us->iobuf[0] = 0x0;
+    printk(KERN_DEBUG "usb_stor_huawei_init --------------------------------------------- \n");
+    result = usb_stor_control_msg(us, us->send_ctrl_pipe,
+        USB_REQ_SET_FEATURE, USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+        0x01, 0x0, us->iobuf, 0x0, 1000);
+    US_DEBUGP("usb_control_msg performing result is %d \n", result);
+    return 0;
+}
+
+
+int usb_stor_huawei_scsi_init(struct us_data *us)
+{
+    int result = 0;
+    int act_len = 0;
+    
+#if 0  //  华为数据卡模块Linux第三方集成指导文档 V1.2.pdf 命令
+    unsigned char cmd[32] = {0x55, 0x53, 0x42, 0x43, 0xEE, 0x00, 0x00, 0x00,
+                            0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x11,
+                            0x06, 0x20, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+#else
+	/*  最新命令  */
+    unsigned char cmd[32] = {0x55, 0x53, 0x42, 0x43,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00,0x00,0x00,0x00, 
+                            0x11, 0x06, 0x20, 0x00, 0x00, 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00};
+#endif
+    printk(KERN_DEBUG "usb_stor_huawei_scsi_init --------------------------------------------------->\n");
+    result = usb_stor_bulk_transfer_buf (us, us->send_bulk_pipe, cmd, 31, &act_len);
+    US_DEBUGP("usb_stor_bulk_transfer_buf performing result is %d, transfer the actual length=%d\n", result, act_len);
+    return result;
+}

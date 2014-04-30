@@ -26,6 +26,40 @@
 #define MODEM_PIN_WAKEMODEM	142
 #endif
 
+//AP status
+#ifdef MODEM_AP_SLEEP_STATUS
+#define AP_SLEEP_STATUS MODEM_AP_SLEEP_STATUS
+#else
+#define AP_SLEEP_STATUS (-1)
+#endif
+#ifndef AP_SLEEP_STATUS_ALIVE
+#define AP_SLEEP_STATUS_ALIVE 0
+#endif
+#ifndef AP_SLEEP_STATUS_SLEEP
+#define AP_SLEEP_STATUS_SLEEP 1
+#endif
+
+//CP status
+#ifdef MODEM_CP_SLEEP_STATUS
+#define CP_SLEEP_STATUS MODEM_CP_SLEEP_STATUS
+#else
+#define CP_SLEEP_STATUS (-1)
+#endif
+#ifndef CP_SLEEP_STATUS_ALIVE
+#define CP_SLEEP_STATUS_ALIVE 0
+#endif
+#ifndef CP_SLEEP_STATUS_SLEEP
+#define CP_SLEEP_STATUS_SLEEP 1
+#endif
+
+//push to talk
+#ifdef MODEM_CP_PUSH_TO_TALK
+#define CP_PUSH_TO_TALK MODEM_CP_PUSH_TO_TALK
+#else
+#define CP_PUSH_TO_TALK (-1)
+#endif
+
+
 #define MODEM_STATE_INVALID 0
 #define MODEM_STATE_ON      1
 #define MODEM_STATE_OFF		2
@@ -50,6 +84,9 @@ struct usb_modem
 	int gpio_power;  	//negative valid
 	int gpio_wakeap;	//modem wake up host
 	int gpio_wakemodem;		//host wakeup modem
+	int gpio_cp_sleep_status;
+	int gpio_ap_sleep_status;
+	int gpio_cp_ptt;
 
 	unsigned long mfpr_pin_power;
 	unsigned long mfpr_pin_onoff;	
@@ -90,6 +127,29 @@ struct usb_modem_plat_data
 	struct usb_modem* modem;
 };
 
+
+static void set_ap_status(struct usb_modem* modem,int awake){
+	if(gpio_is_valid(modem->gpio_ap_sleep_status)){
+		gpio_set_value(modem->gpio_ap_sleep_status,
+			awake?AP_SLEEP_STATUS_ALIVE:AP_SLEEP_STATUS_SLEEP);
+	}
+}
+
+static void modem_set_cp_awake(struct usb_modem* modem){
+	if(gpio_is_valid(modem->gpio_cp_sleep_status)){
+		int sleep_state = gpio_get_value(modem->gpio_cp_sleep_status)?1:0;
+		if(sleep_state!=CP_SLEEP_STATUS_ALIVE){
+			//wakeup cp now via wakemodem rising trigger
+			if(modem->gpio_wakemodem>0){
+				gpio_set_value(modem->gpio_wakemodem,0);
+				udelay(1);
+				gpio_set_value(modem->gpio_wakemodem,1);
+				udelay(1);
+				gpio_set_value(modem->gpio_wakemodem,0);
+			}
+		}
+	}
+}
 
 
 static void modem_command_work(struct work_struct *work)
@@ -154,6 +214,8 @@ static int request_modem_state(struct usb_modem* modem,int state)
 static void modem_enable_callback(struct usb_modem* modem)
 {
 	modem->current_state = modem->request_state;
+
+	modem_set_cp_awake(modem);
 }
 
 
@@ -196,8 +258,7 @@ static void modem_enable_work(struct work_struct *work)
 //
 static void usb_modem_set_pin(struct usb_modem* modem,const char* func,const char* state)
 {
-	if(!strcmp(func,"power"))
-	{
+	if(!strcmp(func,"power")){
 		if(!strcmp(state,"off"))
 		{		
 			//gpio_set_value(modem->gpio_power,1);
@@ -208,9 +269,7 @@ static void usb_modem_set_pin(struct usb_modem* modem,const char* func,const cha
 			//gpio_set_value(modem->gpio_power,0);		
 			gpio_direction_output(modem->gpio_power,1);//power on
  		}
-	}
-	else if(!strcmp(func,"reset"))
-	{
+	}else if(!strcmp(func,"reset")){
 		if(!strcmp(state,"off"))
 		{
 			gpio_set_value(modem->gpio_reset,1);
@@ -219,10 +278,7 @@ static void usb_modem_set_pin(struct usb_modem* modem,const char* func,const cha
 		{
 			gpio_set_value(modem->gpio_reset,0);
 		}
-	
-	}
-	else if(!strcmp(func,"onoff"))
-	{
+	}else if(!strcmp(func,"onoff")){
 		if(!strcmp(state,"on"))
 		{
 			gpio_set_value(modem->gpio_onoff,1);
@@ -233,9 +289,7 @@ static void usb_modem_set_pin(struct usb_modem* modem,const char* func,const cha
 		}else if(!strcmp(state,"skip")){
 			modem->no_pin_onoff=1; 			
 		}
-	}
-	else if(!strcmp(func,"wake"))
-	{
+	}else if(!strcmp(func,"wake")){
 		if(gpio_is_valid(modem->gpio_wakemodem))
 		{
 			if(!strcmp(state,"on"))
@@ -247,6 +301,18 @@ static void usb_modem_set_pin(struct usb_modem* modem,const char* func,const cha
 				gpio_set_value(modem->gpio_wakemodem,0);
 			}
 		}
+	}else if(!strcmp(func,"ptt")){
+		if(gpio_is_valid(modem->gpio_cp_ptt))
+		{
+			if(!strcmp(state,"on"))
+			{
+				gpio_set_value(modem->gpio_cp_ptt,1);
+			}
+			else if(!strcmp(state,"off"))
+			{
+				gpio_set_value(modem->gpio_cp_ptt,0);
+			}
+		}
 	}
 
 }
@@ -254,10 +320,23 @@ static ssize_t usb_modem_show(struct device *dev,
                             struct device_attribute *attr, char *buf)
 {
 	struct usb_modem* modem = platform_get_drvdata(to_platform_device(dev));
+	int pin_state;
 	ssize_t len=0;
 	len += sprintf(buf+len, "power [%s]\t\n", (gpio_get_value(modem->gpio_power)>0)?"on":"off");
 	len += sprintf(buf+len, "reset [%s]\t\n", (gpio_get_value(modem->gpio_reset)>0)?"off":"on");
 	len += sprintf(buf+len, "onoff [%s]\t\n", (gpio_get_value(modem->gpio_onoff)>0)?"on":"off");
+	if(gpio_is_valid(modem->gpio_ap_sleep_status)){
+		pin_state =  gpio_get_value(modem->gpio_ap_sleep_status);
+		len += sprintf(buf+len, "ap_sleep [%s]\t\n", (pin_state==AP_SLEEP_STATUS_SLEEP)?"sleep":"alive");
+	}
+	if(gpio_is_valid(modem->gpio_cp_sleep_status)){
+		pin_state =  gpio_get_value(modem->gpio_cp_sleep_status);
+		len += sprintf(buf+len, "cp_sleep [%s]\t\n", (pin_state==CP_SLEEP_STATUS_SLEEP)?"sleep":"alive");
+	}
+	if(gpio_is_valid(modem->gpio_cp_ptt)){
+		pin_state =  gpio_get_value(modem->gpio_cp_ptt);
+		len += sprintf(buf+len, "cp_ptt [%s]\t\n", (pin_state>0)?"high":"low");
+	}
 
 	if(gpio_is_valid(modem->gpio_wakemodem))
 		len += sprintf(buf+len, "wake [%s]\t\n", (gpio_get_value(modem->gpio_wakemodem)>0)?"on":"off");
@@ -267,7 +346,7 @@ static ssize_t usb_modem_show(struct device *dev,
 	len += sprintf(buf+len, "modem state \"%s\"\t\n", (MODEM_STATE_ON==modem->current_state)?"on":
 		(MODEM_STATE_OFF==modem->current_state)?"off":"invalid");
 	len += sprintf(buf+len, "\n\necho state <on|off> [time_ms]\trequest state on or off with optional time_ms \n");
-	len += sprintf(buf+len, "echo <power|reset|onoff|wake> <on|off|skip>\tset control pin on off\n");
+	len += sprintf(buf+len, "echo <power|reset|onoff|wake|ptt> <on|off|skip>\tset control pin on off\n");
 
 	return len;	
 }
@@ -488,6 +567,7 @@ static int __devinit usb_modem_probe(struct platform_device *pdev)
 	return ret;
 }
 
+
 #ifdef CONFIG_PM
 static int modem_suspend(struct device *dev)
 {
@@ -499,6 +579,7 @@ static int modem_suspend(struct device *dev)
 	enable_irq_wake(gpio_to_irq(modem->gpio_wakeap));
 	#endif
 	modem->host_suspend = 1;
+	set_ap_status(modem,0);
  	return 0;
 }
 
@@ -515,6 +596,9 @@ static int modem_resume(struct device *dev)
 	modem->irq_enable_count--;
 	disable_irq_wake(gpio_to_irq(modem->gpio_wakeap));
 	#endif
+
+	set_ap_status(modem,1);
+	modem_set_cp_awake(modem);
 	return 0;
 }
 
@@ -565,6 +649,9 @@ static int __init board_modem_init(void)
 	modem->gpio_wakeap = -1;
 	modem->gpio_wakemodem	= -1;
 #endif
+	modem->gpio_ap_sleep_status = AP_SLEEP_STATUS;
+	modem->gpio_cp_sleep_status = CP_SLEEP_STATUS;
+	modem->gpio_cp_ptt 			= CP_PUSH_TO_TALK;
 	modem->modem_on_timing_ms = 3000;
 	modem->modem_off_timing_ms = 3000;
 	modem->host_suspend = 0;
@@ -572,20 +659,15 @@ static int __init board_modem_init(void)
 
 	
 	wake_lock_init(&modem->modem_wakelock , WAKE_LOCK_SUSPEND, "modem_wl");
-	if (gpio_request(modem->gpio_power, "modem power")) 
-	{
+	if (gpio_request(modem->gpio_power, "modem power")) {
 	   pr_warning("request modem power GPIO failed\n");
 	   kfree(modem);
 	   return -EBUSY;
-	}
-	else if (gpio_request(modem->gpio_onoff, "modem onoff")) 
-	{
+	}else if (gpio_request(modem->gpio_onoff, "modem onoff")) {
 	  pr_warning("request modem onoff GPIO failed\n");
 	  kfree(modem);
 	  return -EBUSY;
-	}
-	else if (gpio_request(modem->gpio_reset, "modem reset")) 
-	{
+	}else if (gpio_request(modem->gpio_reset, "modem reset")) {
 	  pr_warning("request modem reset GPIO failed\n");
 	  kfree(modem);
 	  return -EBUSY;
@@ -607,6 +689,30 @@ static int __init board_modem_init(void)
 	gpio_direction_output(modem->gpio_wakemodem,0);//wake
 	
 #endif
+	if(gpio_is_valid(modem->gpio_ap_sleep_status)){
+		 if (gpio_request(modem->gpio_ap_sleep_status, "ap_sleep_status")) {
+			  pr_warning("request modem ap_sleep_status GPIO failed\n");
+			  kfree(modem);
+			  return -EBUSY;
+		}
+		gpio_direction_output(modem->gpio_ap_sleep_status,AP_SLEEP_STATUS_ALIVE);//sleep status alive
+	}
+	if(gpio_is_valid(modem->gpio_cp_sleep_status)){
+		 if (gpio_request(modem->gpio_cp_sleep_status, "cp_sleep_status")) {
+			  pr_warning("request modem cp_sleep_status GPIO failed\n");
+			  kfree(modem);
+			  return -EBUSY;
+		}
+		gpio_direction_input(modem->gpio_cp_sleep_status);
+	}
+	if(gpio_is_valid(modem->gpio_cp_ptt)){
+		 if (gpio_request(modem->gpio_cp_ptt, "cp_ptt")) {
+			  pr_warning("request modem cp_ptt GPIO failed\n");
+			  kfree(modem);
+			  return -EBUSY;
+		}
+		gpio_direction_output(modem->gpio_cp_ptt,1);
+	}
 
 	INIT_DELAYED_WORK(&modem->reset_work.work,modem_reset_work);
 	INIT_DELAYED_WORK(&modem->enable_work.work,modem_enable_work);
