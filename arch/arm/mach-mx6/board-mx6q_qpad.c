@@ -859,6 +859,8 @@ static void mipi_dsi_baclight_power(int en){
 	gpio_direction_output(QPAD_DISP_BL_PWR_EN,en?1:0);
 	gpio_free(QPAD_DISP_BL_PWR_EN);
 }
+
+
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.ipu_id		= 0,
 	.disp_id	= 1,
@@ -888,7 +890,7 @@ static struct ipuv3_fb_platform_data qpad_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "mipi_dsi",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
-	.mode_str = "NT-QHD",
+	.mode_str = "540x960@60",
 	.default_bpp = 32,
 	.int_clk = false,
 	.late_init = false,
@@ -909,6 +911,15 @@ static struct ipuv3_fb_platform_data qpad_fb_data[] = {
 	},
 };
 
+static char* lcdpanel_str;
+static int __init  detect_lcdpanel(char *str)
+{
+	lcdpanel_str = str;
+	mipi_dsi_pdata.lcd_panel = lcdpanel_str;
+    return 0;
+}
+
+__setup("panel=", detect_lcdpanel);
 
 
 

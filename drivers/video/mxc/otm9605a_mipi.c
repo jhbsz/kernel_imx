@@ -1,3 +1,4 @@
+#define DEBUG
 #include <linux/types.h>
 #include <linux/init.h>
 #include <linux/delay.h>
@@ -32,12 +33,12 @@ do {								\
 
 static struct fb_videomode otm9605a_lcd_modedb[] = {
 	{
-	 "OT-QHD", 60, 540, 960, 30500/*ps*/,  //945,30500
+	 "540x960@60", 60, 540, 960, 30500/*ps*/,  //945,30500
 	 3, 3,
 	 60, 35,//5,20
 	 8,20,//18
-	 FB_SYNC_OE_LOW_ACT,//ori is  FB_SYNC_OE_LOW_ACT
-	 FB_VMODE_NONINTERLACED,//ori is  FB_VMODE_NONINTERLACED
+	 FB_SYNC_OE_LOW_ACT,
+	 FB_VMODE_NONINTERLACED,
 	 0,
 	},
 };
