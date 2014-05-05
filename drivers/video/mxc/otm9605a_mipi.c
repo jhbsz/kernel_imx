@@ -1,0 +1,422 @@
+#include <linux/types.h>
+#include <linux/init.h>
+#include <linux/delay.h>
+#include <linux/platform_device.h>
+#include <linux/err.h>
+#include <linux/clk.h>
+#include <linux/console.h>
+#include <linux/io.h>
+#include <linux/bitops.h>
+#include <linux/spinlock.h>
+#include <linux/mxcfb.h>
+#include <linux/backlight.h>
+#include <video/mipi_display.h>
+
+#include <mach/hardware.h>
+#include <mach/clock.h>
+#include <mach/mipi_dsi.h>
+
+#include "mipi_dsi.h"
+
+#define MIPI_DSI_MAX_RET_PACK_SIZE				(0x4)
+
+#define CHECK_RETCODE(ret)					\
+do {								\
+	if (ret < 0) {						\
+		dev_err(&mipi_dsi->pdev->dev,			\
+			"%s ERR: ret:%d, line:%d.\n",		\
+			__func__, ret, __LINE__);		\
+		return ret;					\
+	}							\
+} while (0)
+
+static struct fb_videomode otm9605a_lcd_modedb[] = {
+	{
+	 "OT-QHD", 60, 540, 960, 30500/*ps*/,  //945,30500
+	 3, 3,
+	 60, 35,//5,20
+	 8,20,//18
+	 FB_SYNC_OE_LOW_ACT,//ori is  FB_SYNC_OE_LOW_ACT
+	 FB_VMODE_NONINTERLACED,//ori is  FB_VMODE_NONINTERLACED
+	 0,
+	},
+};
+
+static struct mipi_lcd_config lcd_config = {
+	.virtual_ch		= 0x0,
+	.data_lane_num  = 0x2,
+	.max_phy_clk    = 450,
+	.dpi_fmt		= MIPI_RGB888,
+};
+void mipid_otm9605a_get_lcd_videomode(struct fb_videomode **mode, int *size,
+		struct mipi_lcd_config **data)
+{
+	*mode = &otm9605a_lcd_modedb[0];
+	*size = ARRAY_SIZE(otm9605a_lcd_modedb);
+	*data = &lcd_config;
+}
+
+static inline int mipi_generic_write(struct mipi_dsi_info *mipi_dsi,u32* buf,int l){	
+	int err;
+	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
+					buf, l);
+	CHECK_RETCODE(err);
+	return err;
+}
+#define W_COM_1A_0P(o) \
+	do{ \
+		u32 buf[DSI_CMD_BUF_MAXSIZE];\
+		buf[0]=o;\
+		mipi_generic_write(mipi_dsi,buf,1);\
+	}while(0)
+
+#define W_COM_1A_1P(o,p) \
+	do{ \
+		u32 buf[DSI_CMD_BUF_MAXSIZE];\
+		buf[0]=o;\
+		buf[1]=p;\
+		mipi_generic_write(mipi_dsi,buf,2);\
+	}while(0)
+#define W_COM_1A_2P(o,p1,p2) \
+	do{ \
+		u32 buf[DSI_CMD_BUF_MAXSIZE];\
+		buf[0]=o;\
+		buf[1]=p1;\
+		buf[2]=p2;\
+		mipi_generic_write(mipi_dsi,buf,3);\
+	}while(0)
+#define W_COM_1A_3P(o,p1,p2,p3) \
+		do{ \
+			u32 buf[DSI_CMD_BUF_MAXSIZE];\
+			buf[0]=o;\
+			buf[1]=p1;\
+			buf[2]=p2;\
+			buf[3]=p3;\
+			mipi_generic_write(mipi_dsi,buf,4);\
+		}while(0)
+#define W_COM_1A_4P(o,p1,p2,p3,p4) \
+	do{ \
+		u32 buf[DSI_CMD_BUF_MAXSIZE];\
+		buf[0]=o;\
+		buf[1]=p1;\
+		buf[2]=p2;\
+		buf[3]=p3;\
+		buf[4]=p4;\
+		mipi_generic_write(mipi_dsi,buf,5);\
+	}while(0)
+
+#define W_COM_1A_10P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10) \
+	do{ \
+		u32 buf[DSI_CMD_BUF_MAXSIZE];\
+		buf[0]=o;\
+		buf[1]=p1;\
+		buf[2]=p2;\
+		buf[3]=p3;\
+		buf[4]=p4;\
+		buf[5]=p5;\
+		buf[6]=p6;\
+		buf[7]=p7;\
+		buf[8]=p8;\
+		buf[9]=p9;\
+		buf[10]=p10;\
+		mipi_generic_write(mipi_dsi,buf,11);\
+	}while(0)
+#define W_COM_1A_12P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12) \
+	do{ \
+		u32 buf[DSI_CMD_BUF_MAXSIZE];\
+		buf[0]=o;\
+		buf[1]=p1;\
+		buf[2]=p2;\
+		buf[3]=p3;\
+		buf[4]=p4;\
+		buf[5]=p5;\
+		buf[6]=p6;\
+		buf[7]=p7;\
+		buf[8]=p8;\
+		buf[9]=p9;\
+		buf[10]=p10;\
+		buf[11]=p11;\
+		buf[12]=p12;\
+		mipi_generic_write(mipi_dsi,buf,13);\
+	}while(0)
+#define W_COM_1A_14P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14) \
+	do{ \
+		u32 buf[DSI_CMD_BUF_MAXSIZE];\
+		buf[0]=o;\
+		buf[1]=p1;\
+		buf[2]=p2;\
+		buf[3]=p3;\
+		buf[4]=p4;\
+		buf[5]=p5;\
+		buf[6]=p6;\
+		buf[7]=p7;\
+		buf[8]=p8;\
+		buf[9]=p9;\
+		buf[10]=p10;\
+		buf[11]=p11;\
+		buf[12]=p12;\
+		buf[13]=p13;\
+		buf[14]=p14;\
+		mipi_generic_write(mipi_dsi,buf,15);\
+	}while(0)
+
+#define W_COM_1A_15P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15) \
+	do{ \
+		u32 buf[DSI_CMD_BUF_MAXSIZE];\
+		buf[0]=o;\
+		buf[1]=p1;\
+		buf[2]=p2;\
+		buf[3]=p3;\
+		buf[4]=p4;\
+		buf[5]=p5;\
+		buf[6]=p6;\
+		buf[7]=p7;\
+		buf[8]=p8;\
+		buf[9]=p9;\
+		buf[10]=p10;\
+		buf[11]=p11;\
+		buf[12]=p12;\
+		buf[13]=p13;\
+		buf[14]=p14;\
+		buf[15]=p15;\
+		mipi_generic_write(mipi_dsi,buf,16);\
+	}while(0)
+#define W_COM_1A_16P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16) \
+	do{ \
+		u32 buf[DSI_CMD_BUF_MAXSIZE];\
+		buf[0]=o;\
+		buf[1]=p1;\
+		buf[2]=p2;\
+		buf[3]=p3;\
+		buf[4]=p4;\
+		buf[5]=p5;\
+		buf[6]=p6;\
+		buf[7]=p7;\
+		buf[8]=p8;\
+		buf[9]=p9;\
+		buf[10]=p10;\
+		buf[11]=p11;\
+		buf[12]=p12;\
+		buf[13]=p13;\
+		buf[14]=p14;\
+		buf[15]=p15;\
+		buf[16]=p16;\
+		mipi_generic_write(mipi_dsi,buf,17);\
+	}while(0)
+
+
+	
+static int mipid_otm9605a_setup(struct mipi_dsi_info *mipi_dsi)
+{
+	dev_dbg(&mipi_dsi->pdev->dev, "OTM9605A LCD setup.\n");
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_3P(0xFF,0x96,0x05,0x01);
+	W_COM_1A_1P(0x00,0x80);
+	W_COM_1A_2P(0xFF,0x96,0x05);
+
+	W_COM_1A_1P(0x00,0x92);
+	W_COM_1A_2P(0xFF,0x10,0x02);
+
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0x00,0x00);
+
+	W_COM_1A_1P(0x00,0xB4);
+	W_COM_1A_1P(0xC0,0x50);
+
+	W_COM_1A_1P(0x00,0x89);
+	W_COM_1A_1P(0xC0,0x01);
+	W_COM_1A_1P(0x00,0xA0);
+	W_COM_1A_1P(0xC1,0x00);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0xA0,0x00);
+	W_COM_1A_1P(0x00,0xA2);
+	W_COM_1A_3P(0xC0,0x01,0x10,0x00);
+	W_COM_1A_1P(0x00,0x91);
+	W_COM_1A_1P(0xC5,0x77);
+
+	W_COM_1A_1P(0x00,0x80);
+	W_COM_1A_1P(0xD6,0x58);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0xD7,0x00);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_2P(0xD8,0x6f,0x6f);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_1P(0xD9,0x2A);
+
+	////////////// CE improve code ///////////////////
+	W_COM_1A_1P(0x00,0x80); 
+	W_COM_1A_2P(0xC1,0x36,0x66);
+	W_COM_1A_1P(0x00,0xb1); 
+	W_COM_1A_1P(0xC5,0x28);
+	W_COM_1A_1P(0x00,0xB2); 
+	W_COM_1A_4P(0xF5,0x15,0x00,0x15,0x00);
+
+	////////////// CE improve code end ///////////////
+
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_16P(0xE1,0x00,0x0F,0x15,0x0E,0x07,0x0E,0x0B,0x09,0x04,0x08,0x0F,0x0A,0x11,0x12,0x0A,0x03);
+	W_COM_1A_1P(0x00,0x00);
+	W_COM_1A_16P(0xE2,0x00,0x0F,0x15,0x0E,0x07,0x0E,0x0B,0x09,0x04,0x08,0x0F,0x0A,0x11,0x12,0x0A,0x03);
+
+	W_COM_1A_1P(0x00,0x80);
+	W_COM_1A_10P(0xCB,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0x90);
+	W_COM_1A_15P(0xCB,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xA0);
+	W_COM_1A_15P(0xCB,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xB0);
+	W_COM_1A_10P(0xCB,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xC0);
+	W_COM_1A_15P(0xCB,0x00,0x00,0x04,0x04,0x04,0x04,0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xD0);
+	W_COM_1A_15P(0xCB,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x04,0x04,0x04,0x04,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xE0);
+	W_COM_1A_10P(0xCB,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xF0);
+	W_COM_1A_10P(0xCB,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff);
+	W_COM_1A_1P(0x00,0x80);
+	W_COM_1A_10P(0xCC,0x00,0x00,0x09,0x0B,0x01,0x25,0x26,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0x90);
+	W_COM_1A_15P(0xCC,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0A,0x0C,0x02);
+	W_COM_1A_1P(0x00,0xA0);
+	W_COM_1A_15P(0xCC,0x25,0x26,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0x80);
+	W_COM_1A_12P(0xCE,0x86,0x01,0x06,0x85,0x01,0x06,0x0F,0x00,0x00,0x0f,0x00,0x00);
+	W_COM_1A_1P(0x00,0x90);
+	W_COM_1A_14P(0xCE,0xF0,0x00,0x00,0xF0,0x00,0x00,0xF0,0x00,0x00,0xF0,0x00,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xA0);
+	W_COM_1A_14P(0xCE,0x18,0x05,0x03,0xC0,0x00,0x06,0x00,0x18,0x04,0x03,0xC1,0x00,0x06,0x00);
+	W_COM_1A_1P(0x00,0xB0);
+	W_COM_1A_14P(0xCE,0x18,0x03,0x03,0xC2,0x00,0x06,0x00,0x18,0x02,0x03,0xC3,0x00,0x06,0x00);
+	W_COM_1A_1P(0x00,0xC0);
+	W_COM_1A_14P(0xCE,0xF0,0x00,0x00,0x10,0x00,0x00,0x00,0xF0,0x00,0x00,0x10,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xD0);
+	W_COM_1A_14P(0xCE,0xF0,0x00,0x00,0x10,0x00,0x00,0x00,0xF0,0x00,0x00,0x10,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0x80);
+	W_COM_1A_14P(0xCF,0xF0,0x00,0x00,0x10,0x00,0x00,0x00,0xF0,0x00,0x00,0x10,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0x90);
+	W_COM_1A_14P(0xCF,0xF0,0x00,0x00,0x10,0x00,0x00,0x00,0xF0,0x00,0x00,0x10,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xA0);
+	W_COM_1A_14P(0xCF,0xF0,0x00,0x00,0x10,0x00,0x00,0x00,0xF0,0x00,0x00,0x10,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xB0);
+	W_COM_1A_14P(0xCF,0xF0,0x00,0x00,0x10,0x00,0x00,0x00,0xF0,0x00,0x00,0x10,0x00,0x00,0x00);
+	W_COM_1A_1P(0x00,0xC0);
+	W_COM_1A_10P(0xCF,0x02,0x02,0x10,0x10,0x00,0x00,0x01,0x81,0x00,0x08);
+
+	////////////////////// CABC CODE /////////////////////////////////
+
+
+	////////////////////// CABC CODE END //////////////////////////////
+	//////////////////////////////////////
+	W_COM_1A_1P(0x00,0xB1);
+	W_COM_1A_1P(0xC5,0x28);
+
+	W_COM_1A_1P(0x00,0x80);
+	W_COM_1A_1P(0xC4,0x9C);
+
+	W_COM_1A_1P(0x00,0xC0);
+	W_COM_1A_1P(0xC5,0x00);
+
+	W_COM_1A_1P(0x00,0xB2);
+	W_COM_1A_4P(0xF5,0x15,0x00,0x15,0x00);
+
+	W_COM_1A_1P(0x00,0x93);
+	W_COM_1A_1P(0xC5,0x03);
+
+	W_COM_1A_1P(0x00,0x80);
+	W_COM_1A_2P(0xC1,0x36,0x66);
+
+	W_COM_1A_1P(0x00,0x89);
+	W_COM_1A_1P(0xC0,0x01);
+
+	W_COM_1A_1P(0x00,0xA0);
+	W_COM_1A_1P(0xC1,0x00);
+
+	W_COM_1A_1P(0x00,0xC5);
+	W_COM_1A_1P(0xB0,0x03);
+	///////////////////////////////////////
+	W_COM_1A_1P(0x00,0x00);
+//	W_COM_1A_1P(0xFF,0xFF,0xFF,0xFF);
+
+
+
+	W_COM_1A_0P(0x11);
+	msleep(120);
+	W_COM_1A_0P(0x29);
+
+	return 0;
+
+}
+
+int mipid_otm9605a_lcd_suspend(struct mipi_dsi_info *mipi_dsi){	
+	int err=0;	
+	if(mipi_dsi->backlight_power){
+		mipi_dsi->backlight_power(0);
+	}
+	if(mipi_dsi->lcd_power){
+		mipi_dsi->lcd_power(0);
+	}else {
+		u32 buf[DSI_CMD_BUF_MAXSIZE];
+		buf[0] = 0x22 |(0x00 << 8) ;
+		err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
+			buf, 0x2);
+		CHECK_RETCODE(err);
+		msleep(50);
+		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_SET_DISPLAY_OFF,
+					NULL, 0);
+		CHECK_RETCODE(err);
+		msleep(50);
+		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_ENTER_SLEEP_MODE,
+						NULL, 0);
+		CHECK_RETCODE(err);
+	}
+	
+	return err;
+}
+
+int mipid_otm9605a_lcd_resume(struct mipi_dsi_info *mipi_dsi){	
+	int err=0;	
+	
+	if(mipi_dsi->lcd_power){
+		mipi_dsi->lcd_power(1);
+		if(mipi_dsi->reset)
+			mipi_dsi->reset();
+		mipid_otm9605a_setup(mipi_dsi);
+	}else {
+		u32 buf[DSI_CMD_BUF_MAXSIZE];
+		buf[0] = 0x22 |(0x00 << 8) ;
+		err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_GENERIC_LONG_WRITE,
+			buf, 0x2);
+		CHECK_RETCODE(err);
+		msleep(120);
+		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_EXIT_SLEEP_MODE,
+					NULL, 0);
+		CHECK_RETCODE(err);
+
+		msleep(120);
+		err = mipi_dsi_dcs_cmd(mipi_dsi, MIPI_DCS_SET_DISPLAY_ON,
+						NULL, 0);
+		CHECK_RETCODE(err);
+	}
+	
+	if(mipi_dsi->backlight_power){
+		mipi_dsi->backlight_power(1);
+	}
+	
+	return err;
+}
+
+
+int mipid_otm9605a_lcd_setup(struct mipi_dsi_info *mipi_dsi)
+{
+	//FIXME skip setup since bootloader already init
+	return 0;
+
+}
+

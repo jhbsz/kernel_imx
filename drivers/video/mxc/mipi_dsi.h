@@ -112,9 +112,15 @@ void mipid_nt35517_get_lcd_videomode(struct fb_videomode **mode, int *size,
 int mipid_nt35517_lcd_setup(struct mipi_dsi_info *);
 int mipid_nt35517_lcd_resume(struct mipi_dsi_info *mipi_dsi);
 int mipid_nt35517_lcd_suspend(struct mipi_dsi_info *mipi_dsi);
-
-
 #endif
+#ifdef CONFIG_FB_MXC_OTM9605A_PANEL
+void mipid_otm9605a_get_lcd_videomode(struct fb_videomode **mode, int *size,
+		struct mipi_lcd_config **data);
+int mipid_otm9605a_lcd_setup(struct mipi_dsi_info *);
+int mipid_otm9605a_lcd_resume(struct mipi_dsi_info *mipi_dsi);
+int mipid_otm9605a_lcd_suspend(struct mipi_dsi_info *mipi_dsi);
+#endif
+
 
 #ifndef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
 #error "Please configure MIPI LCD panel, we cannot find one!"

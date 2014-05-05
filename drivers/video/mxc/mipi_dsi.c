@@ -76,6 +76,17 @@ static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
 		},
 	},
 	#endif
+	#ifdef CONFIG_FB_MXC_OTM9605A_PANEL
+	{
+		"OT-QHD",
+		{
+			mipid_otm9605a_get_lcd_videomode,
+			mipid_otm9605a_lcd_setup,
+			mipid_otm9605a_lcd_suspend,
+			mipid_otm9605a_lcd_resume,
+		},
+	},
+	#endif
 	{
 	"", {NULL, NULL}
 	}
