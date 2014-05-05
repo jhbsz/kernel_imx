@@ -28,6 +28,7 @@
 #include <linux/workqueue.h>
 #include <linux/mii.h>
 #include <linux/usb.h>
+#include <linux/slab.h>
 #include <linux/sched.h>
 #include <linux/ctype.h>
 #include <linux/usb/cdc.h>
@@ -158,7 +159,7 @@ module_param(only_use_inne_modem, bool, S_IRUGO|S_IWUSR);
 
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)
-#include <linux/unaligned/access_ok.h>
+//#include <linux/unaligned/access_ok.h>
 #else
 static inline u16 get_unaligned_le16(const void *p)
 {
@@ -182,7 +183,136 @@ static inline void put_unaligned_le32(u32 val, void *p)
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35)
-#include <linux/usb/ncm.h>
+#include <linux/usb/cdc.h>
+#define NCM_NCAP_CRC_MODE	(1 << 4)
+
+/*
+ * Class Specific structures and constants
+ *
+ * CDC NCM parameter structure, CDC NCM subclass 6.2.1
+ *
+ */
+struct usb_cdc_ncm_ntb_parameter {
+	__le16	wLength;
+	__le16	bmNtbFormatSupported;
+	__le32	dwNtbInMaxSize;
+	__le16	wNdpInDivisor;
+	__le16	wNdpInPayloadRemainder;
+	__le16	wNdpInAlignment;
+	__le16	wPadding1;
+	__le32	dwNtbOutMaxSize;
+	__le16	wNdpOutDivisor;
+	__le16	wNdpOutPayloadRemainder;
+	__le16	wNdpOutAlignment;
+	__le16	wPadding2;
+} __attribute__ ((packed));
+
+/*
+ * CDC NCM transfer headers, CDC NCM subclass 3.2
+ */
+
+#define NCM_NTH16_SIGN		0x484D434E /* NCMH */
+#define NCM_NTH32_SIGN		0x686D636E /* ncmh */
+
+/*
+ * CDC NCM datagram pointers, CDC NCM subclass 3.3
+ */
+
+#define NCM_NDP16_CRC_SIGN	0x314D434E /* NCM1 */
+#define NCM_NDP16_NOCRC_SIGN	0x304D434E /* NCM0 */
+#define NCM_NDP32_CRC_SIGN	0x316D636E /* ncm1 */
+#define NCM_NDP32_NOCRC_SIGN	0x306D636E /* ncm0 */
+
+/*
+ * Here are options for NCM Datagram Pointer table (NDP) parser.
+ * There are 2 different formats: NDP16 and NDP32 in the spec (ch. 3),
+ * in NDP16 offsets and sizes fields are 1 16bit word wide,
+ * in NDP32 -- 2 16bit words wide. Also signatures are different.
+ * To make the parser code the same, put the differences in the structure,
+ * and switch pointers to the structures when the format is changed.
+ */
+
+struct ndp_parser_opts {
+	u32		nth_sign;
+	u32		ndp_sign;
+	unsigned	nth_size;
+	unsigned	ndp_size;
+	unsigned	ndplen_align;
+	/* sizes in u16 units */
+	unsigned	dgram_item_len; /* index or length */
+	unsigned	block_length;
+	unsigned	fp_index;
+	unsigned	reserved1;
+	unsigned	reserved2;
+	unsigned	next_fp_index;
+};
+
+#define INIT_NDP16_OPTS {					\
+		.nth_sign = NCM_NTH16_SIGN,			\
+		.ndp_sign = NCM_NDP16_NOCRC_SIGN,		\
+		.nth_size = sizeof(struct usb_cdc_ncm_nth16),	\
+		.ndp_size = sizeof(struct usb_cdc_ncm_ndp16),	\
+		.ndplen_align = 4,				\
+		.dgram_item_len = 1,				\
+		.block_length = 1,				\
+		.fp_index = 1,					\
+		.reserved1 = 0,					\
+		.reserved2 = 0,					\
+		.next_fp_index = 1,				\
+	}
+
+#define INIT_NDP32_OPTS {					\
+		.nth_sign = NCM_NTH32_SIGN,			\
+		.ndp_sign = NCM_NDP32_NOCRC_SIGN,		\
+		.nth_size = sizeof(struct usb_cdc_ncm_nth32),	\
+		.ndp_size = sizeof(struct usb_cdc_ncm_ndp32),	\
+		.ndplen_align = 8,				\
+		.dgram_item_len = 2,				\
+		.block_length = 2,				\
+		.fp_index = 2,					\
+		.reserved1 = 1,					\
+		.reserved2 = 2,					\
+		.next_fp_index = 2,				\
+	}
+
+static inline void put_ncm(__le16 **p, unsigned size, unsigned val)
+{
+	switch (size) {
+	case 1:
+		put_unaligned_le16((u16)val, *p);
+		break;
+	case 2:
+		put_unaligned_le32((u32)val, *p);
+
+		break;
+	default:
+		BUG();
+	}
+
+	*p += size;
+}
+
+static inline unsigned get_ncm(__le16 **p, unsigned size)
+{
+	unsigned tmp;
+
+	switch (size) {
+	case 1:
+		tmp = get_unaligned_le16(*p);
+		break;
+	case 2:
+		tmp = get_unaligned_le32(*p);
+		break;
+	default:
+		BUG();
+	}
+
+	*p += size;
+	return tmp;
+}
+
+#define NCM_CONTROL_TIMEOUT		(5 * 1000)
+
 #else
 #define USB_CDC_NCM_TYPE		0x1a
 
@@ -1076,9 +1206,9 @@ static void rx_tlp_parse(struct hw_cdc_net *dev, struct sk_buff *skb)
 				}else{
 					unsigned short tmplen = dev->hw_tlp_tmp_buf.bytesneeded + dev->hw_tlp_tmp_buf.pktlength;
 					if (HW_USB_RECEIVE_BUFFER_SIZE < tmplen){
-						devdbg(dev, "The tlp length is larger than 1600");
 						unsigned char *ptr = (unsigned char *)kmalloc(dev->hw_tlp_tmp_buf.bytesneeded + dev->hw_tlp_tmp_buf.pktlength
 									, GFP_KERNEL);
+						devdbg(dev, "The tlp length is larger than 1600");
 						if (NULL != ptr){
 							memcpy(ptr, dev->hw_tlp_tmp_buf.buffer, dev->hw_tlp_tmp_buf.pktlength);
 							memcpy(ptr + dev->hw_tlp_tmp_buf.pktlength, cur_ptr, 
@@ -2111,7 +2241,7 @@ static int cdc_ncm_config(struct ncm_ctx *ctx)
 	unsigned int				tx_pipe;
 	unsigned int				rx_pipe;
 	struct usb_cdc_ncm_ntb_parameter 	*ntb_params;
-	u8					*b;
+	void *b;
 	u8 i = 0;
     //static u8 first_flag = 0;
     
