@@ -74,134 +74,73 @@ static inline int mipi_generic_write(struct mipi_dsi_info *mipi_dsi,u32* buf,int
 #define W_COM_1A_1P(o,p) \
 	do{ \
 		u32 buf[DSI_CMD_BUF_MAXSIZE];\
-		buf[0]=o;\
-		buf[1]=p;\
+		buf[0]=o|(p<<8);\
 		mipi_generic_write(mipi_dsi,buf,2);\
 	}while(0)
 #define W_COM_1A_2P(o,p1,p2) \
 	do{ \
 		u32 buf[DSI_CMD_BUF_MAXSIZE];\
-		buf[0]=o;\
-		buf[1]=p1;\
-		buf[2]=p2;\
+		buf[0]=o|(p1<<8)|(p2<<16);\
 		mipi_generic_write(mipi_dsi,buf,3);\
 	}while(0)
 #define W_COM_1A_3P(o,p1,p2,p3) \
 		do{ \
 			u32 buf[DSI_CMD_BUF_MAXSIZE];\
-			buf[0]=o;\
-			buf[1]=p1;\
-			buf[2]=p2;\
-			buf[3]=p3;\
+			buf[0]=o|(p1<<8)|(p2<<16)|(p3<<24);\
 			mipi_generic_write(mipi_dsi,buf,4);\
 		}while(0)
 #define W_COM_1A_4P(o,p1,p2,p3,p4) \
 	do{ \
 		u32 buf[DSI_CMD_BUF_MAXSIZE];\
-		buf[0]=o;\
-		buf[1]=p1;\
-		buf[2]=p2;\
-		buf[3]=p3;\
-		buf[4]=p4;\
+		buf[0]=o|(p1<<8)|(p2<<16)|(p3<<24);\
+		buf[1]=p4;\
 		mipi_generic_write(mipi_dsi,buf,5);\
 	}while(0)
 
 #define W_COM_1A_10P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10) \
 	do{ \
 		u32 buf[DSI_CMD_BUF_MAXSIZE];\
-		buf[0]=o;\
-		buf[1]=p1;\
-		buf[2]=p2;\
-		buf[3]=p3;\
-		buf[4]=p4;\
-		buf[5]=p5;\
-		buf[6]=p6;\
-		buf[7]=p7;\
-		buf[8]=p8;\
-		buf[9]=p9;\
-		buf[10]=p10;\
+		buf[0]=o|(p1<<8)|(p2<<16)|(p3<<24);\
+		buf[1]=p4|(p5<<8)|(p6<<16)|(p7<<24);\
+		buf[2]=p8|(p9<<8)|(p10<<16);\
 		mipi_generic_write(mipi_dsi,buf,11);\
 	}while(0)
 #define W_COM_1A_12P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12) \
 	do{ \
 		u32 buf[DSI_CMD_BUF_MAXSIZE];\
-		buf[0]=o;\
-		buf[1]=p1;\
-		buf[2]=p2;\
-		buf[3]=p3;\
-		buf[4]=p4;\
-		buf[5]=p5;\
-		buf[6]=p6;\
-		buf[7]=p7;\
-		buf[8]=p8;\
-		buf[9]=p9;\
-		buf[10]=p10;\
-		buf[11]=p11;\
-		buf[12]=p12;\
+		buf[0]=o|(p1<<8)|(p2<<16)|(p3<<24);\
+		buf[1]=p4|(p5<<8)|(p6<<16)|(p7<<24);\
+		buf[2]=p8|(p9<<8)|(p10<<16)|(p11<<24);\
+		buf[3]=p12;\
 		mipi_generic_write(mipi_dsi,buf,13);\
 	}while(0)
 #define W_COM_1A_14P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14) \
 	do{ \
 		u32 buf[DSI_CMD_BUF_MAXSIZE];\
-		buf[0]=o;\
-		buf[1]=p1;\
-		buf[2]=p2;\
-		buf[3]=p3;\
-		buf[4]=p4;\
-		buf[5]=p5;\
-		buf[6]=p6;\
-		buf[7]=p7;\
-		buf[8]=p8;\
-		buf[9]=p9;\
-		buf[10]=p10;\
-		buf[11]=p11;\
-		buf[12]=p12;\
-		buf[13]=p13;\
-		buf[14]=p14;\
+		buf[0]=o|(p1<<8)|(p2<<16)|(p3<<24);\
+		buf[1]=p4|(p5<<8)|(p6<<16)|(p7<<24);\
+		buf[2]=p8|(p9<<8)|(p10<<16)|(p11<<24);\
+		buf[3]=p12|(p13<<8)|(p14<<16);\
 		mipi_generic_write(mipi_dsi,buf,15);\
 	}while(0)
 
 #define W_COM_1A_15P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15) \
 	do{ \
 		u32 buf[DSI_CMD_BUF_MAXSIZE];\
-		buf[0]=o;\
-		buf[1]=p1;\
-		buf[2]=p2;\
-		buf[3]=p3;\
-		buf[4]=p4;\
-		buf[5]=p5;\
-		buf[6]=p6;\
-		buf[7]=p7;\
-		buf[8]=p8;\
-		buf[9]=p9;\
-		buf[10]=p10;\
-		buf[11]=p11;\
-		buf[12]=p12;\
-		buf[13]=p13;\
-		buf[14]=p14;\
-		buf[15]=p15;\
+		buf[0]=o|(p1<<8)|(p2<<16)|(p3<<24);\
+		buf[1]=p4|(p5<<8)|(p6<<16)|(p7<<24);\
+		buf[2]=p8|(p9<<8)|(p10<<16)|(p11<<24);\
+		buf[3]=p12|(p13<<8)|(p14<<16)|(p15<<24);\
 		mipi_generic_write(mipi_dsi,buf,16);\
 	}while(0)
 #define W_COM_1A_16P(o,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16) \
 	do{ \
 		u32 buf[DSI_CMD_BUF_MAXSIZE];\
-		buf[0]=o;\
-		buf[1]=p1;\
-		buf[2]=p2;\
-		buf[3]=p3;\
-		buf[4]=p4;\
-		buf[5]=p5;\
-		buf[6]=p6;\
-		buf[7]=p7;\
-		buf[8]=p8;\
-		buf[9]=p9;\
-		buf[10]=p10;\
-		buf[11]=p11;\
-		buf[12]=p12;\
-		buf[13]=p13;\
-		buf[14]=p14;\
-		buf[15]=p15;\
-		buf[16]=p16;\
+		buf[0]=o|(p1<<8)|(p2<<16)|(p3<<24);\
+		buf[1]=p4|(p5<<8)|(p6<<16)|(p7<<24);\
+		buf[2]=p8|(p9<<8)|(p10<<16)|(p11<<24);\
+		buf[3]=p12|(p13<<8)|(p14<<16)|(p15<<24);\
+		buf[4]=p16;\
 		mipi_generic_write(mipi_dsi,buf,17);\
 	}while(0)
 
