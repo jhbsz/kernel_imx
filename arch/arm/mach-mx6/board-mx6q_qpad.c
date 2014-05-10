@@ -836,7 +836,7 @@ static void mx6_reset_mipi_dsi(void)
 	/*
 	 * it needs to delay 120ms minimum for reset complete
 	 */
-	msleep(10);
+	msleep(120);
 }
 
 static void mipi_dsi_power(int en){	
