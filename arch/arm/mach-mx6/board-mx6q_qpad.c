@@ -1576,7 +1576,7 @@ static int wlan_bt_power_change(int status)
 			pps.wlan=0;
 		}
 
-	if(wlan_sdhc&&wlan_sdhc->mmc){
+	if((NULL!=wlan_sdhc)&&(NULL!=wlan_sdhc->mmc)){
 		mmc_detect_change(wlan_sdhc->mmc,0);
 		msleep(100);
 	}
