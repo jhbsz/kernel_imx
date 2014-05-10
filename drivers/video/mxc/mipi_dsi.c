@@ -475,6 +475,7 @@ static void mipi_dsi_disable_controller(struct mipi_dsi_info *mipi_dsi)
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_RSTZ, DSI_PHY_RSTZ_RST);
 }
 
+#ifndef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
 static irqreturn_t mipi_dsi_irq_handler(int irq, void *data)
 {
 	u32		mask0;
@@ -497,6 +498,7 @@ static irqreturn_t mipi_dsi_irq_handler(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
+#endif
 
 static inline void mipi_dsi_set_mode(struct mipi_dsi_info *mipi_dsi,
 	bool cmd_mode)
@@ -878,9 +880,12 @@ static int mipi_dsi_disp_init(struct mxc_dispdrv_handle *disp,
 	/* ipu selected by platform data setting */
 	setting->dev_id = pdata->ipu_id;
 	setting->disp_id = pdata->disp_id;
-	//err = request_irq(mipi_dsi->irq, mipi_dsi_irq_handler,
-			 // IRQF_SHARED, "mipi_dsi", mipi_dsi);
+	#ifndef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
+	err = request_irq(mipi_dsi->irq, mipi_dsi_irq_handler,
+			IRQF_SHARED, "mipi_dsi", mipi_dsi);
+	#else
 	err = 0;
+	#endif
 
 	if (err) {
 		dev_err(dev, "failed to request irq\n");

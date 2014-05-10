@@ -33,13 +33,16 @@ do {								\
 
 static struct fb_videomode otm9605a_lcd_modedb[] = {
 	{
-	 "540x960@60", 60, 540, 960, 30500/*ps*/,  //945,30500
-	 3, 3,
-	 60, 35,//5,20
-	 8,20,//18
-	 FB_SYNC_OE_LOW_ACT,
-	 FB_VMODE_NONINTERLACED,
-	 0,
+	 "540x960@60", 
+	 60,/*refresh*/
+	 540,960,/*xres,yres*/
+	 30500,/*pixclock ps*/
+	 20, 20, /*left margin,right margin*/
+	 50, 30,/*upper margin,lower margin*/
+	 4,10,/*hsync len,vsync len*/
+	 FB_SYNC_OE_LOW_ACT,/*sync*/
+	 FB_VMODE_NONINTERLACED,/*vmode*/
+	 0,/*flag*/
 	},
 };
 

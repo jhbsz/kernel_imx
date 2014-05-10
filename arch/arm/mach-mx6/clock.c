@@ -5440,10 +5440,6 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		pll3_pfd_540M.disable(&pll3_pfd_540M);
 		pll3_usb_otg_main_clk.disable(&pll3_usb_otg_main_clk);
 	}
-#else
-	pll3_pfd_540M.enable(&pll3_pfd_540M);
-	pll3_usb_otg_main_clk.enable(&pll3_usb_otg_main_clk);
-
 #endif
 #endif
 	pll4_audio_main_clk.disable(&pll4_audio_main_clk);
@@ -5498,9 +5494,12 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		/* on mx6dl gpu2d_axi_clk source from mmdc0 directly */
 		clk_set_parent(&gpu2d_axi_clk, &mmdc_ch0_axi_clk[0]);
 
+		#ifndef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
 		clk_set_rate(&pll3_pfd_540M, 540000000);
-
 		clk_set_parent(&ipu1_clk, &pll3_pfd_540M);
+		#else
+		ipu1_clk.parent = &pll3_pfd_540M;
+		#endif
 		/* pxp & epdc */
 		clk_set_parent(&ipu2_clk, &pll2_pfd_400M);
 		clk_set_rate(&ipu2_clk, 200000000);
@@ -5516,7 +5515,9 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		#endif
 			clk_set_rate(&gpu3d_core_clk[0], 528000000);
 		clk_set_parent(&ipu2_clk, &mmdc_ch0_axi_clk[0]);
+		#ifndef CONFIG_MX6_CLK_FOR_BOOTUI_TRANS
 		clk_set_parent(&ipu1_clk, &mmdc_ch0_axi_clk[0]);
+		#endif
 		clk_set_parent(&axi_clk, &periph_clk);
 	}
 
