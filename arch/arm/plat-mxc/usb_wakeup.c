@@ -27,7 +27,14 @@
 #include <linux/fsl_devices.h>
 #include <linux/suspend.h>
 #include <linux/io.h>
+#include <linux/workqueue.h>
+#include <linux/input.h>
 #include <mach/arc_otg.h>
+#ifdef CONFIG_PM
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
+#endif
 
 struct wakeup_ctrl {
 	int wakeup_irq;
@@ -36,7 +43,45 @@ struct wakeup_ctrl {
 	struct fsl_usb2_wakeup_platform_data *pdata;
 	struct task_struct *thread;
 	struct completion  event;
+
+	#ifdef CONFIG_ANDROID
+	//only for otg event
+	struct early_suspend es;
+	struct input_dev	*idev;
+	struct delayed_work input_work;
+	int report_enabled;
+	#endif
 };
+
+
+#ifdef CONFIG_ANDROID
+
+static void usb_otg_input_work(struct work_struct *work){
+	struct wakeup_ctrl* ctrl = (struct wakeup_ctrl*)container_of(work,struct wakeup_ctrl,input_work.work);
+	if(ctrl->idev){
+		printk("report otg input key\n");
+		input_report_key(ctrl->idev, KEY_POWER, 1);
+		input_report_key(ctrl->idev, KEY_POWER, 0);
+		input_sync(ctrl->idev);
+	}
+}
+static void submit_input_work(struct wakeup_ctrl* ctrl){
+	if(ctrl->report_enabled){
+		schedule_delayed_work(&ctrl->input_work,msecs_to_jiffies(500));
+		ctrl->report_enabled=0;
+	}
+}
+static void usb_wakeup_early_suspend(struct early_suspend *h){
+	struct wakeup_ctrl* ctrl = (struct wakeup_ctrl*)container_of(h,struct wakeup_ctrl,es);
+	ctrl->report_enabled++;
+}
+static void usb_wakeup_late_resume(struct early_suspend *h){
+	struct wakeup_ctrl* ctrl = (struct wakeup_ctrl*)container_of(h,struct wakeup_ctrl,es);
+	if(ctrl->report_enabled>0)
+		ctrl->report_enabled--;
+}
+#endif
+
 
 extern int usb_event_is_otg_wakeup(struct fsl_usb2_platform_data *pdata);
 extern void usb_debounce_id_vbus(void);
@@ -127,12 +172,18 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 		struct fsl_usb2_platform_data *usb_pdata = pdata->usb_pdata[i];
 		if (usb_pdata) {
 			/* In order to get the real id/vbus value */
-			if (usb_event_is_otg_wakeup(usb_pdata))
+			if (usb_event_is_otg_wakeup(usb_pdata)){
 				usb_debounce_id_vbus();
+			}
 
 			usb_pdata->irq_delay = 0;
 			wakeup_evt = is_wakeup(usb_pdata);
 			usb_pdata->wakeup_event = wakeup_evt;
+			#if defined(CONFIG_ANDROID)&&defined(CONFIG_EARLYSUSPEND)
+			if(!strcmp(pdata->name,"DR wakeup")){
+				submit_input_work(ctrl);
+			}
+			#endif
 			if (wakeup_evt != WAKEUP_EVENT_INVALID) {
 				if (usb2_is_in_lowpower(ctrl))
 					if (usb_pdata->usb_clock_for_pm)
@@ -218,6 +269,36 @@ static int wakeup_dev_probe(struct platform_device *pdev)
 	if (status)
 		goto error2;
 	platform_set_drvdata(pdev, ctrl);
+
+
+#ifdef CONFIG_ANDROID
+	INIT_DELAYED_WORK(&ctrl->input_work,usb_otg_input_work);
+	ctrl->idev= input_allocate_device();
+	if (!ctrl->idev) {
+		dev_err(&pdev->dev, "Failed to allocate input dev\n");
+		return -ENOMEM;
+	}
+
+	ctrl->idev->name = "usb_wakeup";
+	ctrl->idev->phys = "usb_wakeup/input0";
+	ctrl->idev->dev.parent = &pdev->dev;
+	ctrl->idev->evbit[0] = BIT_MASK(EV_KEY);
+	ctrl->idev->keybit[BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER);
+	status = input_register_device(ctrl->idev);
+	if (status) {
+		dev_err(&pdev->dev, "Can't register usb dr input device: %d\n", status);
+		input_free_device(ctrl->idev);
+		return -ENODEV;
+	}
+	#ifdef CONFIG_PM
+	#ifdef CONFIG_HAS_EARLYSUSPEND
+	ctrl->es.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
+	ctrl->es.suspend = usb_wakeup_early_suspend;
+	ctrl->es.resume = usb_wakeup_late_resume;
+	register_early_suspend(&ctrl->es);
+	#endif
+	#endif
+#endif
 
 	printk(KERN_DEBUG "the wakeup pdata is 0x%p\n", pdata);
 	return 0;
