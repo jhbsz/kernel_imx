@@ -245,6 +245,16 @@ static int __init  detect_console_assigned(char *str)
 __setup("console=", detect_console_assigned);
 
 
+static int tpquirks __initdata = 0;
+static int __init  tp_quriks_assign(char *str)
+{
+    get_option(&str, &tpquirks);
+    return 0;
+}
+
+__setup("tpquirks=", tp_quriks_assign);
+
+
 
 //
 //
@@ -1990,6 +2000,20 @@ static void __init mx6_qpad_board_init(void)
 		//patch for TP y axis inverted
 		if(BOARD_QPAD_REVB==mx6_board_rev()){
 			ft5x0x_data.y_inverted=1;
+		}
+		if(tpquirks){
+			if(tpquirks&0x1)
+				ft5x0x_data.y_inverted=1;
+			else
+				ft5x0x_data.y_inverted=0;
+			if(tpquirks&0x2)
+				ft5x0x_data.x_inverted=1;
+			else
+				ft5x0x_data.x_inverted=0;
+			if(tpquirks&0x4)
+				ft5x0x_data.xyswap=1;
+			else
+				ft5x0x_data.xyswap=0;
 		}
 		#endif
 		i2c_register_board_info(0, mxc_i2c0_board_info,
