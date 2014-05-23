@@ -106,12 +106,12 @@ static int fxos8700_change_mode(struct i2c_client *client, int type,int active)
 		acc_act = active;
 	else
 		mag_act = active;
-	if(acc_act == FXOS8700_ACTIVED && mag_act == FXOS8700_ACTIVED)
+	//if(acc_act == FXOS8700_ACTIVED && mag_act == FXOS8700_ACTIVED)
 	  data |= 0x03;
-	else if (acc_act == FXOS8700_STANDBY && mag_act == FXOS8700_ACTIVED)
+	/*else if (acc_act == FXOS8700_STANDBY && mag_act == FXOS8700_ACTIVED)
 	  data |= 0x01;
 	else 
-      data |= 0x00;
+      data |= 0x00;*/
 	i2c_smbus_write_byte_data(client, FXOS8700_M_CTRL_REG1,data); 
 	
     data = i2c_smbus_read_byte_data(client, FXOS8700_CTRL_REG1);
