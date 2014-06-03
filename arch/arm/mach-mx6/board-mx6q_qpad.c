@@ -1836,8 +1836,11 @@ static int __init board_misc_init(void){
 
 	//for v2,smartcard reader power enable support
 	if(BOARD_QPAD_REVA<mx6_board_rev()){
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_17__GPIO_7_12);
-		
+		if (cpu_is_mx6q())
+				mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_17__GPIO_7_12);
+		else if (cpu_is_mx6dl())
+			mxc_iomux_v3_setup_pad(MX6DL_PAD_GPIO_17__GPIO_7_12);
+
 		ret = gpio_request(QPAD_SMARTCARD_PWR_EN, "SmartCardPwr");
 		if (ret) {
 			pr_err("failed to get GPIO SmartCardPwr %d\n",
