@@ -32,13 +32,13 @@
 #include <linux/smp.h>
 #include <mach/hardware.h>
 #include <mach/clock.h>
-#include <mach/system.h>
 #include <asm/mach/map.h>
 #include <asm/mach-types.h>
 #include <asm/cacheflush.h>
 #include <asm/tlb.h>
 #include <asm/hardware/gic.h>
 #include "crm_regs.h"
+
 
 /* DDR settings */
 unsigned long (*iram_ddr_settings)[2];
@@ -189,6 +189,7 @@ int update_ddr_freq(int ddr_rate)
 
 	if (ddr_rate == curr_ddr_rate)
 		return 0;
+
 	if (low_bus_freq_mode || audio_bus_freq_mode)
 		dll_off = true;
     if (ddr3_dram_type)
