@@ -17,9 +17,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
-
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/netdevice.h>
@@ -186,26 +183,6 @@ static inline void put_unaligned_le32(u32 val, void *p)
 #include <linux/usb/cdc.h>
 #define NCM_NCAP_CRC_MODE	(1 << 4)
 
-/*
- * Class Specific structures and constants
- *
- * CDC NCM parameter structure, CDC NCM subclass 6.2.1
- *
- */
-struct usb_cdc_ncm_ntb_parameter {
-	__le16	wLength;
-	__le16	bmNtbFormatSupported;
-	__le32	dwNtbInMaxSize;
-	__le16	wNdpInDivisor;
-	__le16	wNdpInPayloadRemainder;
-	__le16	wNdpInAlignment;
-	__le16	wPadding1;
-	__le32	dwNtbOutMaxSize;
-	__le16	wNdpOutDivisor;
-	__le16	wNdpOutPayloadRemainder;
-	__le16	wNdpOutAlignment;
-	__le16	wPadding2;
-} __attribute__ ((packed));
 
 /*
  * CDC NCM transfer headers, CDC NCM subclass 3.2
@@ -343,26 +320,6 @@ struct usb_cdc_ncm_desc {
 #define USB_CDC_GET_CRC_MODE			0x89
 #define USB_CDC_SET_CRC_MODE			0x8a
 
-/*
- * Class Specific structures and constants
- *
- * CDC NCM parameter structure, CDC NCM subclass 6.2.1
- *
- */
-struct usb_cdc_ncm_ntb_parameter {
-	__le16	wLength;
-	__le16	bmNtbFormatSupported;
-	__le32	dwNtbInMaxSize;
-	__le16	wNdpInDivisor;
-	__le16	wNdpInPayloadRemainder;
-	__le16	wNdpInAlignment;
-	__le16	wPadding1;
-	__le32	dwNtbOutMaxSize;
-	__le16	wNdpOutDivisor;
-	__le16	wNdpOutPayloadRemainder;
-	__le16	wNdpOutAlignment;
-	__le16	wPadding2;
-} __attribute__ ((packed));
 
 /*
  * CDC NCM transfer headers, CDC NCM subclass 3.2
@@ -705,7 +662,8 @@ struct hw_dev_state {
 enum skb_state {
 	illegal = 0,
 	tx_start, tx_done,
-	rx_start, rx_done, rx_cleanup
+	rx_start, rx_done, rx_cleanup,
+	unlink_start
 };
 
 struct skb_data {	/* skb->cb is one of these */
@@ -736,7 +694,7 @@ void hw_cdc_unbind(struct hw_cdc_net *dev, struct usb_interface *intf);
 int cdc_ncm_rx_fixup(struct hw_cdc_net *dev, struct sk_buff *skb);
 struct sk_buff * cdc_ncm_tx_fixup(struct hw_cdc_net *dev, struct sk_buff *skb,
 	gfp_t mem_flags);
-
+static int hw_cdc_manage_power(struct hw_cdc_net* dev, int on);
 /*Begin : fangxiaozhi added for work*/
 static void hw_cdc_check_status_work(struct work_struct *work);
 /*{
@@ -897,6 +855,7 @@ void hw_skb_return (struct hw_cdc_net *dev, struct sk_buff *skb)
             cdc_map_to_lan_forward(skb);    
        }
 #endif
+	#if 0
 	u32 	sn;
 
 	if(skb->len > 128)
@@ -909,6 +868,8 @@ void hw_skb_return (struct hw_cdc_net *dev, struct sk_buff *skb)
 		sn = be32_to_cpu(*(u32 *)(skb->data + 0x2a));
 		devdbg(dev,"hw_skb_return,len:%d receive ack sn:%x,  time:%ld-%ld",skb->len,sn,current_kernel_time().tv_sec,current_kernel_time().tv_nsec);
 	}
+	#endif
+	
 
 	dev->stats.rx_packets++;
 	dev->stats.rx_bytes += skb->len;
@@ -949,26 +910,43 @@ EXPORT_SYMBOL_GPL(hw_skb_return);
 static int unlink_urbs (struct hw_cdc_net *dev, struct sk_buff_head *q)
 {
 	unsigned long		flags;
-	struct sk_buff		*skb, *skbnext;
+	struct sk_buff		*skb;
 	int			count = 0;
 
 	spin_lock_irqsave (&q->lock, flags);
-	for (skb = q->next; skb != (struct sk_buff *) q; skb = skbnext) {
+	while (!skb_queue_empty(q)) {
 		struct skb_data		*entry;
 		struct urb		*urb;
 		int			retval;
 
-		entry = (struct skb_data *) skb->cb;
+		skb_queue_walk(q, skb) {
+			entry = (struct skb_data *) skb->cb;
+			if (entry->state != unlink_start)
+				goto found;
+		}
+		break;
+found:
+		entry->state = unlink_start;
 		urb = entry->urb;
-		skbnext = skb->next;
 
+		/*
+		 * Get reference count of the URB to avoid it to be
+		 * freed during usb_unlink_urb, which may trigger
+		 * use-after-free problem inside usb_unlink_urb since
+		 * usb_unlink_urb is always racing with .complete
+		 * handler(include defer_bh).
+		 */
+		usb_get_urb(urb);
+		spin_unlock_irqrestore(&q->lock, flags);
 		// during some PM-driven resume scenarios,
 		// these (async) unlinks complete immediately
 		retval = usb_unlink_urb (urb);
 		if (retval != -EINPROGRESS && retval != 0)
-			devdbg (dev, "unlink urb err, %d", retval);
+			netdev_dbg(dev->net, "unlink urb err, %d\n", retval);
 		else
 			count++;
+		usb_put_urb(urb);
+		spin_lock_irqsave(&q->lock, flags);
 	}
 	spin_unlock_irqrestore (&q->lock, flags);
 	return count;
@@ -987,7 +965,7 @@ void hw_unlink_rx_urbs(struct hw_cdc_net *dev)
 }
 EXPORT_SYMBOL_GPL(hw_unlink_rx_urbs);
 
-
+
 /*-------------------------------------------------------------------------
  *
  * Network Device Driver (peer link to "Host Device", from USB host)
@@ -1241,25 +1219,31 @@ static void rx_tlp_parse(struct hw_cdc_net *dev, struct sk_buff *skb)
 	}
 }
 
-static void rx_defer_bh(struct hw_cdc_net *dev, struct sk_buff *skb, struct sk_buff_head *list)
+static enum skb_state rx_defer_bh(struct hw_cdc_net *dev, struct sk_buff *skb, struct sk_buff_head *list,enum skb_state state)
 {
 	unsigned long		flags;
+	enum skb_state 		old_state;
+	struct skb_data *entry = (struct skb_data *) skb->cb;
 	spin_lock_irqsave(&list->lock, flags);
+	old_state = entry->state;
+	entry->state = state;
 	__skb_unlink(skb, list);
 	spin_unlock_irqrestore(&list->lock, flags);
 	
 	/*deal with the download tlp feature*/
 	if (1 == dev->hw_tlp_download_is_actived){
+		devdbg (dev, "hw_tlp_download_is_actived active\n");
 		rx_tlp_parse(dev, skb);
 		dev_kfree_skb_any(skb);
 	}else{
 		spin_lock_irqsave(&dev->done.lock, flags);
 		__skb_queue_tail(&dev->done, skb);
-		if (1 <= dev->done.qlen){
+		if (1 == dev->done.qlen){
 			tasklet_schedule(&dev->bh);
 		}
 		spin_unlock_irqrestore(&dev->done.lock, flags);
 	}
+	return old_state;
 }
 ////////////////////////
 
@@ -1285,7 +1269,15 @@ EXPORT_SYMBOL_GPL(hw_defer_kevent);
 /*-------------------------------------------------------------------------*/
 
 
+/* The caller must hold list->lock */
+static void hw_queue_skb(struct sk_buff_head *list,
+			struct sk_buff *newsk, enum skb_state state)
+{
+	struct skb_data *entry = (struct skb_data *) newsk->cb;
 
+	__skb_queue_tail(list, newsk);
+	entry->state = state;
+}
 
 static void rx_complete (struct urb *urb);
 static void rx_submit (struct hw_cdc_net *dev, struct urb *urb, gfp_t flags)
@@ -1320,7 +1312,7 @@ static void rx_submit (struct hw_cdc_net *dev, struct urb *urb, gfp_t flags)
 	entry = (struct skb_data *) skb->cb;
 	entry->urb = urb;
 	entry->dev = dev;
-	entry->state = rx_start;
+	//entry->state = rx_start;
 	entry->length = 0;
 
 	usb_fill_bulk_urb (urb, dev->udev, dev->in,
@@ -1333,7 +1325,8 @@ static void rx_submit (struct hw_cdc_net *dev, struct urb *urb, gfp_t flags)
 			&& !test_bit (EVENT_RX_HALT, &dev->flags)) {
 		switch (retval = usb_submit_urb (urb, GFP_ATOMIC)) {
 		case 0://submit successfully
-			__skb_queue_tail (&dev->rxq, skb);
+			//__skb_queue_tail (&dev->rxq, skb);
+			hw_queue_skb(&dev->rxq,skb,rx_start);
 			break;
 		case -EPIPE:
 			hw_defer_kevent (dev, EVENT_RX_HALT);
@@ -1371,20 +1364,21 @@ static inline void rx_process (struct hw_cdc_net *dev, struct sk_buff *skb)
 {
 	if (dev->is_ncm)
    	{   
-		if(!cdc_ncm_rx_fixup(dev, skb))
-		    goto error;
-    }
+	    if(!cdc_ncm_rx_fixup(dev, skb))
+	        goto error;
+    	}
 	if (skb->len){
 		hw_skb_return (dev, skb);
 	}
-	else {
-		if (netif_msg_rx_err (dev))
-			devdbg (dev, "drop");
+	if (netif_msg_rx_err (dev))
+		devdbg (dev, "drop");
 error:
-		dev->stats.rx_errors++;
-		skb_queue_tail (&dev->done, skb);
-	}
+	dev->stats.rx_errors++;
+	skb_queue_tail (&dev->done, skb);
+	
 }
+
+
 
 /*-------------------------------------------------------------------------*/
 static void rx_complete (struct urb *urb)
@@ -1393,17 +1387,19 @@ static void rx_complete (struct urb *urb)
 	struct skb_data		*entry = (struct skb_data *) skb->cb;
 	struct hw_cdc_net		*dev = entry->dev;
 	int			urb_status = urb->status;
+	enum skb_state		state;
+
 
     devdbg (dev, "rx_complete,urb:%p,rx length %d, time %ld-%ld",urb, urb->actual_length,current_kernel_time().tv_sec,current_kernel_time().tv_nsec);
 	skb_put (skb, urb->actual_length);
-	entry->state = rx_done;
+	state = rx_done;
 	entry->urb = NULL;
 
 	switch (urb_status) {
 	/* success */
 	case 0:
 		if (skb->len < dev->net->hard_header_len) {
-			entry->state = rx_cleanup;
+			state = rx_cleanup;
 			dev->stats.rx_errors++;
 			dev->stats.rx_length_errors++;
 			if (netif_msg_rx_err (dev))
@@ -1442,7 +1438,7 @@ static void rx_complete (struct urb *urb)
 				devdbg (dev, "rx throttle %d", urb_status);
 		}
 block:
-		entry->state = rx_cleanup;
+		state = rx_cleanup;
 		entry->urb = urb;
 		urb = NULL;
 		break;
@@ -1453,18 +1449,21 @@ block:
 		// FALLTHROUGH
 
 	default:
-		entry->state = rx_cleanup;
+		state = rx_cleanup;
 		dev->stats.rx_errors++;
 		if (netif_msg_rx_err (dev))
 			devdbg (dev, "rx status %d", urb_status);
 		break;
 	}
 
-	rx_defer_bh(dev, skb, &dev->rxq);
+
+	
+	state = rx_defer_bh(dev, skb, &dev->rxq,state);
 
 	if (urb) {
 		if (netif_running (dev->net)
-				&& !test_bit (EVENT_RX_HALT, &dev->flags)) {
+				&& !test_bit (EVENT_RX_HALT, &dev->flags)
+				&& state != unlink_start) {
 			rx_submit (dev, urb, GFP_ATOMIC);
 			return;
 		}
@@ -1565,8 +1564,8 @@ static int hw_stop (struct net_device *net)
 	dev->flags = 0;
 	del_timer_sync (&dev->delay);
 	tasklet_kill (&dev->bh);
-	usb_autopm_put_interface(dev->intf);
-
+	hw_cdc_manage_power(dev, 0);
+	//usb_autopm_put_interface(dev->intf);
 	return 0;
 }
 
@@ -1695,6 +1694,7 @@ static int hw_open (struct net_device *net)
 
 	// delay posting reads until we're fully open
 	tasklet_schedule (&dev->bh);
+	hw_cdc_manage_power(dev, 1);
 	return retval;
 done:
 	usb_autopm_put_interface(dev->intf);
@@ -1999,9 +1999,12 @@ static int hw_start_xmit (struct sk_buff *skb, struct net_device *net)
     if (dev->is_ncm ) {
         skb = cdc_ncm_tx_fixup (dev, skb, GFP_ATOMIC);
 	    if (!skb) {
-		if (netif_msg_tx_err (dev))
+		if (netif_msg_tx_err (dev)){
 			devdbg (dev, "can't tx_fixup skb");
 			goto drop;
+		}else {
+			goto not_drop;/* cdc_ncm collected packet; waits for more */
+		}	
 	    }
     }
 
@@ -2036,19 +2039,26 @@ static int hw_start_xmit (struct sk_buff *skb, struct net_device *net)
 	devdbg(dev,"hw_start_xmit ,usb_submit_urb,len:%d, time:%ld-%ld",skb->len,current_kernel_time().tv_sec,current_kernel_time().tv_nsec);
 
 	spin_lock_irqsave (&dev->txq.lock, flags);
-
+	retval = usb_autopm_get_interface_async(dev->intf);
+	if (retval < 0) {
+		spin_unlock_irqrestore(&dev->txq.lock, flags);
+		goto drop;
+	}
 	switch ((retval = usb_submit_urb (urb, GFP_ATOMIC))) {
 	case -EPIPE:
 		netif_stop_queue (net);
 		hw_defer_kevent (dev, EVENT_TX_HALT);
+		usb_autopm_put_interface_async(dev->intf);
 		break;
 	default:
+		usb_autopm_put_interface_async(dev->intf);
 		if (netif_msg_tx_err (dev))
 			devdbg (dev, "tx: submit urb err %d", retval);
 		break;
 	case 0:
 		net->trans_start = jiffies;
-		__skb_queue_tail (&dev->txq, skb);
+		hw_queue_skb(&dev->txq,skb,tx_start);
+		//__skb_queue_tail (&dev->txq, skb);
 		if (dev->txq.qlen >= (dev->is_ncm ? TX_QLEN_NCM :TX_QLEN (dev)))
 			netif_stop_queue (net);
 	}
@@ -2060,6 +2070,7 @@ static int hw_start_xmit (struct sk_buff *skb, struct net_device *net)
 drop:
 		retval = NET_XMIT_SUCCESS;
 		dev->stats.tx_dropped++;
+not_drop:	
 		if (skb)
 			dev_kfree_skb_any (skb);
 		usb_free_urb (urb);
@@ -2240,7 +2251,7 @@ static int cdc_ncm_config(struct ncm_ctx *ctx)
 	u8 					control_if;
 	unsigned int				tx_pipe;
 	unsigned int				rx_pipe;
-	struct usb_cdc_ncm_ntb_parameter 	*ntb_params;
+	struct usb_cdc_ncm_ntb_parameters 	*ntb_params;
 	void *b;
 	u8 i = 0;
     //static u8 first_flag = 0;
@@ -2276,7 +2287,7 @@ for(i=0; i<3; i++)
 	}
 
 	ntb_params = (void *)b;
-	ctx->formats = le16_to_cpu(ntb_params->bmNtbFormatSupported);
+	ctx->formats = le16_to_cpu(ntb_params->bmNtbFormatsSupported);
 	ctx->rx_max_ntb = le32_to_cpu(ntb_params->dwNtbInMaxSize);
 	ctx->tx_max_ntb = le32_to_cpu(ntb_params->dwNtbOutMaxSize);
 	ctx->tx_divisor = le16_to_cpu(ntb_params->wNdpOutDivisor);
@@ -2339,7 +2350,7 @@ for(i=0; i<3; i++)
 			0, control_if, b, 4,
 			NCM_CONTROL_TIMEOUT);
 		if (err < 0) {
-			deverr(ctx->ndev, "failed setting NTB input size time\n", i);
+			deverr(ctx->ndev, "failed setting NTB input size time\n");
 			//goto exit;
 			continue;
 		}
@@ -2377,7 +2388,7 @@ for(i=0; i<3; i++)
 			ctx->bit_mode, control_if, NULL, 0,
 			NCM_CONTROL_TIMEOUT);
 		if (err < 0) {
-			deverr(ctx->ndev, "failed setting bit-mode time\n", i);
+			deverr(ctx->ndev, "failed setting bit-mode time\n");
 			//goto exit;
 			continue;
 		}
@@ -2405,7 +2416,7 @@ for(i=0; i<3; i++)
 			sizeof (struct ndp_parser_opts));
 		if (ctx->crc_mode == NCM_CRC_MODE_YES)
 			ctx->popts.ndp_sign = NCM_NDP16_CRC_SIGN;
-		break;
+		break;	
 	case NCM_BIT_MODE_32:
 		memcpy(&ctx->popts, &ndp32_opts,
 			sizeof (struct ndp_parser_opts));
@@ -2416,7 +2427,7 @@ for(i=0; i<3; i++)
 	break;
 }
 printk("cdc_ncm_config end\n");
-exit:
+//exit:
 	kfree(b);
 	return err;
 #undef NCM_MAX_CONTROL_MSG
@@ -2747,7 +2758,6 @@ struct sk_buff * cdc_ncm_tx_fixup(struct hw_cdc_net *dev, struct sk_buff *skb,
 	unsigned		ndgrams = 0;
 	unsigned		is_skb_added = 0;
 	unsigned		is_curr_ntb_new = 0;
-	u32 			sn;
 
 	spin_lock_irqsave(&ctx->tx_lock, flags);
 
@@ -2770,7 +2780,7 @@ struct sk_buff * cdc_ncm_tx_fixup(struct hw_cdc_net *dev, struct sk_buff *skb,
 		is_curr_ntb_new = 1;
 	}
 
-
+	#if 0
 	if(skb->len < 128)
 	{
 		sn = be32_to_cpu(*(u32 *)(skb->data + 0x2a));
@@ -2781,6 +2791,7 @@ struct sk_buff * cdc_ncm_tx_fixup(struct hw_cdc_net *dev, struct sk_buff *skb,
 		sn = be32_to_cpu(*(u32 *)(skb->data + 0x26));		
 		devdbg(dev, "get pc PACKETS SN:%x,   time:%ld-%ld", sn,current_kernel_time().tv_sec,current_kernel_time().tv_nsec);
 	}
+	#endif
 
 	err = ntb_add_dgram(ctx, curr_ntb, skb->len, skb->data, GFP_ATOMIC);
 	switch (err) {
@@ -2895,7 +2906,8 @@ hw_cdc_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	dev->driver_name = name;
 	dev->driver_desc = "Huawei Ethernet Device";
 	dev->msg_enable = netif_msg_init (msg_level, NETIF_MSG_DRV
-				| NETIF_MSG_PROBE | NETIF_MSG_LINK);
+				| NETIF_MSG_PROBE |
+ 				NETIF_MSG_LINK);
 	skb_queue_head_init (&dev->rxq);
 	skb_queue_head_init (&dev->txq);
 	skb_queue_head_init (&dev->done);
@@ -3083,6 +3095,12 @@ int hw_send_tlp_download_request(struct usb_interface *intf)
 		return 0;
 	}
 }
+
+static int hw_cdc_manage_power(struct hw_cdc_net* dev, int on)
+{
+	dev->intf->needs_remote_wakeup = on;
+	return 0;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 /*
  * probes control interface, claims data interface, collects the bulk
@@ -3100,7 +3118,7 @@ static int hw_cdc_bind(struct hw_cdc_net *dev, struct usb_interface *intf)
 	int				status;
 	struct usb_driver		*driver = driver_of(intf);
     int i;
-    struct ncm_ctx *ctx;
+    struct ncm_ctx *ctx=NULL;
 
 	devdbg(dev, "hw_cdc_bind enter\n");
     
@@ -3316,7 +3334,7 @@ next_desc:
 	
 	return hw_get_ethernet_addr(dev);
 error3:
-    if(dev->is_ncm){
+    if(ctx&&dev->is_ncm){
     	for ( i = 0; i < ctx->skb_pool_size && ctx->skb_pool[i]; i++)
     		dev_kfree_skb_any(ctx->skb_pool[i]);
     	kfree(ctx->skb_pool);
@@ -3665,6 +3683,7 @@ static struct usb_driver hw_ether_driver = {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)//marui add for support kernel 2.6.21 2010-7-8
 	.reset_resume = hw_cdc_reset_resume,
 #endif
+	.supports_autosuspend = 1,
 };
 
 
@@ -3672,8 +3691,10 @@ static void hw_cdc_status(struct hw_cdc_net *dev, struct urb *urb)
 {
 	struct usb_cdc_notification	*event;
 
-	if (urb->actual_length < sizeof *event)
+	if (urb->actual_length < sizeof *event){
 		return;
+	}
+
 
 	/* SPEED_CHANGE can get split into two 8-byte packets */
 	if (test_and_clear_bit(EVENT_STS_SPLIT, &dev->flags)) {
