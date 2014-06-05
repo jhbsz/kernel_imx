@@ -60,6 +60,7 @@
 #include <linux/mfd/mxc-hdmi-core.h>
 #include <linux/power/qpower.h>
 #include <linux/i2c/at24.h>
+#include <linux/proc_fs.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
 #include <mach/mxc_dvfs.h>
@@ -1048,7 +1049,16 @@ static void __init imx6q_add_device_gpio_leds(void)
 
 
 //to fix powerbutton force powered off may trigger rtc alarm event not clear issue
-static void mx6_snvs_fixup(void);
+static void mx6_snvs_fixup(void)
+{
+#define SNVS_LPCR 0x38
+	void __iomem *mx6_snvs_base =  MX6_IO_ADDRESS(MX6Q_SNVS_BASE_ADDR);
+	u32 value;
+	value = readl(mx6_snvs_base + SNVS_LPCR);
+	//clear alarm enable and wakeup enable
+	value &=~0xA;
+	writel(value, mx6_snvs_base + SNVS_LPCR);
+}
 static void snvs_fixup_work(struct work_struct *work){
 	mx6_snvs_fixup();
 }
@@ -1186,16 +1196,6 @@ static void __set_switch_linux_flag(void __iomem * snvs_base)
 	writel(reg, snvs_base + SNVS_LPGPR);
 }
 
-static void mx6_snvs_fixup(void)
-{
-#define SNVS_LPCR 0x38
-	void __iomem *mx6_snvs_base =  MX6_IO_ADDRESS(MX6Q_SNVS_BASE_ADDR);
-	u32 value;
-	value = readl(mx6_snvs_base + SNVS_LPCR);
-	//clear alarm enable and wakeup enable
-	value &=~0xA;
-	writel(value, mx6_snvs_base + SNVS_LPCR);
-}
 
 static void mx6_snvs_poweroff(void)
 {
@@ -1295,6 +1295,7 @@ static struct imx_bt_rfkill_platform_data wlan_bt_rfkill_data = {
 };
 
 
+#ifdef CONFIG_ANDROID_TIMED_OUTPUT
 
 static struct work_struct vibrator_work;
 static struct hrtimer vibe_timer;
@@ -1372,16 +1373,19 @@ static struct timed_output_dev vibrator = {
       .enable = vibrator_enable,
 };
 
+#endif
 static void board_vibrator_init(void)
 {
+	  #ifdef CONFIG_ANDROID_TIMED_OUTPUT
       INIT_WORK(&vibrator_work, update_vibrator);
 
       spin_lock_init(&vibe_lock);
       vibe_state = 0;
       hrtimer_init(&vibe_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
       vibe_timer.function = vibrator_timer_func;
-
+	 
       timed_output_dev_register(&vibrator);
+	  #endif
 }
 
 
@@ -1409,6 +1413,7 @@ static int __init modem_init(void){
 	return 0;
 }
 
+#ifdef CONFIG_PROC_FS
 static int read_board_revision(char *page, char **start,
 			     off_t off, int count,
 			     int *eof, void *data)
@@ -1447,11 +1452,14 @@ static int write_sam(struct file *file, const char *buffer,
 	
     return count;
 }
+#endif
 
 
 static int __init board_misc_init(void){
 	int ret;
+	#ifdef CONFIG_PROC_FS
 	struct proc_dir_entry *entry;
+	#endif
 	eup2471_enable(0);
 	eup2471_flash(0);
 
@@ -1466,6 +1474,7 @@ static int __init board_misc_init(void){
 	gpio_direction_output(TDH_SAM_PWR_EN,0); 	
 	//default state is power off ,to fix current leak issue,switch uart to io mode
 	qpad_uart_io_switch(3,pps.sam);
+	#ifdef CONFIG_PROC_FS
 	entry = create_proc_entry("driver/sam", S_IFREG | S_IRUGO | S_IWUGO, NULL);
 	if (entry) {
 		entry->read_proc = read_sam;
@@ -1476,7 +1485,7 @@ static int __init board_misc_init(void){
 	if (entry) {
 		entry->read_proc = read_board_revision;
 	}
-
+	#endif
 	board_vibrator_init();
 	
 	return 0;
@@ -1606,7 +1615,9 @@ static void __init mx6_tdh_board_init(void)
 
 	imx6q_add_imx_caam();
 
+	#if defined(CONFIG_LEDS_TRIGGER) || defined(CONFIG_LEDS_GPIO)
 	imx6q_add_device_gpio_leds();
+	#endif
 
 	imx6q_add_imx_i2c(0, &mx6q_i2c_data);
 	imx6q_add_imx_i2c(1, &mx6q_i2c_data);

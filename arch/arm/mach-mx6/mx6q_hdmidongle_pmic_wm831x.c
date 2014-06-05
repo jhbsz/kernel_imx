@@ -196,6 +196,6 @@ int __init mx6q_hdmidongle_init_wm8326(void)
 			ARRAY_SIZE(mxc_i2c2_board_info));
 }
 #else
-int __init mx6q_hdmidongle_init_wm8326(void) {};
+int __init mx6q_hdmidongle_init_wm8326(void) {return 0;}
 #endif
 
