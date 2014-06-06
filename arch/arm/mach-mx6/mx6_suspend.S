@@ -1149,6 +1149,12 @@ set ddr iomux to low power mode
 	ldr	r1, =MMDC_P1_BASE_ADDR
 	add	r1, r1, #PERIPBASE_VIRT
 
+	 /*Check if 2nd channel is used, otherwise skip self refresh for 2nd channel */
+	 ldr    r0, [r1, #0x18]
+	 and    r0, r0, #0x4
+	 cmp    r0, #0x0
+	 beq    skip_2nd_channel_1a
+
 	/* Put DDR explicitly into self-refresh. */
 	 /* Disable Automatic power savings. */
 	 ldr    r0, [r1, #0x404]
@@ -1165,6 +1171,7 @@ set ddr iomux to low power mode
 	 and     r0, r0, #0x2000000
 	 cmp    r0, #0x2000000
 	 bne     poll_dvfs_set_1a
+skip_2nd_channel_1a:
 
 	/* set mmdc iomux to low power mode */
 	ldr	r1, =MX6Q_IOMUXC_BASE_ADDR
@@ -1393,6 +1400,12 @@ poll_dvfs_clear_1:
 	ldr	r1, =MMDC_P1_BASE_ADDR
 	add	r1, r1, #PERIPBASE_VIRT
 
+	 /*Check if 2nd channel is used, otherwise skip configuring 2nd channel */
+	 ldr    r6, [r1, #0x18]
+	 and    r6, r6, #0x4
+	 cmp    r6, #0x0
+	 beq    skip_2nd_channel_1b
+
 	/* Ensure DDR exits self-refresh. */
 	ldr	r6, [r1, #0x404]
 	bic	r6, r6, #0x200000
@@ -1408,6 +1421,7 @@ poll_dvfs_clear_1a:
 	ldr	r6, [r1, #0x404]
 	bic	r6, r6, #0x01
 	str	r6, [r1, #0x404]
+skip_2nd_channel_1b:
 
 	/* Add enough nops so that the
 	  * prefetcher will not get instructions
@@ -1557,6 +1571,12 @@ poll_dvfs_clear_2:
 
 	ldr	r1, =MMDC_P1_BASE_ADDR
 
+	/*Check if 2nd channel is used, otherwise skip configuring 2nd channel */
+	ldr    r6, [r1, #0x18]
+	and    r6, r6, #0x4
+	cmp    r6, #0x0
+	beq    skip_2nd_channel_1c
+
 	/* Ensure DDR exits self-refresh. */
 	ldr	r6, [r1, #0x404]
 	bic	r6, r6, #0x200000
@@ -1572,6 +1592,7 @@ poll_dvfs_clear_2a:
 	ldr	r6, [r1, #0x404]
 	bic	r6, r6, #0x01
 	str	r6, [r1, #0x404]
+skip_2nd_channel_1c:
 
 #ifdef CONFIG_CACHE_L2X0
 	ldr r2, =L2_BASE_ADDR
