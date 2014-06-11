@@ -278,7 +278,7 @@ static const struct esdhc_platform_data qpad_sd2_data __initconst = {
 /*WIFI SDIO*/
 static struct sdhci_host* wlan_sdhc;
 static int wlan_wakeup_init=0;
-struct wake_lock wlan_wakelock;
+//struct wake_lock wlan_wakelock;
 
 static iomux_v3_cfg_t mx6q_wlan_wakeup_pads_func[] = {
 	MX6Q_PAD_SD3_DAT1__USDHC3_DAT1_50MHZ,
@@ -295,7 +295,7 @@ static iomux_v3_cfg_t mx6dl_wlan_wakeup_pads_io[] = {
 };
 
 static irqreturn_t wlan_wakup_handler(int irq, void *data){
-	   wake_lock_timeout(&wlan_wakelock, HZ * 2);
+	   //wake_lock_timeout(&wlan_wakelock, HZ * 2);
        return IRQ_HANDLED;
 }
 static int wlan_wakeup_add(void){
@@ -303,7 +303,7 @@ static int wlan_wakeup_add(void){
 	   if(!wlan_wakeup_init){
 	       gpio_request(QPAD_WIFI_WAKEUP,"wifi-wakeup");
 	       gpio_direction_input(QPAD_WIFI_WAKEUP);
-		   wake_lock_init(&wlan_wakelock , WAKE_LOCK_SUSPEND, "wlan wakelock");
+		   //wake_lock_init(&wlan_wakelock , WAKE_LOCK_SUSPEND, "wlan_wakelock");
 		   wlan_wakeup_init++;
 	   }
 	   //we can't use both edge trigger ,otherwise GPC will be waken up immediately and we 
