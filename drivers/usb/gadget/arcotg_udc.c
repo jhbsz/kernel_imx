@@ -11,8 +11,6 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-#undef VERBOSE
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/ioport.h>
@@ -2229,6 +2227,11 @@ static void fsl_gadget_disconnect_event(struct work_struct *work)
 	/* close USB PHY clock */
 	dr_phy_low_power_mode(udc, true);
 	/* close dr controller clock */
+
+	if(USB_STATE_SUSPENDED!=udc_controller->usb_state){
+		printk(KERN_DEBUG "\n\nUDC suspend patch\n\n");
+		suspend_irq(udc);
+	}
 	dr_clk_gate(false);
 	printk(KERN_DEBUG "%s: udc enter low power mode\n", __func__);
 }
