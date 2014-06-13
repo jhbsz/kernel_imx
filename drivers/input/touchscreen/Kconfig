@@ -802,5 +802,13 @@ config TOUCHSCREEN_FOCALTECH
         help
           Say y here to support the touchscreen found on
           FocalTech touch screen
+
+config TOUCHSCREEN_EK2127
+        tristate "EK2127 Touch Screen"
+        depends on I2C
+	default n
+        help
+          Say y here to support the touchscreen found on
+          EK2127 touch screen
 	  
 endif

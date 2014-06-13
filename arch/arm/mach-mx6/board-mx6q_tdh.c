@@ -100,7 +100,6 @@
 #define BOARD_TDH_REVC 0x3
 
 
-#define FT5X0X_XY_PATCH
 
 typedef struct peripheral_power_state{
 	unsigned int sam:1;
@@ -243,7 +242,7 @@ static iomux_v3_cfg_t mx6dl_wlan_wakeup_pads_io[] = {
 };
 
 static irqreturn_t wlan_wakup_handler(int irq, void *data){
-	   wake_lock_timeout(&wlan_wakelock, HZ * 2);
+	   //wake_lock_timeout(&wlan_wakelock, HZ * 2);
        return IRQ_HANDLED;
 }
 static int wlan_wakeup_add(void){
@@ -251,7 +250,7 @@ static int wlan_wakeup_add(void){
 	   if(!wlan_wakeup_init){
 	       gpio_request(TDH_WIFI_WAKEUP,"wifi-wakeup");
 	       gpio_direction_input(TDH_WIFI_WAKEUP);
-		   wake_lock_init(&wlan_wakelock , WAKE_LOCK_SUSPEND, "wlan wakelock");
+		   //wake_lock_init(&wlan_wakelock , WAKE_LOCK_SUSPEND, "wlan_wakelock");
 		   wlan_wakeup_init++;
 	   }
 	   //we can't use both edge trigger ,otherwise GPC will be waken up immediately and we 
@@ -557,7 +556,7 @@ static struct eup2471_platform_data eup2471_pdata =
 	.flash 		= eup2471_flash,
 };
 
-#include <linux/ft5x0x_ts.h>
+#include <linux/input/touchscreen.h>
 
 static int ft5x0x_set_power(int on){
 	int ret=0;
@@ -612,17 +611,39 @@ static int ft5x0x_plat_init(void){
 	msleep(50);
 	
 	gpio_free(TDH_TP_RST);
+
+	if(!gpio_request(TDH_TP_IRQ, "tp-irq")){
+		gpio_direction_input(TDH_TP_IRQ);
+		gpio_free(TDH_TP_IRQ);
+	}
+	
 err:
 	return ret;
 }
 
-static struct ft5x0x_ts_platform_data ft5x0x_data=
-{
+static int touchscreen_reset(void){
+	int ret=0;
+	ret = gpio_request(TDH_TP_RST, "tp-rst");
+	if (ret) {
+		pr_err("failed to get GPIO tp-rst: %d\n",
+			ret);
+		return ret;
+	}
+	
+	gpio_direction_output(TDH_TP_RST, 0);
+	msleep(50);
+	gpio_direction_output(TDH_TP_RST, 1);	
+	
+	gpio_free(TDH_TP_RST);
+
+	return 0;
+}
+
+static struct touchscreen_platform_data ts_pdata= {
 	.setpower	= ft5x0x_set_power,
 	.plat_init	= ft5x0x_plat_init,
+	.reset 		= touchscreen_reset,	
 };
-
-
 static struct at24_platform_data eeprom_data = {
 	.byte_len	= SZ_32K / 8,	
 	.page_size	= 32,	
@@ -647,11 +668,11 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
-		.type			= "ft5x0x_ts",
-		.addr			= 0x38,
+		.type			= "EKFT2K",
+		.addr			= 0x15,
 		.irq			= gpio_to_irq(TDH_TP_IRQ),
-		.platform_data	= &ft5x0x_data,
-	},
+		.platform_data	= &ts_pdata,
+	}
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
@@ -801,7 +822,15 @@ static struct ipuv3_fb_platform_data tdh_fb_data[] = {
 	},
 };
 
+static char* lcdpanel_str;
+static int __init  detect_lcdpanel(char *str)
+{
+	lcdpanel_str = str;
+	mipi_dsi_pdata.lcd_panel = lcdpanel_str;
+    return 0;
+}
 
+__setup("panel=", detect_lcdpanel);
 
 
 static struct qpower_battery_pdata qbp = {
@@ -1310,15 +1339,7 @@ static void set_vibrator(int on)
 		return;
 	}
 
-	if (on) 
-	{
-		gpio_direction_output(gpio, 1);
-	} 
-	else 
-	{
-		gpio_direction_output(gpio, 0);
-	}
-
+	gpio_direction_output(gpio, on?0:1);
 	gpio_free(gpio);
 
 }
@@ -1625,12 +1646,6 @@ static void __init mx6_tdh_board_init(void)
 
 	
 	if(eBootModeCharger!=android_bootmode){
-		#ifdef FT5X0X_XY_PATCH
-		//patch for TP y axis inverted
-		if(BOARD_TDH_REVB==mx6_board_rev()){
-			ft5x0x_data.y_inverted=1;
-		}
-		#endif
 		i2c_register_board_info(0, mxc_i2c0_board_info,
 				ARRAY_SIZE(mxc_i2c0_board_info));
 		i2c_register_board_info(1, mxc_i2c1_board_info,

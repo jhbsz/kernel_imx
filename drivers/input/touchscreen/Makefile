@@ -68,3 +68,4 @@ obj-$(CONFIG_TOUCHSCREEN_NOVATEK)	+= novatek_ts.o
 obj-$(CONFIG_TOUCHSCREEN_EGALAX)	+= egalax_ts.o
 obj-$(CONFIG_TOUCHSCREEN_ELAN)		+= elan_ts.o
 obj-$(CONFIG_TOUCHSCREEN_FOCALTECH)	+= ft5x0x_ts.o
+obj-$(CONFIG_TOUCHSCREEN_EK2127)	+= ek2127_ts.o
