@@ -56,6 +56,10 @@ config FB_MXC_OTM9605A_PANEL
 	tristate "OTM9605A Panel"
 	depends on FB_MXC_SYNC_PANEL && FB_MXC_MIPI_DSI	
 
+config FB_MXC_SII450_PANEL
+	tristate "SII450 Panel"
+	depends on FB_MXC_SYNC_PANEL && FB_MXC_MIPI_DSI	
+
 config FB_MXC_CLAA_WVGA_SYNC_PANEL
 	depends on FB_MXC_SYNC_PANEL
 	tristate "CLAA WVGA Panel"

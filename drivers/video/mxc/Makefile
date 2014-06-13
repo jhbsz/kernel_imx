@@ -6,6 +6,7 @@ obj-$(CONFIG_FB_MXC_MIPI_DSI)			+= mipi_dsi.o
 obj-$(CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL) 	+= mxcfb_hx8369_wvga.o
 obj-$(CONFIG_FB_MXC_NT35517_5INCH_PANEL) 	+= nt35517_mipi_lcd.o
 obj-$(CONFIG_FB_MXC_OTM9605A_PANEL) 	+= otm9605a_mipi.o
+obj-$(CONFIG_FB_MXC_SII450_PANEL) 	+= sii450_mipi.o
 obj-$(CONFIG_FB_MXC_EDID)			+= mxc_edid.o
 ifeq ($(CONFIG_ARCH_MX21)$(CONFIG_ARCH_MX27)$(CONFIG_ARCH_MX25),y)
 	obj-$(CONFIG_FB_MXC_TVOUT)              += fs453.o

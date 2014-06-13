@@ -1,4 +1,3 @@
-#define DEBUG
 #include <linux/types.h>
 #include <linux/init.h>
 #include <linux/delay.h>

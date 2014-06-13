@@ -122,6 +122,16 @@ int mipid_otm9605a_lcd_suspend(struct mipi_dsi_info *mipi_dsi);
 #endif
 
 
+#ifdef CONFIG_FB_MXC_SII450_PANEL
+void mipid_sii450_get_lcd_videomode(struct fb_videomode **mode, int *size,
+		struct mipi_lcd_config **data);
+int mipid_sii450_lcd_setup(struct mipi_dsi_info *);
+int mipid_sii450_lcd_resume(struct mipi_dsi_info *mipi_dsi);
+int mipid_sii450_lcd_suspend(struct mipi_dsi_info *mipi_dsi);
+#endif
+
+
+
 #ifndef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
 #error "Please configure MIPI LCD panel, we cannot find one!"
 #endif
