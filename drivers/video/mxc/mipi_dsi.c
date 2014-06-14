@@ -92,9 +92,9 @@ static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
 		"SI-QHD",
 		{
 			mipid_sii450_get_lcd_videomode,
-			//mipid_sii450_lcd_setup,
-			//mipid_sii450_lcd_suspend,
-			//mipid_sii450_lcd_resume,
+			mipid_sii450_lcd_setup,
+			mipid_sii450_lcd_suspend,
+			mipid_sii450_lcd_resume,
 		},
 	},
 	#endif
