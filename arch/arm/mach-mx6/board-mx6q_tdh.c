@@ -749,7 +749,7 @@ static void mx6_reset_mipi_dsi(void)
 	/*
 	 * it needs to delay 120ms minimum for reset complete
 	 */
-	msleep(10);
+	msleep(120);
 }
 
 static void mipi_dsi_power(int en){	
@@ -801,7 +801,7 @@ static struct ipuv3_fb_platform_data tdh_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "mipi_dsi",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
-	.mode_str = "NT-QHD",
+	.mode_str = "540x960@60",
 	.default_bpp = 32,
 	.int_clk = false,
 	.late_init = false,

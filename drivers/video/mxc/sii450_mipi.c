@@ -1,3 +1,4 @@
+#define DEBUG
 #include <linux/types.h>
 #include <linux/init.h>
 #include <linux/delay.h>
@@ -181,7 +182,7 @@ static int mipi_write_array(struct mipi_dsi_info *mipi_dsi,unsigned char* s,int 
 
 	
 #define Delayms(n) \
-	msleep(n)
+	mdelay(n)
 static int mipid_sii450_setup(struct mipi_dsi_info *mipi_dsi)
 {
 	dev_dbg(&mipi_dsi->pdev->dev, "SII450 LCD setup.\n");
@@ -344,7 +345,7 @@ static int mipid_sii450_setup(struct mipi_dsi_info *mipi_dsi)
  Delayms(120);	
  
 
- W_COM_1A_0P(0x29);
+ //W_COM_1A_0P(0x29);
  {
 	 unsigned char dcs0[]={
 		 0x29,
