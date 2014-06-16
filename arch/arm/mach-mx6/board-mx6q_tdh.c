@@ -646,7 +646,7 @@ static struct touchscreen_platform_data ts_pdata= {
 };
 static struct at24_platform_data eeprom_data = {
 	.byte_len	= SZ_32K / 8,	
-	.page_size	= 32,	
+	.page_size	= 8,
 	.flags		= AT24_FLAG_ADDR16|AT24_FLAG_IRUGO,
 };
 
@@ -682,7 +682,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.platform_data = &eup2471_pdata,
 	},
 	{
-		I2C_BOARD_INFO("at24", 0x54),
+		I2C_BOARD_INFO("at24", 0x50),
 		.platform_data	= &eeprom_data,	
 	},
 };
