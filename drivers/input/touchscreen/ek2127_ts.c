@@ -241,9 +241,9 @@ static int get_interrupt_level(int irq){
 	int irqgpio = irq_to_gpio(irq);
 	int irqlevel;
 	gpio_request(irqgpio,"tsirq");
-	irqlevel = gpio_get_value(irqgpio);
+	irqlevel = gpio_direction_input(irqgpio);
 	gpio_free(irqgpio);
-	return irqlevel;
+	return irqlevel?1:0;
 }
 
 
@@ -797,7 +797,7 @@ static int __hello_packet_handler(struct i2c_client *client)
 		pr_red_info("Read hello packet failed");
 		return -EFAULT;
 	}
-	pr_green_info("hello packet %2x:%2X:%2x:%2x", buf_recv[0], buf_recv[1], buf_recv[2], buf_recv[3]);
+	//pr_green_info("hello packet %2x:%2X:%2x:%2x", buf_recv[0], buf_recv[1], buf_recv[2], buf_recv[3]);
 
 	if ((buf_recv[0] == 0x55) && (buf_recv[1] == 0x55) && (buf_recv[2] == 0x80) && (buf_recv[3] == 0x80)) {
 		rc = elan_ktf2k_ts_poll(client); //No send but poll???????
@@ -1164,32 +1164,14 @@ static void elan_ktf2k_ts_report_data(struct i2c_client *client, uint8_t *buf)
 			{
 				dev_dbg(&client->dev, "no press\n");
 				printk("tp button_state0 = %x\n",button_state);
-             			printk("tp buf[BUTTON_ID_INDEX] = %x KEY_MENU=%x KEY_HOME=%x KEY_BACK=%x KEY_SEARCH =%x\n",buf[BUTTON_ID_INDEX], KEY_MENU, KEY_HOME, KEY_BACK, KEY_SEARCH);
+             			//printk("tp buf[BUTTON_ID_INDEX] = %x KEY_MENU=%x KEY_HOME=%x KEY_BACK=%x KEY_SEARCH =%x\n",buf[BUTTON_ID_INDEX], KEY_MENU, KEY_HOME, KEY_BACK, KEY_SEARCH);
 #ifdef ELAN_BUTTON
 				if (buf[BUTTON_ID_INDEX] == ELAN_KEY_MENU) 
 				{
 					button_state = ELAN_KEY_MENU;
 					input_report_key(idev,ANDROID_KEY_MENU,1);
 					input_report_key(idev,ANDROID_KEY_MENU,0);
-					printk("[elan]menu key is press ELAN_KEY_MENU = %x\n",ELAN_KEY_MENU);
-
-				/*	button_state = ELAN_KEY_MENU;
-				
-				#if 0//defined(MACRO_LCD_SIZE_HVGA)
-					x = 40;
-					y = 500;
-				#else
-					x = 60;
-					//y = 820;
-					y = 884;
-				#endif
-
-				    input_report_abs(idev, ABS_PRESSURE,255);
-				    input_report_key(idev, BTN_TOUCH, 1);
-				    input_report_abs(idev, ABS_MT_TOUCH_MAJOR, 1);
-				    input_report_abs(idev, ABS_MT_POSITION_X, x);
-				    input_report_abs(idev, ABS_MT_POSITION_Y, y);
-				*/
+					printk("[elan]menu key was pressed\n");
 				} 
 				#if  0
 				else if (buf[BUTTON_ID_INDEX] == ELAN_KEY_HOME) 
@@ -1215,21 +1197,7 @@ static void elan_ktf2k_ts_report_data(struct i2c_client *client, uint8_t *buf)
 					button_state = ELAN_KEY_BACK;
 					input_report_key(idev,ANDROID_KEY_BACK,1);
 					input_report_key(idev,ANDROID_KEY_BACK,0);
-				/*	button_state = ELAN_KEY_BACK;
-				#if 0//defined(MACRO_LCD_SIZE_HVGA)
-					x = 200;
-					y = 500;
-				#else
-					x = 420;
-					//y = 820;
-					y = 884;
-				#endif
-				    input_report_abs(idev, ABS_PRESSURE,255);
-				    input_report_key(idev, BTN_TOUCH, 1);
-				    input_report_abs(idev, ABS_MT_TOUCH_MAJOR, 1);
-				    input_report_abs(idev, ABS_MT_POSITION_X, x);
-				    input_report_abs(idev, ABS_MT_POSITION_Y, y);
-				*/
+					printk("[elan]back key was pressed\n");
 				} 
 				#if  0
 				else if (buf[BUTTON_ID_INDEX] == ELAN_KEY_SEARCH) 
