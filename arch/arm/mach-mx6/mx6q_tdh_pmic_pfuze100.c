@@ -517,13 +517,13 @@ static int pfuze100_init(struct mc_pfuze *pfuze)
 	ret = pfuze_reg_rmw(pfuze, 0x6F,
 				0x20,
 				0x20);
-	if (ret) goto err;*/
+	if (ret) goto err;
 
 	//shutdown VGEN6 in standby mode
 	ret = pfuze_reg_rmw(pfuze, 0x71,
 				0x20,
 				0x20);
-	if (ret) goto err;
+	if (ret) goto err;*/
 
 	return 0;
 err:
