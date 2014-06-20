@@ -136,6 +136,7 @@ static iomux_v3_cfg_t mx6q_tdh_pads[] = {
 	/* Audio Codec */
 	MX6Q_PAD_GPIO_17__GPIO_7_12,		/* MICROPHONE_DET */
 	MX6Q_PAD_SD1_CLK__GPIO_1_20,		/*AUDIO_INT*/
+	MX6Q_PAD_NANDF_D1__GPIO_2_1,		/*SPK_PWR*/
 
 
 	/*Touch Panel*/

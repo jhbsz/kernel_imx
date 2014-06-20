@@ -131,6 +131,7 @@ typedef struct peripheral_power_state{
 
 #define TDH_AUDIO_INT				IMX_GPIO_NR(1, 20)
 #define TDH_AUDIO_HEADPHONE_DET		IMX_GPIO_NR(7, 12)
+#define TDH_AUDIO_SPK_PWR		IMX_GPIO_NR(2, 1)
 
 
 //FLASHLIGHT
@@ -1004,6 +1005,15 @@ static int __init imx6q_init_audio(void)
 	}
 	gpio_direction_input(TDH_AUDIO_HEADPHONE_DET);
 	gpio_free(TDH_AUDIO_HEADPHONE_DET);
+
+	ret = gpio_request(TDH_AUDIO_SPK_PWR, "spk_pwr");
+	if (ret) {
+		pr_err("failed to get GPIO spk_pwr: %d\n",
+			ret);
+		return -EINVAL;
+	}
+	gpio_direction_output(TDH_AUDIO_SPK_PWR,1);
+	gpio_free(TDH_AUDIO_SPK_PWR);
 
 	mxc_register_device(&mx6_tdh_audio_rt5625_device,
 			&rt5625_data);

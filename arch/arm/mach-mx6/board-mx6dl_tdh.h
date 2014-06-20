@@ -137,6 +137,7 @@ static iomux_v3_cfg_t mx6dl_tdh_pads[] = {
 	MX6DL_PAD_EIM_D21__GPIO_3_21,		/* MICROPHONE_DET */
 	MX6DL_PAD_GPIO_16__GPIO_7_11,		/*AUDIO_RST_N*/
 	MX6DL_PAD_SD1_CLK__GPIO_1_20,		/*AUDIO_INT*/
+	MX6DL_PAD_NANDF_D1__GPIO_2_1,		/*SPK_PWR*/
 	
 
 
