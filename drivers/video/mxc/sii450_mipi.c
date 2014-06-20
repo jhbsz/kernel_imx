@@ -38,8 +38,8 @@ static struct fb_videomode sii450_lcd_modedb[] = {
 	540,960,/*xres,yres*/
 	30500,/*pixclock ps*/
 	10, 10, /*left margin,right margin*/
-	50, 30,/*upper margin,lower margin*/
-	10,10,/*hsync len,vsync len*/
+	4, 4,/*upper margin,lower margin*/
+	10,2,/*hsync len,vsync len*/
 	FB_SYNC_OE_LOW_ACT,/*sync*/
 	FB_VMODE_NONINTERLACED,/*vmode*/
 	0,/*flag*/
