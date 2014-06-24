@@ -17,7 +17,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
+#define DEBUG
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -26,6 +26,7 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/i2c.h>
+#include <linux/leds.h>
 #include <linux/regulator/consumer.h>
 #include <linux/fsl_devices.h>
 #include <media/v4l2-chip-ident.h>
@@ -65,10 +66,27 @@ enum hm5065_frame_rate {
 	hm5065_30_fps
 };
 
+typedef struct sensor_runtime_conf{
+	unsigned char flashbrightness;
+	unsigned char autoflash;
+
+	//3A
+	unsigned char autowb;
+	unsigned char autoexposure;
+	unsigned char autofocus;
+}SENSOR_RTCONF;
+
+
+DEFINE_LED_TRIGGER(ledtrig_flash);
+
+
 static int hm5065_framerates[] = {
 	[hm5065_15_fps] = 15,
 	[hm5065_30_fps] = 30,
 };
+
+static SENSOR_RTCONF rtconf;
+
 
 struct reg_value {
 	u16 u16RegAddr;
@@ -2658,6 +2676,12 @@ static s32 hm5065_read_reg(u16 reg, u8 *val)
 	return u8RdVal;
 }
 
+static void ledtrig_camera_flash(int brightness)
+{
+	led_trigger_event(ledtrig_flash, brightness);
+}
+
+
 static int hm5065_set_rotate_mode(struct reg_value *rotate_mode)
 {
 	s32 i = 0;
@@ -2981,6 +3005,10 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 {
 	struct sensor_data *sensor = s->priv;
 
+	printk("%s %d\n",__func__,on);
+	if (camera_plat->mclk_on&&on)
+		camera_plat->mclk_on(1);
+	
 	if (on && !sensor->on) {
 		if (io_regulator)
 			if (regulator_enable(io_regulator) != 0)
@@ -2994,6 +3022,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 		if (analog_regulator)
 			if (regulator_enable(analog_regulator) != 0)
 				return -EIO;
+		
 		/* Make sure power on */
 		if (camera_plat->pwdn)
 			camera_plat->pwdn(0);
@@ -3010,8 +3039,12 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 
 		if (camera_plat->pwdn)
 			camera_plat->pwdn(1);
+		
 	}
 
+	if (camera_plat->mclk_on&&!on)
+		camera_plat->mclk_on(0);
+	
 	sensor->on = on;
 
 	return 0;
@@ -3130,11 +3163,17 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 			old_frame_rate = hm5065_30_fps;
 		}
 
+		printk("switch mode\n,new fps:%d,old fps:%d,mode:%d,orig mode:%d\n",
+			new_frame_rate,old_frame_rate,
+			a->parm.capture.capturemode,
+			sensor->streamcap.capturemode);
 		ret = hm5065_change_mode(new_frame_rate, old_frame_rate,
 				a->parm.capture.capturemode,
 				sensor->streamcap.capturemode);
-		if (ret < 0)
+		if (ret < 0){
+			printk("switch hm5065 mode failed\n");
 			return ret;
+		}
 
 		sensor->streamcap.timeperframe = *timeperframe;
 		sensor->streamcap.capturemode =
@@ -3240,7 +3279,21 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	pr_debug("In HM5065:ioctl_s_ctrl %d\n",
 		 vc->id);
 
-	switch (vc->id) {
+	switch (vc->id) {	
+	case V4L2_CID_MXC_AUTOFOCUS:
+		{
+			printk("%s FIXME:autofocus feature\n",__func__);
+			break;
+		}
+	case V4L2_CID_MXC_FLASH:
+	{
+		rtconf.autoflash = vc->value;
+		switch(rtconf.autoflash){
+			default: case 0:ledtrig_camera_flash(0);break;
+			case 1: case 2:ledtrig_camera_flash(rtconf.flashbrightness);break;
+		}
+		break;
+	}	
 	case V4L2_CID_BRIGHTNESS:
 		break;
 	case V4L2_CID_CONTRAST:
@@ -3596,6 +3649,8 @@ static int hm5065_probe(struct i2c_client *client,
 	hm5065_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	hm5065_data.streamcap.timeperframe.numerator = 1;
 
+	rtconf.flashbrightness = 120;
+
 	if (plat_data->io_regulator) {
 		io_regulator = regulator_get(&client->dev,
 					     plat_data->io_regulator);
@@ -3657,18 +3712,23 @@ static int hm5065_probe(struct i2c_client *client,
 	if (plat_data->io_init)
 		plat_data->io_init();
 
+	if (plat_data->mclk_on)
+		plat_data->mclk_on(1);
+
 	if (plat_data->pwdn)
 		plat_data->pwdn(0);
 
+	msleep(100);
+
 	retval = hm5065_read_reg(HM5065_CHIP_ID_HIGH_BYTE, &chip_id_high);
-	if (retval < 0 || chip_id_high != 0x56) {
-		pr_warning("camera HM5065 is not found\n");
+	if (retval < 0 ){ //|| chip_id_high != 0x56) {
+		pr_warning("camera HM5065 is not found,id_high=0x%x\n",chip_id_high);
 		retval = -ENODEV;
 		goto err4;
 	}
 	retval = hm5065_read_reg(HM5065_CHIP_ID_LOW_BYTE, &chip_id_low);
-	if (retval < 0 || chip_id_low != 0x42) {
-		pr_warning("camera HM5065 is not found\n");
+	if (retval < 0 ){// || chip_id_low != 0x42) {
+		pr_warning("camera HM5065 is not found,id_low=0x%x\n",chip_id_low);
 		retval = -ENODEV;
 		goto err4;
 	}
@@ -3676,12 +3736,15 @@ static int hm5065_probe(struct i2c_client *client,
 	if (plat_data->pwdn)
 		plat_data->pwdn(1);
 
+	if (plat_data->mclk_on)
+		plat_data->mclk_on(0);
+
 	camera_plat = plat_data;
 
 	hm5065_int_device.priv = &hm5065_data;
 	retval = v4l2_int_device_register(&hm5065_int_device);
 
-	pr_info("camera HM5065 is found\n");
+	pr_info("camera HM5065 is found,id[%02x%02x]\n",chip_id_high,chip_id_low);
 	return retval;
 
 err4:
@@ -3700,6 +3763,11 @@ err2:
 		regulator_put(io_regulator);
 	}
 err1:
+	if (plat_data->pwdn)
+		plat_data->pwdn(1);
+
+	if (plat_data->mclk_on)
+		plat_data->mclk_on(0);	
 	return retval;
 }
 
