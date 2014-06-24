@@ -118,8 +118,8 @@ typedef struct peripheral_power_state{
 #define TDH_CSI0_RST		IMX_GPIO_NR(5, 20)
 
 #define GPIO_KEY_POWER		IMX_GPIO_NR(3,29)
-#define GPIO_KEY_VOLUP		IMX_GPIO_NR(6,10)
-#define GPIO_KEY_VOLDOWN	IMX_GPIO_NR(6,9)
+#define GPIO_KEY_VOLUP		IMX_GPIO_NR(6,9)
+#define GPIO_KEY_VOLDOWN	IMX_GPIO_NR(6,10)
 #define GPIO_KEY_PTT		IMX_GPIO_NR(4,10)
 #define GPIO_KEY_HOT1		IMX_GPIO_NR(4,14)
 #define GPIO_KEY_HOT2		IMX_GPIO_NR(4,11)
@@ -135,8 +135,9 @@ typedef struct peripheral_power_state{
 
 
 //FLASHLIGHT
-#define TDH_FL_PWR_EN		IMX_GPIO_NR(3, 22)
-#define TDH_FL_EN			IMX_GPIO_NR(3, 31)
+#define TDH_FL_PWR_EN		IMX_GPIO_NR(3, 31)
+#define TDH_FL_EN			IMX_GPIO_NR(3, 22)
+
 
 //Touch Panel
 #define TDH_TP_PWR_EN		IMX_GPIO_NR(2, 28)
@@ -402,9 +403,9 @@ static void mx6q_csi0_mclk_on(int on){
 
 static void mx6q_csi0_cam_powerdown(int pdn){	
 	if (pdn){
-		gpio_set_value(TDH_CSI0_PWDN, 1);
-	}else{
 		gpio_set_value(TDH_CSI0_PWDN, 0);
+	}else{
+		gpio_set_value(TDH_CSI0_PWDN, 1);
 	}
 
 	msleep(2);
@@ -442,7 +443,7 @@ static void mx6q_csi0_io_init(void)
 		printk(KERN_ERR"Request GPIO failed,"
 				"gpio: %d \n", cam_rst);
 	}else {
-		gpio_direction_output(cam_rst,1);
+		gpio_direction_output(cam_rst,0);
 	}
 
 	if (gpio_request(cam_pdn, "cam-pdn")) {
@@ -452,12 +453,11 @@ static void mx6q_csi0_io_init(void)
 		gpio_direction_output(cam_pdn,1);
 	}
 	msleep(5);
-	gpio_set_value(cam_pdn, 0);
 	gpio_set_value(cam_rst, 0);
-	msleep(1);
+	msleep(50);
 	gpio_set_value(cam_rst, 1);
-	msleep(5);
-	gpio_set_value(cam_pdn, 1);
+	msleep(10);
+
 		
 	/* For MX6Q:
 	 * GPR1 bit19 and bit20 meaning:
@@ -534,14 +534,15 @@ static int eup2471_flash(int on)
 
 	if (on)
 	{
+		gpio_direction_output(en, 0);
+		udelay(10);
 		gpio_direction_output(en, 1);
 		udelay(10);
-
 		gpio_direction_output(en, 0);
 	}
 	else
 	{
-		gpio_direction_output(en, 1);
+		gpio_direction_output(en, 0);
 	}
 
 	gpio_free(en);
@@ -658,11 +659,11 @@ static struct imxi2c_platform_data mx6q_i2c_data = {
 
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
+//	{
+//		I2C_BOARD_INFO("rt5625", 0x1f),
+//	},
 	{
-		I2C_BOARD_INFO("rt5625", 0x1f),
-	},
-	{
-		I2C_BOARD_INFO("HM5065", 0x10),
+		I2C_BOARD_INFO("HM5065", 0x1f),
 		.platform_data = (void *)&camera_data,
 	},
 };

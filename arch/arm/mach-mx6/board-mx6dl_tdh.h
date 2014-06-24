@@ -152,7 +152,7 @@ static iomux_v3_cfg_t mx6dl_tdh_pads[] = {
 
 	/*FlashLight*/
 	MX6DL_PAD_EIM_D31__GPIO_3_31,		/*FL_PWR_EN*/
-	MX6DL_PAD_GPIO_19__GPIO_4_5,			/*FLASHLIGHT_EN*/
+	MX6DL_PAD_EIM_D22__GPIO_3_22,			/*FLASHLIGHT_EN*/
 	
 
 	/*WiFi*/
