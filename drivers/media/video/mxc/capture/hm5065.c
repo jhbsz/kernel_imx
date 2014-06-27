@@ -2495,10 +2495,85 @@ static struct reg_value hm5065_setting_QSXGA_2_VGA[] = {
 };
 
 static struct reg_value hm5065_setting_30fps_VGA_640_480[] = {
-	
+    {0x0010, 0x02,0,0},
+    {0x0000, 0xC8,0,0}, // delay cmd (0x0000, 0xC8)
+		{0x00B2, 0x4f,0,0},	//50 
+		{0x00B3, 0xc0,0,0},	//30   
+    {0x00B5, 0x01,0,0},//  01=>02	35Mhz  ;01: 70MHz;02:35MHz
+    {0x0030, 0x14,0,0}, //14
+		{0x0083 ,0x00,0,0},    
+		{0x0084 ,0x01,0,0},  
+    {0x0000, 0xC8,0,0}, // delay cmd (0x0000, 0xC8)		
+ 
+
+    {0x0040, 0x01,0,0},//0x01 	//	binning mode and subsampling mode for frame rate
+    {0x0041, 0x04,0,0},//0x0A 	//	04 : VGA mode : 0A : self define ; 00 : 5M ;03:SVGA
+    {0x0042, 0x05,0,0}, 	//	X:800 0x500=1280,0x0320=800
+    {0x0043, 0x00,0,0}, 	//
+    {0x0044, 0x03,0,0}, 	//	Y:600 0x03c0=960,0x0258=600
+    {0x0045, 0xc0,0,0}, 	//
+    
+    //{0x0010, 0x01},
+    //{0x0000, 0xC8}, // delay cmd (0x0000, 0xC8)	
+    
+    {0x00E8, 0x01,0,0},//AFR
+    {0x00ED, 0x0A,0,0},//Min=10ps
+    {0x00EE, 0x1E,0,0},//Max=30fps
+
+    
+    {0x0251, 0x02,0,0},//BLC ON
+
+    {0x0128, 0x00,0,0},
+
+    {0x01FA, 0x01,0,0},
+    {0x01A5, 0x3E,0,0},                                                                              	
+    {0x01A6, 0x33,0,0},                                                                              	
+    {0x01A7, 0x3D,0,0},
+    {0x01A8, 0x9A,0,0},
+		{0x0010, 0x01,0,0},
+		{0x0000, 0xC8,0,0},
+    {0x070A, 0x00,0,0},	
 };
 
 static struct reg_value hm5065_setting_15fps_VGA_640_480[] = {
+    {0x0010, 0x02,0,0},
+    {0x0000, 0xC8,0,0}, // delay cmd (0x0000, 0xC8)
+		{0x00B2, 0x4f,0,0},	//50 
+		{0x00B3, 0xc0,0,0},	//30   
+    {0x00B5, 0x01,0,0},//  01=>02	35Mhz  ;01: 70MHz;02:35MHz
+    {0x0030, 0x14,0,0}, //14
+		{0x0083 ,0x00,0,0},    
+		{0x0084 ,0x01,0,0},  
+    {0x0000, 0xC8,0,0}, // delay cmd (0x0000, 0xC8)		
+ 
+
+    {0x0040, 0x01,0,0},//0x01 	//	binning mode and subsampling mode for frame rate
+    {0x0041, 0x04,0,0},//0x0A 	//	04 : VGA mode : 0A : self define ; 00 : 5M ;03:SVGA
+    {0x0042, 0x05,0,0}, 	//	X:800 0x500=1280,0x0320=800
+    {0x0043, 0x00,0,0}, 	//
+    {0x0044, 0x03,0,0}, 	//	Y:600 0x03c0=960,0x0258=600
+    {0x0045, 0xc0,0,0}, 	//
+    
+    //{0x0010, 0x01},
+    //{0x0000, 0xC8}, // delay cmd (0x0000, 0xC8)	
+    
+    {0x00E8, 0x01,0,0},//AFR
+    {0x00ED, 0x0A,0,0},//Min=10ps
+    {0x00EE, 0x1E,0,0},//Max=30fps
+
+    
+    {0x0251, 0x02,0,0},//BLC ON
+
+    {0x0128, 0x00,0,0},
+
+    {0x01FA, 0x01,0,0},
+    {0x01A5, 0x3E,0,0},                                                                              	
+    {0x01A6, 0x33,0,0},                                                                              	
+    {0x01A7, 0x3D,0,0},
+    {0x01A8, 0x9A,0,0},
+		{0x0010, 0x01,0,0},
+		{0x0000, 0xC8,0,0},
+    {0x070A, 0x00,0,0},		
 	
 };
 
@@ -2759,7 +2834,21 @@ static int hm5065_change_mode(enum hm5065_frame_rate new_frame_rate,
 		iModeSettingArySize = ARRAY_SIZE(hm5065_setting_VGA_2_QVGA);
 		hm5065_data.pix.width = 320;
 		hm5065_data.pix.height = 240;
-	} else {
+	} else if((new_frame_rate == old_frame_rate) &&
+	    (new_mode == hm5065_mode_VGA_640_480) &&
+		(orig_mode == hm5065_mode_VGA_640_480)){
+		if(hm5065_15_fps==new_frame_rate){
+			pModeSetting = hm5065_setting_15fps_VGA_640_480;
+			iModeSettingArySize = ARRAY_SIZE(hm5065_setting_15fps_VGA_640_480);
+		}else {
+			pModeSetting = hm5065_setting_30fps_VGA_640_480;
+			iModeSettingArySize = ARRAY_SIZE(hm5065_setting_30fps_VGA_640_480);
+		}
+		
+		hm5065_data.pix.width = 640;
+		hm5065_data.pix.height = 480;
+		
+	}else {
 		retval = hm5065_write_snapshot_para(new_frame_rate, new_mode);
 		goto err;
 	}
