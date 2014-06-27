@@ -1676,11 +1676,11 @@ static struct reg_value hm5065_initial_setting[] = {
 {0x7104,0x02,0,0},
 {0x7105,0x00,0,0},
 {0x019C,0x4B,0,0},
-{0x019D,0xC0,0,0},
+{0x019D,0x20,0,0},
 {0x0129,0x00,0,0},
 {0x0130,0x00,0,0},
-{0x0083,0x00,0,0},
-{0x0084,0x00,0,0},
+{0x0083,0x01,0,0},
+{0x0084,0x01,0,0},
 {0x01A1,0x80,0,0},
 {0x01A2,0x80,0,0},
 {0x01A3,0x80,0,0},
@@ -1699,7 +1699,7 @@ static struct reg_value hm5065_initial_setting[] = {
 {0x5200,0x01,0,0},
 {0x7000,0x0C,0,0},
 {0x02C2,0x00,0,0},
-{0x02C3,0xA0,0,0},
+{0x02C3,0xd0,0,0},
 {0x015E,0x40,0,0},
 {0x015F,0x00,0,0},
 {0x0390,0x01,0,0},
@@ -1741,7 +1741,7 @@ static struct reg_value hm5065_initial_setting[] = {
 {0x03D5,0x49,0,0},
 {0x03D6,0x34,0,0},
 {0x03D7,0xD1,0,0},
-{0x004C,0x08,0,0},
+{0x004C,0x0A,0,0},
 {0x006C,0x08,0,0},
 {0x0350,0x00,0,0},
 {0x0351,0x5A,0,0},
@@ -1759,7 +1759,7 @@ static struct reg_value hm5065_initial_setting[] = {
 {0x035D,0x49,0,0},
 {0x035E,0x39,0,0},
 {0x035F,0x85,0,0},
-{0x0049,0x14,0,0},
+{0x0049,0x16,0,0},
 {0x004A,0x0D,0,0},
 {0x0069,0x14,0,0},
 {0x006A,0x0D,0,0},
@@ -2131,7 +2131,7 @@ static struct reg_value hm5065_initial_setting[] = {
 {0x0571,0x00,0,0},
 {0x0572,0x42,0,0},
 {0x0573,0x00,0,0},
-{0x0081,0x7A,0,0},
+{0x0081,0x58,0,0},
 {0x0588,0x00,0,0},
 {0x0589,0x5A,0,0},
 {0x058A,0xEE,0,0},
@@ -2470,6 +2470,16 @@ static struct reg_value hm5065_initial_setting[] = {
 {0x0144,0x0D,0,0},
 {0x01D4,0x3C,0,0},
 {0x01D5,0x00,0,0},
+
+{0x016C,0x00,0,0},
+
+
+{0x00B2, 0x50,0,0}, //50 
+{0x00B3, 0x80,0,0}, //30   
+{0x00B5, 0x02,0,0},//  01=>02	35Mhz  ;01: 70MHz;02:35MHz
+{0x0030, 0x11,0,0}, //14
+
+
 {0x0010,0x01,0,200},
 };
 
@@ -2482,6 +2492,22 @@ static struct reg_value hm5065_setting_30fps_QCIF_176_144[] = {
 };
 
 static struct reg_value hm5065_setting_15fps_QSXGA_2592_1944[] = {
+#if 0
+	{0x0010, 0x00,0,200},
+	{0x00B2, 0x4f,0,0},	//50 
+	{0x00B3, 0xc0,0,0},	//30   
+	{0x00B5, 0x02,0,0},//  01=>02	35Mhz  ;01: 70MHz;02:35MHz
+	{0x0030, 0x11,0,0}, //14
+	#endif
+	
+	{0x0040, 0x00,0,0},//0x01 	//	binning mode and subsampling mode for frame rate
+	{0x0041, 0x00,0,0},//0x0A 	//	04 : VGA mode : 0A : self define ; 00 : 5M ;03:SVGA
+	{0x0042, 0x05,0,0}, 	//	X:800 0x500=1280,0x0320=800
+	{0x0043, 0x00,0,0}, 	//
+	{0x0044, 0x03,0,0}, 	//	Y:600 0x03c0=960,0x0258=600
+	{0x0045, 0xc0,0,0}, 	//
+	{0x0251, 0x02,0,0},//BLC ON
+	//{0x0010, 0x01,0,200},
 
 };
 
@@ -2495,85 +2521,54 @@ static struct reg_value hm5065_setting_QSXGA_2_VGA[] = {
 };
 
 static struct reg_value hm5065_setting_30fps_VGA_640_480[] = {
-    {0x0010, 0x02,0,0},
-    {0x0000, 0xC8,0,0}, // delay cmd (0x0000, 0xC8)
-		{0x00B2, 0x4f,0,0},	//50 
-		{0x00B3, 0xc0,0,0},	//30   
-    {0x00B5, 0x01,0,0},//  01=>02	35Mhz  ;01: 70MHz;02:35MHz
-    {0x0030, 0x14,0,0}, //14
-		{0x0083 ,0x00,0,0},    
-		{0x0084 ,0x01,0,0},  
-    {0x0000, 0xC8,0,0}, // delay cmd (0x0000, 0xC8)		
- 
+	#if 0
+	{0x0010, 0x00,0,200},
+	{0x00B2, 0x50,0,0},	//50 
+	{0x00B3, 0x80,0,0},	//30   
+	{0x00B5, 0x02,0,0},//  01=>02	35Mhz  ;01: 70MHz;02:35MHz
+	{0x0030, 0x11,0,0}, //14
+	#endif
+	
+	{0x0040, 0x01,0,0},//0x01 	//	binning mode and subsampling mode for frame rate
+	{0x0041, 0x04,0,0},//0x0A 	//	04 : VGA mode : 0A : self define ; 00 : 5M ;03:SVGA
+	{0x0042, 0x05,0,0}, 	//	X:800 0x500=1280,0x0320=800
+	{0x0043, 0x00,0,0}, 	//
+	{0x0044, 0x03,0,0}, 	//	Y:600 0x03c0=960,0x0258=600
+	{0x0045, 0xc0,0,0}, 	//
+	{0x0251, 0x02,0,0},//BLC ON
+//	{0x0010, 0x01,0,200},
 
-    {0x0040, 0x01,0,0},//0x01 	//	binning mode and subsampling mode for frame rate
-    {0x0041, 0x04,0,0},//0x0A 	//	04 : VGA mode : 0A : self define ; 00 : 5M ;03:SVGA
-    {0x0042, 0x05,0,0}, 	//	X:800 0x500=1280,0x0320=800
-    {0x0043, 0x00,0,0}, 	//
-    {0x0044, 0x03,0,0}, 	//	Y:600 0x03c0=960,0x0258=600
-    {0x0045, 0xc0,0,0}, 	//
-    
-    //{0x0010, 0x01},
-    //{0x0000, 0xC8}, // delay cmd (0x0000, 0xC8)	
-    
     {0x00E8, 0x01,0,0},//AFR
-    {0x00ED, 0x0A,0,0},//Min=10ps
-    {0x00EE, 0x1E,0,0},//Max=30fps
+ //   {0x00ED, 0x1E,0,0},//Min=10ps
+//    {0x00EE, 0x1E,0,0},//Max=30fps
 
-    
-    {0x0251, 0x02,0,0},//BLC ON
-
-    {0x0128, 0x00,0,0},
-
-    {0x01FA, 0x01,0,0},
-    {0x01A5, 0x3E,0,0},                                                                              	
-    {0x01A6, 0x33,0,0},                                                                              	
-    {0x01A7, 0x3D,0,0},
-    {0x01A8, 0x9A,0,0},
-		{0x0010, 0x01,0,0},
-		{0x0000, 0xC8,0,0},
-    {0x070A, 0x00,0,0},	
+	
+	{0x070A, 0x01,0,0},	
 };
 
 static struct reg_value hm5065_setting_15fps_VGA_640_480[] = {
-    {0x0010, 0x02,0,0},
-    {0x0000, 0xC8,0,0}, // delay cmd (0x0000, 0xC8)
-		{0x00B2, 0x4f,0,0},	//50 
-		{0x00B3, 0xc0,0,0},	//30   
-    {0x00B5, 0x01,0,0},//  01=>02	35Mhz  ;01: 70MHz;02:35MHz
-    {0x0030, 0x14,0,0}, //14
-		{0x0083 ,0x00,0,0},    
-		{0x0084 ,0x01,0,0},  
-    {0x0000, 0xC8,0,0}, // delay cmd (0x0000, 0xC8)		
- 
+#if 0
+	{0x0010, 0x00,0,200},
+	{0x00B2, 0x4f,0,0},	//50 
+	{0x00B3, 0xc0,0,0},	//30   
+	{0x00B5, 0x01,0,0},//  01=>02	35Mhz  ;01: 70MHz;02:35MHz
+	{0x0030, 0x14,0,0}, //14
+	#endif
+	{0x0040, 0x01,0,0},//0x01 	//	binning mode and subsampling mode for frame rate
+	{0x0041, 0x04,0,0},//0x0A 	//	04 : VGA mode : 0A : self define ; 00 : 5M ;03:SVGA
+	{0x0042, 0x05,0,0}, 	//	X:800 0x500=1280,0x0320=800
+	{0x0043, 0x00,0,0}, 	//
+	{0x0044, 0x03,0,0}, 	//	Y:600 0x03c0=960,0x0258=600
+	{0x0045, 0xc0,0,0}, 	//
+	{0x0251, 0x02,0,0},//BLC ON
+//	{0x0010, 0x01,0,200},
 
-    {0x0040, 0x01,0,0},//0x01 	//	binning mode and subsampling mode for frame rate
-    {0x0041, 0x04,0,0},//0x0A 	//	04 : VGA mode : 0A : self define ; 00 : 5M ;03:SVGA
-    {0x0042, 0x05,0,0}, 	//	X:800 0x500=1280,0x0320=800
-    {0x0043, 0x00,0,0}, 	//
-    {0x0044, 0x03,0,0}, 	//	Y:600 0x03c0=960,0x0258=600
-    {0x0045, 0xc0,0,0}, 	//
-    
-    //{0x0010, 0x01},
-    //{0x0000, 0xC8}, // delay cmd (0x0000, 0xC8)	
-    
     {0x00E8, 0x01,0,0},//AFR
     {0x00ED, 0x0A,0,0},//Min=10ps
     {0x00EE, 0x1E,0,0},//Max=30fps
 
-    
-    {0x0251, 0x02,0,0},//BLC ON
-
-    {0x0128, 0x00,0,0},
-
-    {0x01FA, 0x01,0,0},
-    {0x01A5, 0x3E,0,0},                                                                              	
-    {0x01A6, 0x33,0,0},                                                                              	
-    {0x01A7, 0x3D,0,0},
-    {0x01A8, 0x9A,0,0},
-		{0x0010, 0x01,0,0},
-		{0x0000, 0xC8,0,0},
-    {0x070A, 0x00,0,0},		
+	
+	{0x070A, 0x01,0,0},			
 	
 };
 
@@ -2621,6 +2616,13 @@ static struct reg_value hm5065_setting_15fps_NTSC_720_480[] = {
 static struct reg_value hm5065_setting_15fps_PAL_720_576[] = {
 
 };
+
+static struct reg_value hm5065_setting_start_focus[] = {	
+	{0x070a, 0x03,0,200},
+	{0x070b,0x01,0,200},
+	{0x070b,0x02,0,200},
+};
+
 
 static struct hm5065_mode_info hm5065_mode_info_data[2][hm5065_mode_MAX + 1] = {
 	{
@@ -2820,23 +2822,7 @@ static int hm5065_change_mode(enum hm5065_frame_rate new_frame_rate,
 		return -1;
 	}
 
-	if ((new_frame_rate == old_frame_rate) &&
-	    (new_mode == hm5065_mode_VGA_640_480) &&
-		(orig_mode == hm5065_mode_QSXGA_2592_1944)) {
-		pModeSetting = hm5065_setting_QSXGA_2_VGA;
-		iModeSettingArySize = ARRAY_SIZE(hm5065_setting_QSXGA_2_VGA);
-		hm5065_data.pix.width = 640;
-		hm5065_data.pix.height = 480;
-	} else if ((new_frame_rate == old_frame_rate) &&
-	    (new_mode == hm5065_mode_QVGA_320_240) &&
-		(orig_mode == hm5065_mode_VGA_640_480)) {
-		pModeSetting = hm5065_setting_VGA_2_QVGA;
-		iModeSettingArySize = ARRAY_SIZE(hm5065_setting_VGA_2_QVGA);
-		hm5065_data.pix.width = 320;
-		hm5065_data.pix.height = 240;
-	} else if((new_frame_rate == old_frame_rate) &&
-	    (new_mode == hm5065_mode_VGA_640_480) &&
-		(orig_mode == hm5065_mode_VGA_640_480)){
+	if(new_mode == hm5065_mode_VGA_640_480 ){
 		if(hm5065_15_fps==new_frame_rate){
 			pModeSetting = hm5065_setting_15fps_VGA_640_480;
 			iModeSettingArySize = ARRAY_SIZE(hm5065_setting_15fps_VGA_640_480);
@@ -2951,6 +2937,7 @@ static int hm5065_write_snapshot_para(enum hm5065_frame_rate frame_rate,
        enum hm5065_mode mode)
 {
 	int ret = 0;
+#if 0
 	bool m_60Hz = false;
 	u16 capture_frame_rate = 50;
 	u16 g_preview_frame_rate = 225;
@@ -2959,7 +2946,6 @@ static int hm5065_write_snapshot_para(enum hm5065_frame_rate frame_rate,
 	u8 ret_l, ret_m, ret_h, gain, lines_10ms;
 	u16 ulcapture_exposure, icapture_gain, preview_maxlines;
 	u32 ulcapture_exposure_gain, capture_maxlines, g_preview_exposure;
-
 	hm5065_write_reg(0x3503, 0x07);
 
 	ret_h = ret_m = ret_l = 0;
@@ -3056,7 +3042,62 @@ static int hm5065_write_snapshot_para(enum hm5065_frame_rate frame_rate,
 	hm5065_write_reg(0x3501, exposure_mid);
 	hm5065_write_reg(0x3500, exposure_high);
 	msleep(500);
+#else 
+	s32 i = 0;
+	struct reg_value *pModeSetting = NULL;
+	s32 iModeSettingArySize = 0;
+	register u32 Delay_ms = 0;
+	register u16 RegAddr = 0;
+	register u8 Mask = 0;
+	register u8 Val = 0;
+	u8 RegVal = 0;
+	int retval = 0;
 
+	hm5065_data.pix.width =
+		hm5065_mode_info_data[frame_rate][mode].width;
+	hm5065_data.pix.height =
+		hm5065_mode_info_data[frame_rate][mode].height;
+
+	pModeSetting = hm5065_mode_info_data[frame_rate][mode].init_data_ptr;
+	iModeSettingArySize = hm5065_mode_info_data[frame_rate][mode].init_data_size;
+
+	printk("%s take snapshot start\n",__func__);
+
+	for (i = 0; i < iModeSettingArySize; ++i, ++pModeSetting) {
+		Delay_ms = pModeSetting->u32Delay_ms;
+		RegAddr = pModeSetting->u16RegAddr;
+		Val = pModeSetting->u8Val;
+		Mask = pModeSetting->u8Mask;
+
+		if (Mask) {
+			retval = hm5065_read_reg(RegAddr, &RegVal);
+			if (retval < 0) {
+				pr_err("read reg error addr=0x%x", RegAddr);
+				goto err;
+			}
+
+			RegVal &= ~(u8)Mask;
+			Val &= Mask;
+			Val |= RegVal;
+		}
+
+		retval = hm5065_write_reg(RegAddr, Val);
+		if (retval < 0) {
+			pr_err("write reg error addr=0x%x", RegAddr);
+			goto err;
+		}
+
+		if (Delay_ms)
+			msleep(Delay_ms);
+	}
+
+	printk("%s take snapshot end\n",__func__);
+
+
+#endif
+
+
+err:
 	return ret ;
 }
 
@@ -3322,6 +3363,12 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	int ret = 0;
 
 	switch (vc->id) {
+	case V4L2_CID_MXC_AUTOFOCUS:
+		{
+			vc->value = 1;
+			ret=0;	
+			break;
+		}
 	case V4L2_CID_BRIGHTNESS:
 		vc->value = hm5065_data.brightness;
 		break;
@@ -3350,6 +3397,57 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	return ret;
 }
 
+static int hm5065_start_focus(void)
+{
+	struct reg_value *pModeSetting = NULL;
+	s32 i = 0;
+	s32 iModeSettingArySize = 0;
+	register u32 Delay_ms = 0;
+	register u16 RegAddr = 0;
+	register u8 Mask = 0;
+	register u8 Val = 0;
+	u8 RegVal = 0;
+	int retval = 0;
+
+
+	pModeSetting = hm5065_setting_start_focus;
+	iModeSettingArySize = ARRAY_SIZE(hm5065_setting_start_focus);
+	
+	for (i = 0; i < iModeSettingArySize; ++i, ++pModeSetting) {
+		Delay_ms = pModeSetting->u32Delay_ms;
+		RegAddr = pModeSetting->u16RegAddr;
+		Val = pModeSetting->u8Val;
+		Mask = pModeSetting->u8Mask;
+
+		if (Mask) {
+			retval = hm5065_read_reg(RegAddr, &RegVal);
+			if (retval < 0) {
+				pr_err("read reg error addr=0x%x", RegAddr);
+				goto err;
+			}
+
+			RegVal &= ~(u8)Mask;
+			Val &= Mask;
+			Val |= RegVal;
+		}
+
+		retval = hm5065_write_reg(RegAddr, Val);
+		if (retval < 0) {
+			pr_err("write reg error addr=0x%x", RegAddr);
+			goto err;
+		}
+
+		if (Delay_ms)
+			msleep(Delay_ms);
+	}
+
+err:
+	return 0;
+
+}
+
+
+
 /*!
  * ioctl_s_ctrl - V4L2 sensor interface handler for VIDIOC_S_CTRL ioctl
  * @s: pointer to standard V4L2 device structure
@@ -3371,7 +3469,8 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	switch (vc->id) {	
 	case V4L2_CID_MXC_AUTOFOCUS:
 		{
-			printk("%s FIXME:autofocus feature\n",__func__);
+			if(vc->value)
+				retval=hm5065_start_focus();
 			break;
 		}
 	case V4L2_CID_MXC_FLASH:
