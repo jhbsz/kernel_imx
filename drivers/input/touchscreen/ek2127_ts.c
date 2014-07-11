@@ -41,7 +41,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 
-#undef CONFIG_HAS_EARLYSUSPEND
+//#undef CONFIG_HAS_EARLYSUSPEND
 //ADD  IAP
 #define IAP_IN_DRIVER_MODE 	1
 #define IAP_PORTION            	0
@@ -1564,7 +1564,7 @@ static int elan_ktf2k_ts_probe(struct i2c_client *client, const struct i2c_devic
 	}
 	
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING - 1;
+	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	ts->early_suspend.suspend = elan_ktf2k_ts_early_suspend;
 	ts->early_suspend.resume = elan_ktf2k_ts_late_resume;
 	register_early_suspend(&ts->early_suspend);
@@ -1701,9 +1701,9 @@ static int elan_ktf2k_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	struct elan_ktf2k_ts_data *ts = i2c_get_clientdata(client);
 	int rc = 0;
+	printk("[elan] %s: enter\n", __func__);
 	if(power_lock==0) /* The power_lock can be removed when firmware upgrade procedure will not be enter into suspend mode.  */
 	{
-		printk(KERN_INFO "[elan] %s: enter\n", __func__);
 
 		disable_irq(client->irq);
 
@@ -1712,16 +1712,24 @@ static int elan_ktf2k_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 		//	enable_irq(client->irq);
 
 		//rc = elan_ktf2k_ts_set_power_state(client, PWR_STATE_DEEP_SLEEP);
+		
+		if(ts->pdata->setpower)
+			ts->pdata->setpower(0);
 	}
 	return 0;
 }
 
 static int elan_ktf2k_ts_resume(struct i2c_client *client)
 {
+	struct elan_ktf2k_ts_data *ts = i2c_get_clientdata(client);
+
 	int rc = 0, retry = 5;
+	printk("[elan] %s: enter\n", __func__);
 	if(power_lock==0)   /* The power_lock can be removed when firmware upgrade procedure will not be enter into suspend mode.  */
 	{
-		printk(KERN_INFO "[elan] %s: enter\n", __func__);
+
+		if(ts->pdata->setpower)
+			ts->pdata->setpower(1);
 
 		do {
 			rc = elan_ktf2k_ts_set_power_state(client, PWR_STATE_NORMAL);
