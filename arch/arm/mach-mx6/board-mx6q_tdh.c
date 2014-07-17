@@ -659,22 +659,24 @@ static struct imxi2c_platform_data mx6q_i2c_data = {
 
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
-//	{
-//		I2C_BOARD_INFO("rt5625", 0x1f),
-//	},
+	{
+		I2C_BOARD_INFO("rt5625", 0x1f),
+	},
+	/*
 	{
 		I2C_BOARD_INFO("HM5065", 0x1f),
 		.platform_data = (void *)&camera_data,
-	},
+	},*/
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
-		.type			= "EKFT2K",
-		.addr			= 0x15,
+		.type			= "ft5x0x_ts",
+		.addr			= 0x38,
 		.irq			= gpio_to_irq(TDH_TP_IRQ),
 		.platform_data	= &ts_pdata,
 	}
+
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {

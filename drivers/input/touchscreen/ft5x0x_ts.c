@@ -757,7 +757,7 @@ static void ft5x0x_report_value(struct ft5x0x_ts_data* ft5x0x)
 
 	for (i  = 0; i < event->touch_point; i++)
 	{
-	   //dev_info(dev,"tp[%d,%d]\n",event->au16_x[i],event->au16_y[i]);
+	   //printk("tp[%d,%d]\n",event->au16_x[i],event->au16_y[i]);
 	    if (event->au16_x[i] < SCREEN_MAX_X && event->au16_y[i] < SCREEN_MAX_Y)
 	    // LCD view area
 	    {
@@ -989,14 +989,18 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto exit_check_functionality_failed;
 	}
 
-	
 	if(pdata->plat_init)
 		pdata->plat_init();
+	
+	if(pdata->setpower)
+		pdata->setpower(1);
+	
 
 	// probe the device
-	if(i2c_smbus_read_byte_data(client,0)<0)
+	err = ft5x0x_i2c_read(client,0,&uc_reg_value,1);
+	if(err<0)
 	{
-	    dev_err(dev, "failed to access %s[%s] in addr %02x\n",client->name,id->name,client->addr);
+	    dev_err(dev, "failed to access %s[%s] in addr %02x ret:%d\n",client->name,id->name,client->addr,err);
 	    return -ENODEV;
 	}
 
