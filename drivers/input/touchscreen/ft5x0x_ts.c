@@ -762,7 +762,7 @@ static void ft5x0x_report_value(struct ft5x0x_ts_data* ft5x0x)
 
 	for (i  = 0; i < event->touch_point; i++)
 	{
-	   printk("tp[%d,%d]\n",event->au16_x[i],event->au16_y[i]);
+	   //printk("tp[%d,%d]\n",event->au16_x[i],event->au16_y[i]);
 	    if (event->au16_x[i] < SCREEN_MAX_X && event->au16_y[i] < SCREEN_MAX_Y)
 	    // LCD view area
 	    {
