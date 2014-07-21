@@ -714,7 +714,7 @@ err:
 	return ret;
 }
 
-static struct ft5x0x_ts_platform_data ft5x0x_data=
+static struct touchscreen_platform_data ft5x0x_data=
 {
 	.setpower	= ft5x0x_set_power,
 	.plat_init	= ft5x0x_plat_init,

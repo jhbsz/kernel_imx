@@ -29,13 +29,14 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/firmware.h>
-#include <linux/ft5x0x_ts.h>
+#include <linux/input/touchscreen.h>
 #include "ft5x0x_ts.h"
 
 #define CONFIG_FT5X0X_MULTITOUCH 1
 
 #define TP_ID_5X0X 0 //first tp from GW
 #define TP_ID_G5     1
+#define TP_ID_XY     2
 
 struct ts_event {
     u16 au16_x[CFG_MAX_TOUCH_POINTS];              //x coordinate
@@ -713,6 +714,10 @@ static int ft5x0x_touch_key_process(struct ft5x0x_ts_data*  ts,struct input_dev 
 		else if ( x < 737&&x > 717)	   key_id = 2;
 		else if (x < 67&&x > 47)	   key_id = 3;
 		else	   key_id = 0xf;
+	}else if(ts->identifer==TP_ID_XY){
+		if(x==100) key_id=0;
+		else if(x==250) key_id=1;
+		else if(x==400) key_id=2;
 	}
 	else
 	{
@@ -757,7 +762,7 @@ static void ft5x0x_report_value(struct ft5x0x_ts_data* ft5x0x)
 
 	for (i  = 0; i < event->touch_point; i++)
 	{
-	   //printk("tp[%d,%d]\n",event->au16_x[i],event->au16_y[i]);
+	   printk("tp[%d,%d]\n",event->au16_x[i],event->au16_y[i]);
 	    if (event->au16_x[i] < SCREEN_MAX_X && event->au16_y[i] < SCREEN_MAX_Y)
 	    // LCD view area
 	    {
@@ -778,10 +783,15 @@ static void ft5x0x_report_value(struct ft5x0x_ts_data* ft5x0x)
 	    else //maybe the touch key area
 	    {
 		#if CFG_SUPPORT_TOUCH_KEY
-			if(false == ft5x0x->tpkey_enabled){
+			if(false != ft5x0x->tpkey_enabled){
 				//special case for 5x0x
 				if(ft5x0x->identifer==TP_ID_5X0X)
 				{
+					if (event->au16_y[i] >= SCREEN_MAX_Y)
+					{
+						ft5x0x_touch_key_process(ft5x0x,data->input_dev, event->au16_x[i], event->au16_y[i], event->au8_touch_event[i]);
+					}
+				}else if(ft5x0x->identifer==TP_ID_XY){				
 					if (event->au16_y[i] >= SCREEN_MAX_Y)
 					{
 						ft5x0x_touch_key_process(ft5x0x,data->input_dev, event->au16_x[i], event->au16_y[i], event->au8_touch_event[i]);
@@ -974,7 +984,7 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct ft5x0x_ts_data *ft5x0x_ts;
 	struct input_dev *input_dev;	
 	struct device *dev = &client->dev;
-	struct ft5x0x_ts_platform_data* pdata = client->dev.platform_data;
+	struct touchscreen_platform_data* pdata = client->dev.platform_data;
 	unsigned long irqflags;
 	int err = 0;
 	u8 uc_reg_value; 
@@ -992,10 +1002,6 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if(pdata->plat_init)
 		pdata->plat_init();
 	
-	if(pdata->setpower)
-		pdata->setpower(1);
-	
-
 	// probe the device
 	err = ft5x0x_i2c_read(client,0,&uc_reg_value,1);
 	if(err<0)
@@ -1030,7 +1036,7 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	//set identifier
 	ft5x0x_ts->identifer = id->driver_data;
 
-	if(FT5X0X_QUIRK_TOUCHKEY_ENABLE&pdata->quirks){
+	if(TOUCHSCREEN_QUIRK_TOUCHKEY_ENABLE&pdata->quirks){
 		ft5x0x_ts->tpkey_enabled = true;
 	}
 
@@ -1046,7 +1052,7 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 
 	irqflags = IRQF_TRIGGER_FALLING;
-	if(pdata->quirks&FT5X0X_QUIRK_WAKEUP){
+	if(pdata->quirks&TOUCHSCREEN_QUIRK_WAKEUP){
 		irqflags |= IRQF_NO_SUSPEND;		
 		device_init_wakeup(&client->dev, 1);
 	}
@@ -1066,6 +1072,10 @@ ft5x0x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto exit_input_dev_alloc_failed;
 	}
 	
+	input_dev->id.bustype = BUS_I2C;	
+	input_dev->id.vendor = 0x0001;
+	input_dev->id.product = 0x0001;
+	input_dev->id.version = 0x0100;
 	ft5x0x_ts->input_dev = input_dev;
 
 	set_bit(ABS_MT_TOUCH_MAJOR, input_dev->absbit);
@@ -1197,6 +1207,7 @@ static int __devexit ft5x0x_ts_remove(struct i2c_client *client)
 static const struct i2c_device_id ft5x0x_ts_id[] = {
 	{ FT5X0X_NAME, TP_ID_5X0X },
 	{ "ep-g5", TP_ID_G5 },		
+	{ "ft5x0x-xy", TP_ID_XY },
 	{ }
 };
 

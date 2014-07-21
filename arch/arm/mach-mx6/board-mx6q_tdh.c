@@ -642,6 +642,7 @@ static int touchscreen_reset(void){
 }
 
 static struct touchscreen_platform_data ts_pdata= {
+	.quirks 	= TOUCHSCREEN_QUIRK_TOUCHKEY_ENABLE,
 	.setpower	= ft5x0x_set_power,
 	.plat_init	= ft5x0x_plat_init,
 	.reset 		= touchscreen_reset,	
@@ -671,7 +672,7 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
-		.type			= "ft5x0x_ts",
+		.type			= "ft5x0x-xy",
 		.addr			= 0x38,
 		.irq			= gpio_to_irq(TDH_TP_IRQ),
 		.platform_data	= &ts_pdata,
